@@ -32,19 +32,14 @@ export default function AppShell({
   return (
     <Box w="100%" h="100dvh">
       <Topbar onOpenMenu={onOpen} />
-      {/* Sidebar fija en desktop */}
       <Box display={{ base: 'none', lg: 'block' }} position="fixed" top="64px" left="0" h="calc(100dvh - 64px)" w="260px" borderRightWidth="1px" bg="white" _dark={{ bg: 'gray.800' }}>
         <Sidebar onNavigate={onClose} />
       </Box>
-
-      {/* Drawer en mobile */}
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerContent pt="64px" w="260px">
           <Sidebar onNavigate={handleLogout} />
         </DrawerContent>
       </Drawer>
-
-      {/* Área de contenido con margen para la sidebar en desktop */}
       <Box pl={{ base: 0, lg: '260px' }} pt="64px">
         {children}
       </Box>
