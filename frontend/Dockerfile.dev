@@ -1,0 +1,16 @@
+FROM node:20-alpine
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+# Cargamos variables públicas para dev
+COPY .env.local ./.env.local
+
+ENV NODE_ENV=development
+# Si tu host y Docker no propagan bien eventos de FS, habilita polling:
+# ENV CHOKIDAR_USEPOLLING=1
+# ENV WATCHPACK_POLLING=true
+
+EXPOSE 3000
+CMD ["npm","run","dev"]
