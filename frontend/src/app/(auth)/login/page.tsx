@@ -157,7 +157,7 @@ export default function LoginPage() {
         flex={{ base: '0 0 auto', lg: '1 1 50%' }}
         alignItems="center"
         justifyContent="center"
-        display={{ base: 'none', lg: 'flex' }}       // oculta en mobile/tablet
+        display={{ base: 'none', lg: 'flex' }}      
       >
             <Image
               src="/LOGO-PRINCIPAL.jpeg"
