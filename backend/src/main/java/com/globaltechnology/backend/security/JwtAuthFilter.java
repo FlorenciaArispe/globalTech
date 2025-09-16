@@ -20,20 +20,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     this.jwt = jwt; this.uds = uds;
   }
 
-  @Override
-  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-      throws ServletException, IOException {
+@Override
+protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+    throws ServletException, IOException {
 
-    String header = request.getHeader("Authorization");
-    if (header != null && header.startsWith("Bearer ")) {
-      String token = header.substring(7);
-      if (jwt.validate(token)) {
-        String username = jwt.getUsername(token);
-        UserDetails user = uds.loadUserByUsername(username);
-        var auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(auth);
-      }
-    }
-    chain.doFilter(request, response);
+  if ("OPTIONS".equalsIgnoreCase(req.getMethod())) { // 👈
+    chain.doFilter(req, res);
+    return;
   }
+
+  String auth = req.getHeader("Authorization");
+  if (auth == null || !auth.startsWith("Bearer ")) { // 👈 sin token, no cortar
+    chain.doFilter(req, res);
+    return;
+  }
+
+  String token = auth.substring(7);
+  if (jwt.validate(token)) {
+    var user = uds.loadUserByUsername(jwt.getUsername(token));
+    var authToken = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+    SecurityContextHolder.getContext().setAuthentication(authToken);
+  }
+  chain.doFilter(req, res);
+}
+
 }
