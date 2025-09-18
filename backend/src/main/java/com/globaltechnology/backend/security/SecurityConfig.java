@@ -30,17 +30,17 @@ public class SecurityConfig {
       .cors(cors -> cors.configurationSource(corsConfigurationSource()))
       .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
       .authorizeHttpRequests(auth -> auth
-          .requestMatchers("/actuator/**").permitAll()
-          .requestMatchers("/auth/login").permitAll()
-          // ejemplo: permitir GET de clientes libre (podés cerrarlo luego)
-          .requestMatchers(HttpMethod.GET, "/api/clientes/**").hasAnyRole("ADMIN","OPERADOR")
-          .requestMatchers("/api/**").hasRole("ADMIN") // el resto de /api solo ADMIN
-          .anyRequest().authenticated()
-      )
-       .exceptionHandling(ex -> ex
-        .authenticationEntryPoint(new JsonAuthEntryPoint())       // 401
-        .accessDeniedHandler(new JsonAccessDeniedHandler())       // 403
-    )
+  .requestMatchers("/actuator/**","/auth/login").permitAll()
+
+  .requestMatchers(HttpMethod.GET, "/api/categorias/**").hasAnyAuthority("ADMIN","OPERADOR")
+  .requestMatchers(HttpMethod.POST, "/api/categorias/**").hasAuthority("ADMIN")
+  .requestMatchers(HttpMethod.PUT,  "/api/categorias/**").hasAuthority("ADMIN")
+  .requestMatchers(HttpMethod.DELETE,"/api/categorias/**").hasAuthority("ADMIN")
+
+  .requestMatchers(HttpMethod.GET, "/api/clientes/**").hasAnyAuthority("ADMIN","OPERADOR")
+  .requestMatchers("/api/**").hasAuthority("ADMIN")
+  .anyRequest().authenticated()
+)
       .addFilterBefore(jwt, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();

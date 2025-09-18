@@ -1,0 +1,8 @@
+﻿{
+  "categoriaId": 1,
+  "marcaId": 1,
+  "nombre": "iPhone 13",
+  "trackeaImei": true,
+  "requiereColor": true,
+  "requiereCapacidad": true
+}

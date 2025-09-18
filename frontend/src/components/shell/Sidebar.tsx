@@ -67,28 +67,24 @@ function RouteGroup({
 
       <Collapse in={open} animateOpacity>
         <VStack align="stretch" spacing={0} mt={1} pl={2}>
-          {route.children!.map((child) => {
-            const active = pathname === child.href || pathname.startsWith(child.href + '/');
-            return (
-              <HStack
-                key={child.href}
-                as={NextLink}
-                href={child.href}
-                onClick={onNavigate}
-                px={3}
-                py={2}
-                rounded="md"
-                _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}
-                bg={active ? 'gray.100' : undefined}
-                _dark={{ bg: active ? 'gray.700' : undefined }}
-              >
-                <Box w="6px" h="6px" rounded="full" bg={active ? 'blue.500' : 'gray.400'} />
-                <Text fontSize="sm" fontWeight={active ? 'semibold' : 'normal'}>
-                  {child.label}
-                </Text>
-              </HStack>
-            );
-          })}
+        {route.children!.map((child) => {
+  const Icon = child.icon;
+  return (
+    <HStack
+      key={child.href}
+      as={NextLink}
+      href={child.href}
+      onClick={onNavigate}
+      px={3}
+      py={2}
+      rounded="md"
+      _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}
+    >
+      {Icon && <Icon size={16} />}
+      <Text fontSize="sm">{child.label}</Text>
+    </HStack>
+  );
+})}
         </VStack>
       </Collapse>
     </Box>
