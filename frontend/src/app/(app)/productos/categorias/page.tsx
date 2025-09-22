@@ -36,6 +36,7 @@ export default function CategoriasPage() {
     let alive = true;
   
     const token = getToken();
+    console.log("TOKEN CATEGORIAS", token) 
     if (!token) {
       router.replace('/login'); // sin token, a login
       return;

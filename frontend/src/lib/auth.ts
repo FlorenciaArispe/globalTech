@@ -1,5 +1,6 @@
+// /lib/auth.ts
 export const TOKEN_KEY = 'jwt';
-export const USER_KEY = 'user';
+export const USER_KEY  = 'user';
 
 export function setToken(token: string) {
   if (typeof window !== 'undefined') localStorage.setItem(TOKEN_KEY, token);
@@ -12,14 +13,12 @@ export function clearToken() {
   if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
 }
 
-export const setUser = (u: string) => localStorage.setItem(USER_KEY, u);
-export const getUser = () => (typeof window === 'undefined' ? null : localStorage.getItem(USER_KEY));
-export const clearUser = () => localStorage.removeItem(USER_KEY);
+export const setUser   = (u: string) => { if (typeof window !== 'undefined') localStorage.setItem(USER_KEY, u); };
+export const getUser   = () => (typeof window === 'undefined' ? null : localStorage.getItem(USER_KEY));
+export const clearUser = () => { if (typeof window !== 'undefined') localStorage.removeItem(USER_KEY); };
 
 export function logoutAll() {
-  try {
-    localStorage.removeItem('persist:root');
-  } catch {}
+  try { if (typeof window !== 'undefined') localStorage.removeItem('persist:root'); } catch {}
   clearToken();
   clearUser();
 }

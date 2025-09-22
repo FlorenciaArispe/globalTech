@@ -35,9 +35,10 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const { data } = await api.post('/auth/login', { username, password });
-      const token: string = data.token;
+      const token: string = data.token || data.access_token || data.accessToken;
       setToken(token);
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      console.log('Guardado?', localStorage.getItem('token')?.slice(0, 20) + '…');
       dispatch(setCredentials({ token, user: data.user || username }));
 
       toast({ status: 'success', title: '¡Bienvenido!' });

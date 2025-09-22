@@ -31,16 +31,37 @@ public class SecurityConfig {
       .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
       .authorizeHttpRequests(auth -> auth
   .requestMatchers("/actuator/**","/auth/login").permitAll()
+  .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-  .requestMatchers(HttpMethod.GET, "/api/categorias/**").hasAnyAuthority("ADMIN","OPERADOR")
-  .requestMatchers(HttpMethod.POST, "/api/categorias/**").hasAuthority("ADMIN")
-  .requestMatchers(HttpMethod.PUT,  "/api/categorias/**").hasAuthority("ADMIN")
-  .requestMatchers(HttpMethod.DELETE,"/api/categorias/**").hasAuthority("ADMIN")
+  // categorias
+  .requestMatchers(HttpMethod.GET,    "/api/categorias/**").hasAnyRole("ADMIN","OPERADOR")
+  .requestMatchers(HttpMethod.POST,   "/api/categorias/**").hasRole("ADMIN")
+  .requestMatchers(HttpMethod.PUT,    "/api/categorias/**").hasRole("ADMIN")
+  .requestMatchers(HttpMethod.DELETE, "/api/categorias/**").hasRole("ADMIN")
 
-  .requestMatchers(HttpMethod.GET, "/api/clientes/**").hasAnyAuthority("ADMIN","OPERADOR")
-  .requestMatchers("/api/**").hasAuthority("ADMIN")
+  // clientes
+  .requestMatchers(HttpMethod.GET, "/api/clientes/**").hasAnyRole("ADMIN","OPERADOR")
+
+  // modelos
+  .requestMatchers(HttpMethod.GET,    "/api/modelos/**").hasRole("ADMIN")
+  .requestMatchers(HttpMethod.POST,   "/api/modelos/**").hasRole("ADMIN")
+  .requestMatchers(HttpMethod.PUT,    "/api/modelos/**").hasRole("ADMIN")
+  .requestMatchers(HttpMethod.DELETE, "/api/modelos/**").hasRole("ADMIN")
+
+  // marcas
+  .requestMatchers(HttpMethod.GET,    "/api/marcas/**").hasAnyRole("ADMIN","OPERADOR")
+  .requestMatchers(HttpMethod.POST,   "/api/marcas/**").hasRole("ADMIN")
+  .requestMatchers(HttpMethod.PUT,    "/api/marcas/**").hasRole("ADMIN")
+  .requestMatchers(HttpMethod.DELETE, "/api/marcas/**").hasRole("ADMIN")
+
+  // notas (ajustá si querés más fino)
+  .requestMatchers("/api/notes/**").hasAnyRole("ADMIN","OPERADOR")
+
+  // catch-all
+  .requestMatchers("/api/**").hasRole("ADMIN")
   .anyRequest().authenticated()
 )
+
       .addFilterBefore(jwt, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();

@@ -80,10 +80,13 @@ export default function NuevoProductoPage() {
   useEffect(() => {
     let alive = true;
   
-    const token = getToken();              // lee token una sola vez
-    if (!token) {
+    const token = getToken();
+    console.log('TOKEN 1', token);
+    if (token) {
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+    } else {
       router.replace('/login');
-      return;                              // no dispares requests sin token
+      return;
     }
   
     (async () => {
