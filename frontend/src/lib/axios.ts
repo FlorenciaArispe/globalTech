@@ -1,33 +1,28 @@
 import axios from 'axios';
-import { getToken, clearToken, clearUser } from './auth';
+import { getToken /*, clearToken, clearUser */ } from './auth';
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE, // http://localhost:8085
+  baseURL: process.env.NEXT_PUBLIC_API_BASE,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// setear en el arranque (por si recargás la página)
-const bootToken = getToken?.();
-if (bootToken) api.defaults.headers.common.Authorization = `Bearer ${bootToken}`;
-
 api.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) {
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  const t = getToken();
+  config.headers = config.headers ?? {};
+  if (t) (config.headers as any).Authorization = `Bearer ${t}`;
+
+  const short = t ? t.slice(0, 12) + '…' + t.slice(-8) : 'NO_TOKEN';
+  console.log(`[api] OUT ${config.method?.toUpperCase()} ${config.baseURL}${config.url} Authorization=${short}`);
   return config;
 });
 
-
 api.interceptors.response.use(
-  (res) => res,
+  (r) => r,
   (err) => {
-    if (err?.response?.status === 401) {
-      // limpiar sesión y (opcional) redirigir desde un handler más arriba
-      clearToken();
-      clearUser();
-    }
+    const s = err?.response?.status;
+    console.log('[api] ERROR', s, err?.config?.method?.toUpperCase(), err?.config?.url, err?.response?.data);
+    // NO limpiar aquí por ahora:
+    // if (s === 401) { clearToken(); clearUser(); }
     return Promise.reject(err);
   }
 );

@@ -11,9 +11,9 @@ import {
   IconButton,
 } from '@chakra-ui/react';
 import { api } from '@/lib/axios';
-import { setToken } from '@/lib/auth';
 import { setCredentials } from '@/store/slices/authSlice';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
+import { setToken } from '@/lib/auth';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -36,10 +36,12 @@ export default function LoginPage() {
     try {
       const { data } = await api.post('/auth/login', { username, password });
       const token: string = data.token || data.access_token || data.accessToken;
+      console.log("TOKEN A GUARDAR", token)
       setToken(token);
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
-      console.log('Guardado?', localStorage.getItem('token')?.slice(0, 20) + '…');
-      dispatch(setCredentials({ token, user: data.user || username }));
+      console.log('[login] jwt guardado =', localStorage.getItem('jwt'));
+      // api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      // console.log('Guardado?', localStorage.getItem('token')?.slice(0, 20) + '…');
+      // dispatch(setCredentials({ token, user: data.user || username }));
 
       toast({ status: 'success', title: '¡Bienvenido!' });
       router.replace(next);

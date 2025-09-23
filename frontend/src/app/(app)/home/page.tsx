@@ -2,7 +2,7 @@
 import StickyNotesBoard from '@/components/StickyNotesBoard';
 import { InfoOutlineIcon } from '@chakra-ui/icons';
 import { Box, Container, HStack, Icon, SimpleGrid, Stat, StatHelpText, StatLabel, StatNumber, Tab, TabList, Tabs, Text, Tooltip } from '@chakra-ui/react'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 type RangeKey = 'hoy' | 'ayer' | 'semana' | 'mes';
 
@@ -14,6 +14,8 @@ export default function Home() {
     { label: 'Esta semana',  key: 'semana' },
     { label: 'Último mes',   key: 'mes' },
   ];
+
+ 
 
   const tabIndex = tabs.findIndex(t => t.key === range);
 

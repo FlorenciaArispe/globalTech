@@ -76,46 +76,48 @@ export default function NuevoProductoPage() {
   const [nuevoModeloReqCap, setNuevoModeloReqCap] = useState(false);
   const [creatingModelo, setCreatingModelo] = useState(false);
 
+   useEffect(() => {
+  console.log('[NuevoProducto] jwt al montar =', localStorage.getItem('jwt'));
+  // ... tus fetch a /api/categorias, /api/marcas, etc.
+}, []);
+
+
  
-  useEffect(() => {
-    let alive = true;
-  
-    const token = getToken();
-    console.log('TOKEN 1', token);
-    if (token) {
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
-    } else {
-      router.replace('/login');
-      return;
-    }
-  
-    (async () => {
-      try {
-        const [cats, mks, cols, caps] = await Promise.all([
-          api.get<Categoria[]>('/api/categorias'),
-          api.get<Marca[]>('/api/marcas'),
-          api.get<Color[]>('/api/colores'),
-          api.get<Capacidad[]>('/api/capacidades'),
-        ]);
-        if (!alive) return;
-        setCategorias(cats.data);
-        setMarcas(mks.data);
-        setColores(cols.data);
-        setCapacidades(caps.data);
-      } catch (e: any) {
-        if (e?.response?.status === 401) { router.replace('/login'); return; }
-        toast({
-          status: 'error',
-          title: 'Error cargando datos',
-          description: e?.response?.data?.message ?? e?.message,
-        });
-      } finally {
-        if (alive) setLoadingBase(false);
+useEffect(() => {
+  let alive = true;
+
+  (async () => {
+    try {
+      const [cats, mks, cols, caps] = await Promise.all([
+        api.get<Categoria[]>('/api/categorias'),
+        api.get<Marca[]>('/api/marcas'),
+        api.get<Color[]>('/api/colores'),
+        api.get<Capacidad[]>('/api/capacidades'),
+      ]);
+      if (!alive) return;
+      setCategorias(cats.data);
+      setMarcas(mks.data);
+      setColores(cols.data);
+      setCapacidades(caps.data);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 401) {
+        router.replace('/login?next=/productos/nuevo');
+        return;
       }
-    })();
-  
-    return () => { alive = false; };
-  }, [router, toast]);   // ← SIEMPRE el mismo array (2 elementos)
+      toast({
+        status: 'error',
+        title: 'Error cargando datos',
+        description: e?.response?.data?.message ?? e?.message,
+      });
+    } finally {
+      if (alive) setLoadingBase(false);
+    }
+  })();
+
+  return () => { alive = false; };
+}, [router, toast]);
+
   
 
   // Cargar modelos filtrados por categoría y marca
@@ -173,41 +175,67 @@ export default function NuevoProductoPage() {
     setIsModeloOpen(true);
   };
 
-  const handleCrearModelo = async () => {
-    if (!categoriaId || !marcaId || !nuevoModeloNombre.trim()) {
-      toast({ status: 'warning', title: 'Completá categoría, marca y nombre' });
-      return;
-    }
-  
-    // evita disparar sin token
-    const token = getToken();
-    if (!token) {
-      toast({ status: 'error', title: 'Sesión expirada' });
-      router.replace('/login');
-      return;
-    }
-  
-    setCreatingModelo(true);
-    try {
-      const { data: creado } = await api.post<Modelo>('/api/modelos', {
-        categoriaId,
-        marcaId,
-        nombre: nuevoModeloNombre.trim(),
-        trackeaImei: nuevoModeloTrackeaImei,
-        requiereColor: nuevoModeloReqColor,
-        requiereCapacidad: nuevoModeloReqCap,
-      });
+const handleCrearModelo = async () => {
+  if (!categoriaId || !marcaId || !nuevoModeloNombre.trim()) {
+    toast({ status: 'warning', title: 'Completá categoría, marca y nombre' });
+    return;
+  }
+
+  setCreatingModelo(true);
+  try {
+    const payload = {
+      categoriaId: Number(categoriaId),
+      marcaId: Number(marcaId),
+      nombre: nuevoModeloNombre.trim(),
+      trackeaImei: Boolean(nuevoModeloTrackeaImei),
+      requiereColor: Boolean(nuevoModeloReqColor),
+      requiereCapacidad: Boolean(nuevoModeloReqCap),
+    };
+
+    // Si querés forzar el header explícitamente, podés dejarlo; si no, confía en el interceptor.
+    const token = localStorage.getItem('jwt');
+    const resp = await api.post('/api/modelos', payload, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      // ⚠️ NO pongas validateStatus acá
+    });
+
+    // Sólo éxito si es 201
+    if (resp.status === 201) {
+      const creado = resp.data as Modelo;
       setModelos(prev => [creado, ...prev]);
       setModeloId(creado.id as any);
       setIsModeloOpen(false);
       toast({ status: 'success', title: 'Modelo creado' });
-    } catch (e: any) {
-      console.log('POST /api/modelos error', e?.response?.status, e?.response?.data);
-      toast({ status: 'error', title: 'No se pudo crear el modelo', description: e?.response?.data?.message ?? e?.message });
-    } finally {
-      setCreatingModelo(false);
+    } else {
+      // Cubre cualquier 2xx inesperado que no sea 201
+      toast({ status: 'error', title: `Respuesta inesperada (${resp.status})` });
+      console.log('POST /api/modelos resp', resp.status, resp.data);
     }
-  };
+  } catch (e: any) {
+    const status = e?.response?.status;
+    console.log('POST /api/modelos error', status, e?.response?.data);
+
+    if (status === 401) {
+      toast({ status: 'error', title: 'Sesión expirada' });
+      router.replace('/login?next=/productos/nuevo');
+      return;
+    }
+    if (status === 403) {
+      toast({ status: 'error', title: 'Sin permisos', description: 'Necesitás rol ADMIN para crear modelos.' });
+      return;
+    }
+
+    toast({
+      status: 'error',
+      title: 'No se pudo crear el modelo',
+      description: e?.response?.data?.message ?? e?.message,
+    });
+  } finally {
+    setCreatingModelo(false);
+  }
+};
+
+
   
 
   // ---- crear variante (producto) ----
@@ -405,7 +433,12 @@ export default function NuevoProductoPage() {
           </ModalBody>
           <ModalFooter>
             <Button mr={3} onClick={() => setIsModeloOpen(false)}>Cancelar</Button>
-            <Button colorScheme="blue" onClick={handleCrearModelo} isLoading={creatingModelo}>
+            <Button colorScheme="blue" 
+             onClick={() => { 
+    console.log('[UI] click Crear modelo');
+    handleCrearModelo();
+  }}
+            isLoading={creatingModelo}>
               Crear modelo
             </Button>
           </ModalFooter>

@@ -6,6 +6,7 @@ import com.globaltechnology.backend.web.dto.ModeloDTO;
 import com.globaltechnology.backend.web.dto.ModeloUpdateDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -18,7 +19,9 @@ public class ModeloController {
   @GetMapping public List<ModeloDTO> list(){ return service.list(); }
   @GetMapping("/{id}") public ModeloDTO get(@PathVariable Long id){ return service.get(id); }
 
-  @PostMapping @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize("hasRole('ADMIN')")
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
   public ModeloDTO create(@Valid @RequestBody ModeloCreateDTO dto){ return service.create(dto); }
 
   @PutMapping("/{id}")
