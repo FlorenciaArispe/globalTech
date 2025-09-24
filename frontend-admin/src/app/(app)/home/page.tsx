@@ -1,4 +1,5 @@
 "use client"
+
 import StickyNotesBoard from '@/components/StickyNotesBoard';
 import { InfoOutlineIcon } from '@chakra-ui/icons';
 import { Box, Container, HStack, Icon, SimpleGrid, Stat, StatHelpText, StatLabel, StatNumber, Tab, TabList, Tabs, Text, Tooltip } from '@chakra-ui/react'

@@ -12,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/modelos")
+@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 public class ModeloController {
   private final ModeloService service;
   public ModeloController(ModeloService service){ this.service = service; }
@@ -19,7 +20,6 @@ public class ModeloController {
   @GetMapping public List<ModeloDTO> list(){ return service.list(); }
   @GetMapping("/{id}") public ModeloDTO get(@PathVariable Long id){ return service.get(id); }
 
-  @PreAuthorize("hasRole('ADMIN')")
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   public ModeloDTO create(@Valid @RequestBody ModeloCreateDTO dto){ return service.create(dto); }

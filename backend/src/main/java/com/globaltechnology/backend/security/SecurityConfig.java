@@ -43,12 +43,12 @@ public class SecurityConfig {
   .requestMatchers(HttpMethod.GET, "/api/clientes/**").hasAnyRole("ADMIN","OPERADOR")
 
   // modelos
-  .requestMatchers(HttpMethod.GET,    "/api/modelos/**").hasRole("ADMIN")
-  .requestMatchers(HttpMethod.POST,   "/api/modelos/**").hasRole("ADMIN")
-  .requestMatchers(HttpMethod.PUT,    "/api/modelos/**").hasRole("ADMIN")
-  .requestMatchers(HttpMethod.DELETE, "/api/modelos/**").hasRole("ADMIN")
+   .requestMatchers(HttpMethod.GET,    "/api/modelos", "/api/modelos/**").hasRole("ADMIN")
+  .requestMatchers(HttpMethod.POST,   "/api/modelos", "/api/modelos/**").hasRole("ADMIN")
+  .requestMatchers(HttpMethod.PUT,    "/api/modelos", "/api/modelos/**").hasRole("ADMIN")
+  .requestMatchers(HttpMethod.DELETE, "/api/modelos", "/api/modelos/**").hasRole("ADMIN")
 
-  // marcas
+  // marca
   .requestMatchers(HttpMethod.GET,    "/api/marcas/**").hasAnyRole("ADMIN","OPERADOR")
   .requestMatchers(HttpMethod.POST,   "/api/marcas/**").hasRole("ADMIN")
   .requestMatchers(HttpMethod.PUT,    "/api/marcas/**").hasRole("ADMIN")

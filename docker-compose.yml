@@ -39,15 +39,18 @@ services:
     ports:
       - "8085:8080"
 
+  # === ADMIN (ya lo tenías) ===
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend-admin
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE}
-    container_name: gt_frontend
+        INTERNAL_API_BASE: ${INTERNAL_API_BASE}
+    container_name: gt_frontend_admin
     environment:
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE}
+      INTERNAL_API_BASE: ${INTERNAL_API_BASE}
     ports:
       - "3000:3000"
     depends_on:
@@ -55,24 +58,60 @@ services:
 
   frontend-dev:
     build:
-      context: ./frontend
+      context: ./frontend-admin
       dockerfile: Dockerfile.dev
-    container_name: gt_frontend_dev
+    container_name: gt_frontend_admin_dev
     environment:
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE}
+      INTERNAL_API_BASE: ${INTERNAL_API_BASE}
       NODE_ENV: development
       CHOKIDAR_USEPOLLING: "true"
-      CHOKIDAR_INTERVAL: "300"
       WATCHPACK_POLLING: "true"
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
+      - ./frontend-admin:/app
       - /app/node_modules
     depends_on:
       - backend
-  
-  pgadmin:               
+
+  # === PUBLICO (nuevo) ===
+  frontend-publico:
+    build:
+      context: ./frontend-publico
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE_PUBLIC}
+        INTERNAL_API_BASE: ${INTERNAL_API_BASE_PUBLIC}
+    container_name: gt_frontend_publico
+    environment:
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE_PUBLIC}
+      INTERNAL_API_BASE: ${INTERNAL_API_BASE_PUBLIC}
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+
+  frontend-publico-dev:
+    build:
+      context: ./frontend-publico
+      dockerfile: Dockerfile.dev
+    container_name: gt_frontend_publico_dev
+    environment:
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE_PUBLIC}
+      INTERNAL_API_BASE: ${INTERNAL_API_BASE_PUBLIC}
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./frontend-publico:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  pgadmin:
     image: dpage/pgadmin4:8
     container_name: gt_pgadmin
     environment:
