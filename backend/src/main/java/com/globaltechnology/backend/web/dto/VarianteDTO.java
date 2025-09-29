@@ -1,6 +1,5 @@
 package com.globaltechnology.backend.web.dto;
 
-import com.globaltechnology.backend.domain.EstadoComercial;
 import java.time.Instant;
 
 public record VarianteDTO(
@@ -11,7 +10,6 @@ public record VarianteDTO(
     String colorNombre,
     Long capacidadId,
     String capacidadEtiqueta,
-    EstadoComercial estadoComercial,
     boolean activo,
     String sku,
     Instant createdAt,

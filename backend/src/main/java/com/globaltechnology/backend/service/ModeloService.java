@@ -45,10 +45,6 @@ public class ModeloService {
     Marca marca = marcaRepo.findById(dto.marcaId())
       .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,"Marca inválida"));
 
-    // regla opcional: trackeaImei solo en "Teléfonos"
-    if (dto.trackeaImei() && !"Teléfonos".equalsIgnoreCase(cat.getNombre())) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"trackeaImei solo para categoría Teléfonos");
-    }
 
     var m = Modelo.builder()
       .categoria(cat).marca(marca).nombre(dto.nombre().trim())

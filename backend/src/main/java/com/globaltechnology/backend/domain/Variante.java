@@ -25,10 +25,6 @@ public class Variante extends Auditable {
   @ManyToOne @JoinColumn(name = "capacidad_id")
   private Capacidad capacidad; // nullable
 
-  @Enumerated(EnumType.STRING)
-  @Column(name = "estado_comercial", nullable = false, length = 16)
-  private EstadoComercial estadoComercial;
-
   @Column(name = "activo", nullable = false)
   private boolean activo = true;
 

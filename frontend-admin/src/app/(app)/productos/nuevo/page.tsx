@@ -15,7 +15,7 @@ type Id = number | string;
 
 // ====== Tipos básicos (ajustá a tus DTO reales) ======
 type Categoria = { id: Id; nombre: string };
-type Marca     = { id: Id; nombre: string };
+type Marca = { id: Id; nombre: string };
 
 // Incluyo flags en Modelo para no tener que pedir detalle aparte.
 // Si tu listado de modelos no trae flags, hacé un GET /api/modelos/{id} al seleccionar.
@@ -29,11 +29,9 @@ type Modelo = {
   requiereCapacidad: boolean;
 };
 
-type Color     = { id: Id; nombre: string };
-type Capacidad = { id: Id; nombre: string };
+type Color = { id: Id; nombre: string };
+type Capacidad = { id: Id; etiqueta: string };
 
-// Ajustá a tu enum real del backend:
-type EstadoComercial = 'NUEVO' | 'USADO' | 'REACONDICIONADO';
 
 export default function NuevoProductoPage() {
   const toast = useToast();
@@ -45,6 +43,12 @@ export default function NuevoProductoPage() {
   const [modelos, setModelos] = useState<Modelo[]>([]);
   const [colores, setColores] = useState<Color[]>([]);
   const [capacidades, setCapacidades] = useState<Capacidad[]>([]);
+  const [isColorOpen, setIsColorOpen] = useState(false);
+  const [nuevoColorNombre, setNuevoColorNombre] = useState('');
+  const [creatingColor, setCreatingColor] = useState(false);
+  const [isCapOpen, setIsCapOpen] = useState(false);
+  const [nuevaCapEtiqueta, setNuevaCapEtiqueta] = useState('');
+  const [creatingCap, setCreatingCap] = useState(false);
 
   const [loadingBase, setLoadingBase] = useState(true);
   const [loadingModelos, setLoadingModelos] = useState(false);
@@ -55,16 +59,16 @@ export default function NuevoProductoPage() {
   const [marcaId, setMarcaId] = useState<Id>('');
   const [modeloId, setModeloId] = useState<Id | 'new'>('');
 
-  // flags del modelo seleccionado (si viene del listado, los tomamos; si no, pedimos detalle)
-  const selectedModelo = useMemo(
-    () => (typeof modeloId === 'string' ? undefined : modelos.find(m => String(m.id) === String(modeloId))),
-    [modeloId, modelos]
-  );
+  const isNewModelo = modeloId === 'new' || !modeloId;
+
+ const selectedModelo = useMemo(() => {
+  if (isNewModelo) return undefined;
+  return modelos.find(m => String(m.id) === String(modeloId));
+}, [isNewModelo, modeloId, modelos]);
 
   // ---------- campos de variante ----------
   const [colorId, setColorId] = useState<Id>('');
   const [capacidadId, setCapacidadId] = useState<Id>('');
-  const [estadoComercial, setEstadoComercial] = useState<EstadoComercial>('NUEVO');
   const [sku, setSku] = useState('');
   const [activo, setActivo] = useState(true);
 
@@ -76,49 +80,49 @@ export default function NuevoProductoPage() {
   const [nuevoModeloReqCap, setNuevoModeloReqCap] = useState(false);
   const [creatingModelo, setCreatingModelo] = useState(false);
 
-   useEffect(() => {
-  console.log('[NuevoProducto] jwt al montar =', localStorage.getItem('jwt'));
-  // ... tus fetch a /api/categorias, /api/marcas, etc.
-}, []);
+  useEffect(() => {
+    console.log('[NuevoProducto] jwt al montar =', localStorage.getItem('jwt'));
+    // ... tus fetch a /api/categorias, /api/marcas, etc.
+  }, []);
 
 
- 
-useEffect(() => {
-  let alive = true;
 
-  (async () => {
-    try {
-      const [cats, mks, cols, caps] = await Promise.all([
-        api.get<Categoria[]>('/api/categorias'),
-        api.get<Marca[]>('/api/marcas'),
-        api.get<Color[]>('/api/colores'),
-        api.get<Capacidad[]>('/api/capacidades'),
-      ]);
-      if (!alive) return;
-      setCategorias(cats.data);
-      setMarcas(mks.data);
-      setColores(cols.data);
-      setCapacidades(caps.data);
-    } catch (e: any) {
-      const status = e?.response?.status;
-      if (status === 401) {
-        router.replace('/login?next=/productos/nuevo');
-        return;
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      try {
+        const [cats, mks, cols, caps] = await Promise.all([
+          api.get<Categoria[]>('/api/categorias'),
+          api.get<Marca[]>('/api/marcas'),
+          api.get<Color[]>('/api/colores'),
+          api.get<Capacidad[]>('/api/capacidades'),
+        ]);
+        if (!alive) return;
+        setCategorias(cats.data);
+        setMarcas(mks.data);
+        setColores(cols.data);
+        setCapacidades(caps.data);
+      } catch (e: any) {
+        const status = e?.response?.status;
+        if (status === 401) {
+          router.replace('/login?next=/productos/nuevo');
+          return;
+        }
+        toast({
+          status: 'error',
+          title: 'Error cargando datos',
+          description: e?.response?.data?.message ?? e?.message,
+        });
+      } finally {
+        if (alive) setLoadingBase(false);
       }
-      toast({
-        status: 'error',
-        title: 'Error cargando datos',
-        description: e?.response?.data?.message ?? e?.message,
-      });
-    } finally {
-      if (alive) setLoadingBase(false);
-    }
-  })();
+    })();
 
-  return () => { alive = false; };
-}, [router, toast]);
+    return () => { alive = false; };
+  }, [router, toast]);
 
-  
+
 
   // Cargar modelos filtrados por categoría y marca
   useEffect(() => {
@@ -156,11 +160,10 @@ useEffect(() => {
     setCapacidadId('');
     setSku('');
     setActivo(true);
-    setEstadoComercial('NUEVO');
   }, [modeloId]);
+const requiereColor = isNewModelo ? nuevoModeloReqColor : !!selectedModelo?.requiereColor;
+const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.requiereCapacidad;
 
-  const requiereColor = selectedModelo?.requiereColor ?? nuevoModeloReqColor;
-  const requiereCapacidad = selectedModelo?.requiereCapacidad ?? nuevoModeloReqCap;
 
   // ---- crear modelo inline ----
   const openCrearModelo = () => {
@@ -175,68 +178,122 @@ useEffect(() => {
     setIsModeloOpen(true);
   };
 
-const handleCrearModelo = async () => {
-  if (!categoriaId || !marcaId || !nuevoModeloNombre.trim()) {
-    toast({ status: 'warning', title: 'Completá categoría, marca y nombre' });
-    return;
-  }
-
-  setCreatingModelo(true);
-  try {
-    const payload = {
-      categoriaId: Number(categoriaId),
-      marcaId: Number(marcaId),
-      nombre: nuevoModeloNombre.trim(),
-      trackeaImei: Boolean(nuevoModeloTrackeaImei),
-      requiereColor: Boolean(nuevoModeloReqColor),
-      requiereCapacidad: Boolean(nuevoModeloReqCap),
-    };
-
-    // Si querés forzar el header explícitamente, podés dejarlo; si no, confía en el interceptor.
-    const token = localStorage.getItem('jwt');
-    const resp = await api.post('/api/modelos', payload, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      // ⚠️ NO pongas validateStatus acá
-    });
-
-    // Sólo éxito si es 201
-    if (resp.status === 201) {
-      const creado = resp.data as Modelo;
-      setModelos(prev => [creado, ...prev]);
-      setModeloId(creado.id as any);
-      setIsModeloOpen(false);
-      toast({ status: 'success', title: 'Modelo creado' });
-    } else {
-      // Cubre cualquier 2xx inesperado que no sea 201
-      toast({ status: 'error', title: `Respuesta inesperada (${resp.status})` });
-      console.log('POST /api/modelos resp', resp.status, resp.data);
-    }
-  } catch (e: any) {
-    const status = e?.response?.status;
-    console.log('POST /api/modelos error', status, e?.response?.data);
-
-    if (status === 401) {
-      toast({ status: 'error', title: 'Sesión expirada' });
-      router.replace('/login?next=/productos/nuevo');
-      return;
-    }
-    if (status === 403) {
-      toast({ status: 'error', title: 'Sin permisos', description: 'Necesitás rol ADMIN para crear modelos.' });
+  const handleCrearModelo = async () => {
+    if (!categoriaId || !marcaId || !nuevoModeloNombre.trim()) {
+      toast({ status: 'warning', title: 'Completá categoría, marca y nombre' });
       return;
     }
 
-    toast({
-      status: 'error',
-      title: 'No se pudo crear el modelo',
-      description: e?.response?.data?.message ?? e?.message,
-    });
-  } finally {
-    setCreatingModelo(false);
-  }
-};
+    setCreatingModelo(true);
+    try {
+      const payload = {
+        categoriaId: Number(categoriaId),
+        marcaId: Number(marcaId),
+        nombre: nuevoModeloNombre.trim(),
+        trackeaImei: Boolean(nuevoModeloTrackeaImei),
+        requiereColor: Boolean(nuevoModeloReqColor),
+        requiereCapacidad: Boolean(nuevoModeloReqCap),
+      };
+
+      // Si querés forzar el header explícitamente, podés dejarlo; si no, confía en el interceptor.
+      const token = localStorage.getItem('jwt');
+      const resp = await api.post('/api/modelos', payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        // ⚠️ NO pongas validateStatus acá
+      });
+
+      // Sólo éxito si es 201
+      if (resp.status === 201) {
+        const creado = resp.data as Modelo;
+        setModelos(prev => [creado, ...prev]);
+        setModeloId(creado.id as any);
+        setIsModeloOpen(false);
+        toast({ status: 'success', title: 'Modelo creado' });
+      } else {
+        // Cubre cualquier 2xx inesperado que no sea 201
+        toast({ status: 'error', title: `Respuesta inesperada (${resp.status})` });
+        console.log('POST /api/modelos resp', resp.status, resp.data);
+      }
+    } catch (e: any) {
+      const status = e?.response?.status;
+      console.log('POST /api/modelos error', status, e?.response?.data);
+
+      if (status === 401) {
+        toast({ status: 'error', title: 'Sesión expirada' });
+        router.replace('/login?next=/productos/nuevo');
+        return;
+      }
+      if (status === 403) {
+        toast({ status: 'error', title: 'Sin permisos', description: 'Necesitás rol ADMIN para crear modelos.' });
+        return;
+      }
+
+      toast({
+        status: 'error',
+        title: 'No se pudo crear el modelo',
+        description: e?.response?.data?.message ?? e?.message,
+      });
+    } finally {
+      setCreatingModelo(false);
+    }
+  };
+
+  const openCrearCapacidad = () => {
+    setNuevaCapEtiqueta('');
+    setIsCapOpen(true);
+  };
+
+  const handleCrearCapacidad = async () => {
+    if (!nuevaCapEtiqueta.trim()) {
+      toast({ status: 'warning', title: 'Ingresá una etiqueta (ej: 128GB)' });
+      return;
+    }
+    setCreatingCap(true);
+    try {
+      const payload = { etiqueta: nuevaCapEtiqueta.trim() }; // <- si tu backend usa 'etiqueta'
+      const token = localStorage.getItem('jwt');
+      const resp = await api.post('/api/capacidades', payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
+      if (resp.status === 201) {
+        const creado = resp.data as Capacidad;
+        setCapacidades(prev => [creado, ...prev]);
+        setCapacidadId(String(creado.id));
+        setIsCapOpen(false);
+        toast({ status: 'success', title: 'Capacidad creada' });
+      } else {
+        toast({ status: 'error', title: `Respuesta inesperada (${resp.status})` });
+        console.log('POST /api/capacidades', resp.status, resp.data);
+      }
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 401) {
+        toast({ status: 'error', title: 'Sesión expirada' });
+        router.replace('/login?next=/productos/nuevo');
+        return;
+      }
+      if (status === 403) {
+        toast({ status: 'error', title: 'Sin permisos', description: 'Necesitás rol ADMIN para crear capacidades.' });
+        return;
+      }
+      if (status === 409) {
+        toast({ status: 'error', title: 'Duplicado', description: 'Ya existe una capacidad con esa etiqueta.' });
+        return;
+      }
+      toast({
+        status: 'error',
+        title: 'No se pudo crear la capacidad',
+        description: e?.response?.data?.message ?? e?.message,
+      });
+    } finally {
+      setCreatingCap(false);
+    }
+  };
 
 
-  
+
+
 
   // ---- crear variante (producto) ----
   const handleCrearVariante = async () => {
@@ -264,7 +321,6 @@ const handleCrearModelo = async () => {
         modeloId,
         colorId: requiereColor ? colorId : null,
         capacidadId: requiereCapacidad ? capacidadId : null,
-        estadoComercial, // asegurate de usar los valores EXACTOS del enum backend
         activo,
         sku: sku?.trim() || null,
       });
@@ -277,6 +333,7 @@ const handleCrearModelo = async () => {
     }
   };
 
+
   if (loadingBase) {
     return (
       <Box bg="#f6f6f6" minH="100dvh">
@@ -286,6 +343,59 @@ const handleCrearModelo = async () => {
       </Box>
     );
   }
+
+  const openCrearColor = () => {
+    setNuevoColorNombre('');
+    setIsColorOpen(true);
+  };
+
+  const handleCrearColor = async () => {
+    if (!nuevoColorNombre.trim()) {
+      toast({ status: 'warning', title: 'Ingresá un nombre de color' });
+      return;
+    }
+
+    setCreatingColor(true);
+    try {
+      const payload = { nombre: nuevoColorNombre.trim() };
+
+      const token = localStorage.getItem('jwt');
+      const resp = await api.post('/api/colores', payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
+      if (resp.status === 201) {
+        const creado = resp.data as Color;
+        // agregar a la lista y seleccionar
+        setColores(prev => [{ id: creado.id, nombre: creado.nombre }, ...prev]);
+        setColorId(String(creado.id));
+        setIsColorOpen(false);
+        toast({ status: 'success', title: 'Color creado' });
+      } else {
+        toast({ status: 'error', title: `Respuesta inesperada (${resp.status})` });
+        console.log('POST /api/colores', resp.status, resp.data);
+      }
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 401) {
+        toast({ status: 'error', title: 'Sesión expirada' });
+        router.replace('/login?next=/productos/nuevo');
+        return;
+      }
+      if (status === 403) {
+        toast({ status: 'error', title: 'Sin permisos', description: 'Necesitás rol ADMIN para crear colores.' });
+        return;
+      }
+      toast({
+        status: 'error',
+        title: 'No se pudo crear el color',
+        description: e?.response?.data?.message ?? e?.message,
+      });
+    } finally {
+      setCreatingColor(false);
+    }
+  };
+
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
@@ -337,14 +447,15 @@ const handleCrearModelo = async () => {
                 flex="1"
                 placeholder={loadingModelos ? 'Cargando modelos…' : 'Elegí modelo'}
                 value={modeloId === 'new' ? 'new' : String(modeloId || '')}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === 'new') {
-                    openCrearModelo();
-                  } else {
-                    setModeloId(v);
-                  }
-                }}
+               onChange={(e) => {
+  const v = e.target.value;
+  if (v === 'new') {
+    setModeloId('new'); 
+    openCrearModelo();
+  } else {
+    setModeloId(v);
+  }
+}}
               >
                 {modelos.map(m => (
                   <option key={m.id} value={String(m.id)}>
@@ -362,37 +473,64 @@ const handleCrearModelo = async () => {
             <Input placeholder="SKU interno" value={sku} onChange={(e) => setSku(e.target.value)} />
           </FormControl>
 
-          {/* Color (si el modelo lo requiere) */}
+
           {requiereColor && (
             <FormControl isRequired>
               <FormLabel>Color</FormLabel>
-              <Select placeholder="Elegí color" value={String(colorId)} onChange={(e) => setColorId(e.target.value)}>
-                {colores.map(c => <option key={c.id} value={String(c.id)}>{c.nombre}</option>)}
+              <Select
+                placeholder="Elegí color"
+                value={String(colorId)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === 'new-color') {
+                    openCrearColor();
+                    return;
+                  }
+                  setColorId(v);
+                }}
+              >
+                {colores.map(c => (
+                  <option key={c.id} value={String(c.id)}>{c.nombre}</option>
+                ))}
+                <option value="new-color">➕ Crear nuevo color…</option>
               </Select>
             </FormControl>
           )}
 
-          {/* Capacidad (si el modelo lo requiere) */}
           {requiereCapacidad && (
             <FormControl isRequired>
               <FormLabel>Capacidad</FormLabel>
-              <Select placeholder="Elegí capacidad" value={String(capacidadId)} onChange={(e) => setCapacidadId(e.target.value)}>
-                {capacidades.map(c => <option key={c.id} value={String(c.id)}>{c.nombre}</option>)}
+              <Select
+                placeholder="Elegí capacidad"
+                value={String(capacidadId)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === 'new-cap') {
+                    openCrearCapacidad();
+                    return;
+                  }
+                  setCapacidadId(v);
+                }}
+              >
+                {capacidades.map(c => (
+                  <option key={c.id} value={String(c.id)}>
+                    {('etiqueta' in c ? (c as any).etiqueta : (c as any).nombre)}
+                  </option>
+                ))}
+                <option value="new-cap">➕ Crear nueva capacidad…</option>
               </Select>
             </FormControl>
           )}
 
-          {/* Estado comercial */}
-          <FormControl>
+          {/* <FormControl>
             <FormLabel>Estado comercial</FormLabel>
             <Select value={estadoComercial} onChange={(e) => setEstadoComercial(e.target.value as EstadoComercial)}>
               <option value="NUEVO">NUEVO</option>
               <option value="USADO">USADO</option>
               <option value="REACONDICIONADO">REACONDICIONADO</option>
             </Select>
-          </FormControl>
+          </FormControl> */}
 
-          {/* Activo */}
           <FormControl display="flex" alignItems="center">
             <FormLabel mb="0">Activo</FormLabel>
             <Switch isChecked={activo} onChange={(e) => setActivo(e.target.checked)} />
@@ -405,7 +543,7 @@ const handleCrearModelo = async () => {
         </HStack>
       </Container>
 
-      {/* Modal: crear modelo */}
+
       <Modal isOpen={isModeloOpen} onClose={() => setIsModeloOpen(false)} isCentered>
         <ModalOverlay />
         <ModalContent>
@@ -433,13 +571,59 @@ const handleCrearModelo = async () => {
           </ModalBody>
           <ModalFooter>
             <Button mr={3} onClick={() => setIsModeloOpen(false)}>Cancelar</Button>
-            <Button colorScheme="blue" 
-             onClick={() => { 
-    console.log('[UI] click Crear modelo');
-    handleCrearModelo();
-  }}
-            isLoading={creatingModelo}>
+            <Button colorScheme="blue"
+              onClick={() => {
+                console.log('[UI] click Crear modelo');
+                handleCrearModelo();
+              }}
+              isLoading={creatingModelo}>
               Crear modelo
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isColorOpen} onClose={() => setIsColorOpen(false)} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Nuevo color</ModalHeader>
+          <ModalBody>
+            <FormControl isRequired>
+              <FormLabel>Nombre del color</FormLabel>
+              <Input
+                value={nuevoColorNombre}
+                onChange={(e) => setNuevoColorNombre(e.target.value)}
+                placeholder="Ej: Negro, Blanco, Azul medianoche…"
+              />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button mr={3} onClick={() => setIsColorOpen(false)}>Cancelar</Button>
+            <Button colorScheme="blue" onClick={handleCrearColor} isLoading={creatingColor}>
+              Crear color
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isCapOpen} onClose={() => setIsCapOpen(false)} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Nueva capacidad</ModalHeader>
+          <ModalBody>
+            <FormControl isRequired>
+              <FormLabel>Etiqueta</FormLabel>
+              <Input
+                value={nuevaCapEtiqueta}
+                onChange={(e) => setNuevaCapEtiqueta(e.target.value)}
+                placeholder="Ej: 64GB, 128GB, 256GB…"
+              />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button mr={3} onClick={() => setIsCapOpen(false)}>Cancelar</Button>
+            <Button colorScheme="blue" onClick={handleCrearCapacidad} isLoading={creatingCap}>
+              Crear capacidad
             </Button>
           </ModalFooter>
         </ModalContent>

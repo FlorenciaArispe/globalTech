@@ -1,0 +1,13 @@
+FROM node:20-alpine
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+# Copio el resto para el primer build; en compose montamos volumen para HMR
+COPY . .
+
+ENV NODE_ENV=development
+# Vite escucha 0.0.0.0 para que el host pueda acceder
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

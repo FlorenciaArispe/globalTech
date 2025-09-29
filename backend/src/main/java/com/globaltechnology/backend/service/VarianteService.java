@@ -24,17 +24,20 @@ public class VarianteService {
   }
 
   private VarianteDTO toDTO(Variante v){
-    return new VarianteDTO(
-      v.getId(),
-      v.getModelo().getId(), v.getModelo().getNombre(),
-      v.getColor()!=null ? v.getColor().getId():null,
-      v.getColor()!=null ? v.getColor().getNombre():null,
-      v.getCapacidad()!=null ? v.getCapacidad().getId():null,
-      v.getCapacidad()!=null ? v.getCapacidad().getEtiqueta():null,
-      v.getEstadoComercial(), v.isActivo(), v.getSku(),
-      v.getCreatedAt(), v.getUpdatedAt()
-    );
-  }
+  return new VarianteDTO(
+    v.getId(),
+    v.getModelo().getId(), v.getModelo().getNombre(),
+    (v.getColor() != null ? v.getColor().getId() : null),
+    (v.getColor() != null ? v.getColor().getNombre() : null),
+    (v.getCapacidad() != null ? v.getCapacidad().getId() : null),
+    (v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null),
+    v.isActivo(),                 // <-- agregado
+    v.getSku(),                   // <-- agregado
+    v.getCreatedAt(),
+    v.getUpdatedAt()
+  );
+}
+
 
   public List<VarianteDTO> list(){ return repo.findAll().stream().map(this::toDTO).toList(); }
   public VarianteDTO get(Long id){
@@ -64,7 +67,6 @@ public class VarianteService {
 
     var v = Variante.builder()
       .modelo(modelo).color(color).capacidad(cap)
-      .estadoComercial(dto.estadoComercial())
       .activo(dto.activo()==null ? true : dto.activo())
       .sku(dto.sku())
       .build();
@@ -96,7 +98,6 @@ public class VarianteService {
     v.setModelo(modelo);
     v.setColor(color);
     v.setCapacidad(cap);
-    v.setEstadoComercial(dto.estadoComercial());
     if (dto.activo()!=null) v.setActivo(dto.activo());
     v.setSku(dto.sku());
     return toDTO(repo.save(v));

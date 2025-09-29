@@ -39,14 +39,10 @@ services:
     ports:
       - "8085:8080"
 
-  # === ADMIN (ya lo tenías) ===
   frontend:
     build:
       context: ./frontend-admin
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE}
-        INTERNAL_API_BASE: ${INTERNAL_API_BASE}
+    #  dockerfile: Dockerfile
     container_name: gt_frontend_admin
     environment:
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE}
@@ -75,38 +71,35 @@ services:
     depends_on:
       - backend
 
-  # === PUBLICO (nuevo) ===
-  frontend-publico:
+  # === NUEVO: catálogo producción (Nginx en 3001) ===
+  catalog:
     build:
-      context: ./frontend-publico
+      context: ./catalogo
       dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE_PUBLIC}
-        INTERNAL_API_BASE: ${INTERNAL_API_BASE_PUBLIC}
-    container_name: gt_frontend_publico
+      # Si quisieras compilar con una base distinta:
+      # args:
+      #   VITE_API_BASE: ${CATALOGO_API_BASE:-/api}
+    container_name: gt_catalog
     environment:
-      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE_PUBLIC}
-      INTERNAL_API_BASE: ${INTERNAL_API_BASE_PUBLIC}
+      VITE_API_BASE: ${CATALOGO_API_BASE:-/api}
     ports:
-      - "3001:3000"
+      - "3001:80"
     depends_on:
       - backend
 
-  frontend-publico-dev:
+  # === NUEVO: catálogo desarrollo (Vite dev server en 5173) ===
+  catalog-dev:
     build:
-      context: ./frontend-publico
+      context: ./catalogo
       dockerfile: Dockerfile.dev
-    container_name: gt_frontend_publico_dev
+    container_name: gt_catalog_dev
     environment:
-      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE_PUBLIC}
-      INTERNAL_API_BASE: ${INTERNAL_API_BASE_PUBLIC}
+      VITE_API_BASE: ${CATALOGO_API_BASE:-/api}
       NODE_ENV: development
-      CHOKIDAR_USEPOLLING: "true"
-      WATCHPACK_POLLING: "true"
     ports:
-      - "3001:3000"
+      - "5173:5173"
     volumes:
-      - ./frontend-publico:/app
+      - ./catalogo:/app
       - /app/node_modules
     depends_on:
       - backend

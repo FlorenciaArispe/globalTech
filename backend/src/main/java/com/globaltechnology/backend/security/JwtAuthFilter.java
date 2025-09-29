@@ -28,33 +28,29 @@ public class JwtAuthFilter extends OncePerRequestFilter {
   }
 
   @Override
-  protected void doFilterInternal(HttpServletRequest request,
-                                  HttpServletResponse response,
-                                  FilterChain chain)
-      throws ServletException, IOException {
+protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    throws ServletException, IOException {
 
-   String authHeader = request.getHeader("Authorization");
-if (authHeader != null && authHeader.startsWith("Bearer ")) {
-  String token = authHeader.substring(7);
-
-  // Validá primero, NO extraigas antes
-  if (jwtService.isTokenValid(token) &&
-      SecurityContextHolder.getContext().getAuthentication() == null) {
+  String authHeader = request.getHeader("Authorization");
+  if (authHeader != null && authHeader.startsWith("Bearer ")) {
+    String token = authHeader.substring(7);
     String username = jwtService.extractUsername(token);
 
-    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-    UsernamePasswordAuthenticationToken authToken =
-        new UsernamePasswordAuthenticationToken(
-            userDetails, null, userDetails.getAuthorities());
-    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-    SecurityContextHolder.getContext().setAuthentication(authToken);
+    if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+      UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+      if (jwtService.isTokenValid(token, userDetails)) {  // <-- valida subject y expiración
+        var authToken = new UsernamePasswordAuthenticationToken(
+            userDetails, null, userDetails.getAuthorities()
+        );
+        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authToken);
+      }
+    }
   }
+  chain.doFilter(request, response);
 }
-chain.doFilter(request, response);
 
-  }
-
-  @Override
+ @Override
 protected boolean shouldNotFilter(HttpServletRequest request) {
   String path = request.getServletPath();
   return path.equals("/auth/login") || path.startsWith("/actuator/");
