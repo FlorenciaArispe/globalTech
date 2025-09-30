@@ -17,6 +17,7 @@ public class CategoriaService {
   private static CategoriaDTO toDTO(Categoria c){ return new CategoriaDTO(c.getId(), c.getNombre()); }
 
   public List<CategoriaDTO> list(){ return repo.findAll().stream().map(CategoriaService::toDTO).toList(); }
+  
   public CategoriaDTO get(Long id){
     var c = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Categoría no encontrada"));
     return toDTO(c);

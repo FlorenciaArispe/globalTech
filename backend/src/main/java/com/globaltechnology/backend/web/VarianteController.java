@@ -13,7 +13,7 @@ public class VarianteController {
   private final VarianteService service;
   public VarianteController(VarianteService service){ this.service = service; }
 
-  @GetMapping public List<VarianteDTO> list(){ return service.list(); }
+  @GetMapping public List<VarianteDTO> list(){ return service.list(); } // ahora incluye stockDisponible
   @GetMapping("/{id}") public VarianteDTO get(@PathVariable Long id){ return service.get(id); }
 
   @PostMapping @ResponseStatus(HttpStatus.CREATED)

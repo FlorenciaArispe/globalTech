@@ -1,5 +1,19 @@
 // ModeloRepository.java
 package com.globaltechnology.backend.repository;
+
 import com.globaltechnology.backend.domain.Modelo;
 import org.springframework.data.jpa.repository.JpaRepository;
-public interface ModeloRepository extends JpaRepository<Modelo, Long> {}
+
+import java.util.List;
+
+public interface ModeloRepository extends JpaRepository<Modelo, Long> {
+
+  // Filtros que usa el front
+  List<Modelo> findAllByCategoria_IdAndMarca_Id(Long categoriaId, Long marcaId);
+  List<Modelo> findAllByCategoria_Id(Long categoriaId);
+  List<Modelo> findAllByMarca_Id(Long marcaId);
+
+  // Duplicados por marca + nombre (case-insensitive)
+  boolean existsByMarca_IdAndNombreIgnoreCase(Long marcaId, String nombre);
+  boolean existsByMarca_IdAndNombreIgnoreCaseAndIdNot(Long marcaId, String nombre, Long excludeId);
+}

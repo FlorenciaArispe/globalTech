@@ -6,7 +6,6 @@ export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE, // http://localhost:8085
   headers: { 'Content-Type': 'application/json' },
 });
-
 // NO seteamos Authorization por default acá. Siempre via interceptor.
 
 api.interceptors.request.use((config) => {

@@ -3,13 +3,22 @@ package com.globaltechnology.backend.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
+// Variante.java
 @Entity
-@Table(name = "variantes",
-       indexes = {
-         @Index(name = "idx_variante_modelo", columnList = "modelo_id"),
-         @Index(name = "idx_variante_color", columnList = "color_id"),
-         @Index(name = "idx_variante_capacidad", columnList = "capacidad_id")
-       })
+@Table(
+  name = "variantes",
+  indexes = {
+    @Index(name = "idx_variante_modelo", columnList = "modelo_id"),
+    @Index(name = "idx_variante_color", columnList = "color_id"),
+    @Index(name = "idx_variante_capacidad", columnList = "capacidad_id")
+  },
+  uniqueConstraints = {
+    @UniqueConstraint(
+      name = "uk_variante_modelo_color_capacidad",
+      columnNames = {"modelo_id","color_id","capacidad_id"}
+    )
+  }
+)
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(of = "id")
 public class Variante extends Auditable {
@@ -29,5 +38,5 @@ public class Variante extends Auditable {
   private boolean activo = true;
 
   @Column(name = "sku", unique = true, length = 80)
-  private String sku; // opcional, pero recomendable
+  private String sku; // opcional
 }

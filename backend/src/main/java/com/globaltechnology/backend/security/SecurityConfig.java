@@ -73,6 +73,18 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.PUT, "/api/capacidades/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.DELETE, "/api/capacidades/**").hasRole("ADMIN")
 
+            // UNIDADES
+            .requestMatchers(HttpMethod.GET, "/api/unidades/**").hasAnyRole("ADMIN", "OPERADOR")
+            .requestMatchers(HttpMethod.POST, "/api/unidades/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/api/unidades/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/unidades/**").hasRole("ADMIN")
+
+            // VARIENTES
+            .requestMatchers(HttpMethod.GET, "/api/variantes/**").hasAnyRole("ADMIN", "OPERADOR")
+            .requestMatchers(HttpMethod.POST, "/api/variantes/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/api/variantes/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/variantes/**").hasRole("ADMIN")
+
             // catch-all (si algo no matcheó arriba)
             .requestMatchers("/api/**").hasRole("ADMIN")
 

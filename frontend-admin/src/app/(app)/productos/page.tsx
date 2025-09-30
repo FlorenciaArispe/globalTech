@@ -13,15 +13,25 @@ import { api } from '@/lib/axios';
 
 type Id = number | string;
 
-type VarianteApi = any; // ajustá a tu DTO real
+/** === Tipos devueltos por /api/modelos/tabla === */
+type VarianteResumenDTO = {
+  id: Id;
+  nombre: string;              // ej: "Blanco 128GB", "Negro", "128GB"
+  colorNombre?: string | null;
+  capacidadEtiqueta?: string | null;
+  stock: number;
+  precio?: number | null;      // si hoy no lo manejás, vendrá null
+  precioPromo?: number | null; // opcional
+};
 
-type ModeloRow = {
-  modeloId: Id;
-  modeloNombre: string;
-  imagenUrl?: string | null;
-  stockTotal: number;
-  precioMin: number | null;
-  colores: string[]; // únicos
+type ModeloTablaDTO = {
+  id: Id;
+  nombre: string;
+  categoriaId: Id;
+  categoriaNombre: string;
+  marcaId: Id;
+  marcaNombre: string;
+  variantes: VarianteResumenDTO[];
 };
 
 const PLACEHOLDER_DATAURI =
@@ -42,7 +52,7 @@ export default function Productos() {
   const toast = useToast();
   const router = useRouter();
 
-  const [rows, setRows] = useState<ModeloRow[]>([]);
+  const [rows, setRows] = useState<ModeloTablaDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<Id | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
@@ -51,11 +61,13 @@ export default function Productos() {
     let alive = true;
     (async () => {
       try {
-        // Trae variantes y agrupamos por modelo
-        const { data } = await api.get('/api/variantes'); // ajustá si tu endpoint es otro
+        // ✅ ahora consumimos el endpoint de “modelos con variantes”
+        const { data } = await api.get<ModeloTablaDTO[]>('/api/modelos/tabla');
+
+        console.log("TABLA", data)
+
         if (!alive) return;
-        const grouped = groupVariantsByModelo(data as VarianteApi[]);
-        setRows(grouped);
+        setRows(Array.isArray(data) ? data : []);
       } catch (e: any) {
         const status = e?.response?.status;
         if (status === 401) {
@@ -75,7 +87,6 @@ export default function Productos() {
   }, [router, toast]);
 
   const onEdit = (modeloId: Id) => {
-    // Ruta de edición de MODELO (ajustá si usás otra)
     router.push(`/modelos/${modeloId}/editar`);
   };
 
@@ -84,9 +95,8 @@ export default function Productos() {
   const onDelete = async () => {
     if (!deletingId) return;
     try {
-      // Borrás el MODELO (si hay FK a variantes, tu backend debería impedirlo o borrar en cascada)
       await api.delete(`/api/modelos/${deletingId}`);
-      setRows(prev => prev.filter(r => String(r.modeloId) !== String(deletingId)));
+      setRows(prev => prev.filter(r => String(r.id) !== String(deletingId)));
       toast({ status: 'success', title: 'Modelo eliminado' });
     } catch (e: any) {
       const status = e?.response?.status;
@@ -120,14 +130,13 @@ export default function Productos() {
           />
         </HStack>
 
-        {/* Loading */}
         {loading && (
           <Flex bg="white" borderRadius="md" borderWidth="1px" py={20} align="center" justify="center">
             <Spinner />
           </Flex>
         )}
 
-        {/* Empty */}
+
         {!loading && rows.length === 0 && (
           <Flex direction="column" gap={3} bg="white" borderRadius="md" borderWidth="1px" p={6} align="center">
             <Text color="gray.600">Aún no hay productos.</Text>
@@ -137,7 +146,7 @@ export default function Productos() {
           </Flex>
         )}
 
-        {/* Table */}
+
         {!loading && rows.length > 0 && (
           <Box bg="white" borderRadius="md" borderWidth="1px" overflowX="auto">
             <Table size="md">
@@ -145,74 +154,93 @@ export default function Productos() {
                 <Tr>
                   <Th>Producto</Th>
                   <Th>Stock</Th>
-                  <Th isNumeric>Precio (min)</Th>
-                  <Th>Variantes</Th>
+                  <Th isNumeric>Precio</Th>
+                  <Th>Variante</Th>
                   <Th textAlign="right">Acciones</Th>
                 </Tr>
               </Thead>
               <Tbody>
-                {rows.map(row => (
-                  <Tr key={String(row.modeloId)} _hover={{ bg: 'gray.50' }}>
-                    <Td>
-                      <HStack spacing={3}>
-                        <Image
-                          src={row.imagenUrl || PLACEHOLDER_DATAURI}
-                          alt={row.modeloNombre}
-                          boxSize="48px"
-                          borderRadius="md"
-                          objectFit="cover"
-                          border="1px solid"
-                          borderColor="gray.200"
-                        />
-                        <Text fontWeight={600}>{row.modeloNombre}</Text>
-                      </HStack>
-                    </Td>
-                    <Td>
-                      {row.stockTotal > 0 ? (
-                        <Badge colorScheme="green">{row.stockTotal} u.</Badge>
-                      ) : (
-                        <Badge colorScheme="red">Sin stock</Badge>
-                      )}
-                    </Td>
-                    <Td isNumeric>
-                      <Text>{row.precioMin != null ? money(row.precioMin) : '—'}</Text>
-                    </Td>
-                    <Td>
-                      {row.colores.length > 0 ? (
-                        <HStack wrap="wrap" spacing={1}>
-                          {row.colores.slice(0, 3).map((c) => <Tag key={c}>{c}</Tag>)}
-                          {row.colores.length > 3 && <Tag>+{row.colores.length - 3}</Tag>}
-                        </HStack>
-                      ) : (
-                        <Text color="gray.500">—</Text>
-                      )}
-                    </Td>
-                    <Td>
-                      <HStack justify="flex-end" spacing={1}>
-                        <IconButton
-                          aria-label="Editar modelo"
-                          icon={<Pencil size={16} />}
-                          variant="ghost"
-                          onClick={() => onEdit(row.modeloId)}
-                        />
-                        <IconButton
-                          aria-label="Eliminar modelo"
-                          icon={<Trash2 size={16} />}
-                          variant="ghost"
-                          colorScheme="red"
-                          onClick={() => onAskDelete(row.modeloId)}
-                        />
-                      </HStack>
-                    </Td>
-                  </Tr>
-                ))}
+                {rows.map(modelo => {
+                  const stockTotal = (modelo.variantes ?? []).reduce((acc, v) => acc + (v.stock ?? 0), 0);
+                  // precio mínimo a modo de resumen (puede ser null si no tenés precios aún)
+                  const precios = (modelo.variantes ?? []).map(v => v.precio).filter((p): p is number => p != null);
+                  const precioMin = precios.length ? Math.min(...precios) : null;
+
+                  return (
+                    <Fragment key={String(modelo.id)}>
+                      <Tr _hover={{ bg: 'gray.50' }}>
+                        <Td>
+                          <HStack spacing={3}>
+                            <Image
+                              src={PLACEHOLDER_DATAURI}
+                              alt={modelo.nombre}
+                              boxSize="48px"
+                              borderRadius="md"
+                              objectFit="cover"
+                              border="1px solid"
+                              borderColor="gray.200"
+                            />
+                            <Text fontWeight={600}>{modelo.nombre}</Text>
+                          </HStack>
+                        </Td>
+                        <Td>
+                          {stockTotal > 0 ? (
+                            <Badge colorScheme="green">{stockTotal} u.</Badge>
+                          ) : (
+                            <Badge colorScheme="red">Sin stock</Badge>
+                          )}
+                        </Td>
+                        <Td isNumeric>
+                          <Text>{precioMin != null ? money(precioMin) : '—'}</Text>
+                        </Td>
+                        <Td></Td>
+                        <Td>
+                          <HStack justify="flex-end" spacing={1}>
+                            <IconButton
+                              aria-label="Editar modelo"
+                              icon={<Pencil size={16} />}
+                              variant="ghost"
+                              onClick={() => onEdit(modelo.id)}
+                            />
+                            <IconButton
+                              aria-label="Eliminar modelo"
+                              icon={<Trash2 size={16} />}
+                              variant="ghost"
+                              colorScheme="red"
+                              onClick={() => onAskDelete(modelo.id)}
+                            />
+                          </HStack>
+                        </Td>
+                      </Tr>
+
+                      {(modelo.variantes ?? []).map((v) => (
+                        <Tr key={String(v.id)} _hover={{ bg: 'gray.50' }}>
+                          <Td />
+                          <Td>
+                            {v.stock > 0 ? (
+                              <Badge colorScheme="green">{v.stock} u.</Badge>
+                            ) : (
+                              <Badge colorScheme="red">Sin stock</Badge>
+                            )}
+                          </Td>
+                          <Td isNumeric>
+                            <Text>{v.precio != null ? money(v.precio) : '—'}</Text>
+                          </Td>
+                          <Td>
+                            <Tag>{v.nombre}</Tag>
+                          </Td>
+                          <Td>{/* acciones */}</Td>
+                        </Tr>
+                      ))}
+                    </Fragment>
+                  );
+                })}
               </Tbody>
             </Table>
           </Box>
         )}
       </Container>
 
-      {/* Confirmación eliminar */}
       <AlertDialog
         isOpen={!!deletingId}
         leastDestructiveRef={cancelRef}
@@ -235,59 +263,4 @@ export default function Productos() {
   );
 }
 
-/** Agrupa las variantes por modelo y calcula agregados */
-function groupVariantsByModelo(variantes: VarianteApi[]): ModeloRow[] {
-  if (!Array.isArray(variantes)) return [];
-
-  // mapa: modeloId -> acumulador
-  const acc = new Map<string, {
-    id: Id;
-    nombre: string;
-    imagenUrl?: string | null;
-    stock: number;
-    precios: number[];
-    colores: Set<string>;
-  }>();
-
-  for (const v of variantes) {
-    const modeloId: Id =
-      v?.modeloId ?? v?.modelo?.id ?? v?.model_id ?? v?.modelo_uuid ?? v?.modelo ?? '';
-    const modeloNombre: string =
-      v?.modeloNombre ?? v?.modelo?.nombre ?? v?.modelo_name ?? v?.modeloLabel ?? '—';
-    const imagenUrl: string | null =
-      v?.modeloImagenUrl ?? v?.modelo?.imagenUrl ?? v?.imagenUrl ?? v?.imageUrl ?? null;
-
-    const stock = Number(v?.stock ?? v?.cantidad ?? v?.inventario ?? v?.qty ?? 0);
-    const precioRaw = v?.precio ?? v?.price;
-    const precio = precioRaw != null ? Number(precioRaw) : null;
-
-    const colorNombre: string | null =
-      v?.colorNombre ?? v?.color?.nombre ?? v?.color_name ?? v?.color ?? null;
-
-    const key = String(modeloId);
-    if (!acc.has(key)) {
-      acc.set(key, {
-        id: modeloId,
-        nombre: modeloNombre,
-        imagenUrl,
-        stock: 0,
-        precios: [],
-        colores: new Set<string>(),
-      });
-    }
-    const item = acc.get(key)!;
-    item.stock += isFinite(stock) ? stock : 0;
-    if (precio != null && isFinite(precio)) item.precios.push(precio);
-    if (colorNombre) item.colores.add(String(colorNombre));
-  }
-
-  // transform
-  return Array.from(acc.values()).map((m) => ({
-    modeloId: m.id,
-    modeloNombre: m.nombre,
-    imagenUrl: m.imagenUrl,
-    stockTotal: m.stock,
-    precioMin: m.precios.length ? Math.min(...m.precios) : null,
-    colores: Array.from(m.colores),
-  }));
-}
+import { Fragment } from 'react';

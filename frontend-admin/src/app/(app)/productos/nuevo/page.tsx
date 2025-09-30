@@ -9,16 +9,11 @@ import {
 import { ArrowLeft, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/axios';
-import { getToken } from '@/lib/auth';
 
 type Id = number | string;
-
-// ====== Tipos básicos (ajustá a tus DTO reales) ======
 type Categoria = { id: Id; nombre: string };
 type Marca = { id: Id; nombre: string };
 
-// Incluyo flags en Modelo para no tener que pedir detalle aparte.
-// Si tu listado de modelos no trae flags, hacé un GET /api/modelos/{id} al seleccionar.
 type Modelo = {
   id: Id;
   nombre: string;
@@ -36,8 +31,6 @@ type Capacidad = { id: Id; etiqueta: string };
 export default function NuevoProductoPage() {
   const toast = useToast();
   const router = useRouter();
-
-  // ---------- listas base ----------
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [marcas, setMarcas] = useState<Marca[]>([]);
   const [modelos, setModelos] = useState<Modelo[]>([]);
@@ -49,43 +42,31 @@ export default function NuevoProductoPage() {
   const [isCapOpen, setIsCapOpen] = useState(false);
   const [nuevaCapEtiqueta, setNuevaCapEtiqueta] = useState('');
   const [creatingCap, setCreatingCap] = useState(false);
-
   const [loadingBase, setLoadingBase] = useState(true);
   const [loadingModelos, setLoadingModelos] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // ---------- selección ----------
   const [categoriaId, setCategoriaId] = useState<Id>('');
   const [marcaId, setMarcaId] = useState<Id>('');
   const [modeloId, setModeloId] = useState<Id | 'new'>('');
 
   const isNewModelo = modeloId === 'new' || !modeloId;
 
- const selectedModelo = useMemo(() => {
-  if (isNewModelo) return undefined;
-  return modelos.find(m => String(m.id) === String(modeloId));
-}, [isNewModelo, modeloId, modelos]);
+  const selectedModelo = useMemo(() => {
+    if (isNewModelo) return undefined;
+    return modelos.find(m => String(m.id) === String(modeloId));
+  }, [isNewModelo, modeloId, modelos]);
 
-  // ---------- campos de variante ----------
   const [colorId, setColorId] = useState<Id>('');
   const [capacidadId, setCapacidadId] = useState<Id>('');
   const [sku, setSku] = useState('');
   const [activo, setActivo] = useState(true);
 
-  // ---------- modal crear modelo ----------
   const [isModeloOpen, setIsModeloOpen] = useState(false);
   const [nuevoModeloNombre, setNuevoModeloNombre] = useState('');
   const [nuevoModeloTrackeaImei, setNuevoModeloTrackeaImei] = useState(false);
   const [nuevoModeloReqColor, setNuevoModeloReqColor] = useState(false);
   const [nuevoModeloReqCap, setNuevoModeloReqCap] = useState(false);
   const [creatingModelo, setCreatingModelo] = useState(false);
-
-  useEffect(() => {
-    console.log('[NuevoProducto] jwt al montar =', localStorage.getItem('jwt'));
-    // ... tus fetch a /api/categorias, /api/marcas, etc.
-  }, []);
-
-
 
   useEffect(() => {
     let alive = true;
@@ -122,9 +103,6 @@ export default function NuevoProductoPage() {
     return () => { alive = false; };
   }, [router, toast]);
 
-
-
-  // Cargar modelos filtrados por categoría y marca
   useEffect(() => {
     const hasFilters = categoriaId && marcaId;
     if (!hasFilters) {
@@ -154,18 +132,16 @@ export default function NuevoProductoPage() {
     return () => { alive = false; };
   }, [categoriaId, marcaId, toast]);
 
-  // Reset de campos dependientes al cambiar modelo
   useEffect(() => {
     setColorId('');
     setCapacidadId('');
     setSku('');
     setActivo(true);
   }, [modeloId]);
-const requiereColor = isNewModelo ? nuevoModeloReqColor : !!selectedModelo?.requiereColor;
-const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.requiereCapacidad;
 
+  const requiereColor = isNewModelo ? nuevoModeloReqColor : !!selectedModelo?.requiereColor;
+  const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.requiereCapacidad;
 
-  // ---- crear modelo inline ----
   const openCrearModelo = () => {
     if (!categoriaId || !marcaId) {
       toast({ status: 'warning', title: 'Elegí categoría y marca primero' });
@@ -194,15 +170,11 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
         requiereColor: Boolean(nuevoModeloReqColor),
         requiereCapacidad: Boolean(nuevoModeloReqCap),
       };
-
-      // Si querés forzar el header explícitamente, podés dejarlo; si no, confía en el interceptor.
       const token = localStorage.getItem('jwt');
       const resp = await api.post('/api/modelos', payload, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        // ⚠️ NO pongas validateStatus acá
       });
 
-      // Sólo éxito si es 201
       if (resp.status === 201) {
         const creado = resp.data as Modelo;
         setModelos(prev => [creado, ...prev]);
@@ -210,7 +182,6 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
         setIsModeloOpen(false);
         toast({ status: 'success', title: 'Modelo creado' });
       } else {
-        // Cubre cualquier 2xx inesperado que no sea 201
         toast({ status: 'error', title: `Respuesta inesperada (${resp.status})` });
         console.log('POST /api/modelos resp', resp.status, resp.data);
       }
@@ -250,7 +221,7 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
     }
     setCreatingCap(true);
     try {
-      const payload = { etiqueta: nuevaCapEtiqueta.trim() }; // <- si tu backend usa 'etiqueta'
+      const payload = { etiqueta: nuevaCapEtiqueta.trim() };
       const token = localStorage.getItem('jwt');
       const resp = await api.post('/api/capacidades', payload, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -291,13 +262,7 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
     }
   };
 
-
-
-
-
-  // ---- crear variante (producto) ----
   const handleCrearVariante = async () => {
-    // Validaciones básicas
     if (!categoriaId || !marcaId) {
       toast({ status: 'warning', title: 'Seleccioná categoría y marca' });
       return;
@@ -325,7 +290,7 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
         sku: sku?.trim() || null,
       });
       toast({ status: 'success', title: 'Producto creado' });
-      router.replace('/productos'); // o a detalle si querés
+      router.replace('/productos');
     } catch (e: any) {
       toast({ status: 'error', title: 'No se pudo crear el producto', description: e?.response?.data?.message ?? e?.message });
     } finally {
@@ -366,7 +331,6 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
 
       if (resp.status === 201) {
         const creado = resp.data as Color;
-        // agregar a la lista y seleccionar
         setColores(prev => [{ id: creado.id, nombre: creado.nombre }, ...prev]);
         setColorId(String(creado.id));
         setIsColorOpen(false);
@@ -423,7 +387,7 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
         </HStack>
 
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} bg="white" p={4} borderRadius="md" borderWidth="1px">
-          {/* Categoría */}
+
           <FormControl isRequired>
             <FormLabel>Categoría</FormLabel>
             <Select placeholder="Elegí categoría" value={String(categoriaId)} onChange={(e) => setCategoriaId(e.target.value)}>
@@ -431,7 +395,6 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
             </Select>
           </FormControl>
 
-          {/* Marca */}
           <FormControl isRequired>
             <FormLabel>Marca</FormLabel>
             <Select placeholder="Elegí marca" value={String(marcaId)} onChange={(e) => setMarcaId(e.target.value)}>
@@ -439,7 +402,6 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
             </Select>
           </FormControl>
 
-          {/* Modelo */}
           <FormControl isRequired isDisabled={!categoriaId || !marcaId}>
             <FormLabel>Modelo</FormLabel>
             <HStack align="start">
@@ -447,15 +409,15 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
                 flex="1"
                 placeholder={loadingModelos ? 'Cargando modelos…' : 'Elegí modelo'}
                 value={modeloId === 'new' ? 'new' : String(modeloId || '')}
-               onChange={(e) => {
-  const v = e.target.value;
-  if (v === 'new') {
-    setModeloId('new'); 
-    openCrearModelo();
-  } else {
-    setModeloId(v);
-  }
-}}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === 'new') {
+                    setModeloId('new');
+                    openCrearModelo();
+                  } else {
+                    setModeloId(v);
+                  }
+                }}
               >
                 {modelos.map(m => (
                   <option key={m.id} value={String(m.id)}>
@@ -467,12 +429,10 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
             </HStack>
           </FormControl>
 
-          {/* SKU (opcional) */}
           <FormControl>
             <FormLabel>SKU (opcional)</FormLabel>
             <Input placeholder="SKU interno" value={sku} onChange={(e) => setSku(e.target.value)} />
           </FormControl>
-
 
           {requiereColor && (
             <FormControl isRequired>
@@ -521,15 +481,6 @@ const requiereCapacidad = isNewModelo ? nuevoModeloReqCap : !!selectedModelo?.re
               </Select>
             </FormControl>
           )}
-
-          {/* <FormControl>
-            <FormLabel>Estado comercial</FormLabel>
-            <Select value={estadoComercial} onChange={(e) => setEstadoComercial(e.target.value as EstadoComercial)}>
-              <option value="NUEVO">NUEVO</option>
-              <option value="USADO">USADO</option>
-              <option value="REACONDICIONADO">REACONDICIONADO</option>
-            </Select>
-          </FormControl> */}
 
           <FormControl display="flex" alignItems="center">
             <FormLabel mb="0">Activo</FormLabel>

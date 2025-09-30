@@ -4,8 +4,15 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "modelos",
-       uniqueConstraints = @UniqueConstraint(name = "uk_modelo_marca_nombre", columnNames = {"marca_id","nombre"}))
+@Table(
+  name = "modelos",
+  uniqueConstraints = @UniqueConstraint(name = "uk_modelo_marca_nombre", columnNames = {"marca_id","nombre"}),
+  indexes = {
+    @Index(name = "idx_modelo_categoria", columnList = "categoria_id"),
+    @Index(name = "idx_modelo_marca", columnList = "marca_id")
+  }
+)
+
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(of = "id")
 public class Modelo {

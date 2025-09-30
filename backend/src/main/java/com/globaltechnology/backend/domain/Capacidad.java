@@ -12,5 +12,5 @@ public class Capacidad {
   private Long id;
 
   @Column(name = "etiqueta", nullable = false, unique = true, length = 60)
-  private String etiqueta; // 64GB, 128GB, 256GB, etc.
+  private String etiqueta; 
 }

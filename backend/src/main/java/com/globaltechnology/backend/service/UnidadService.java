@@ -28,7 +28,8 @@ public class UnidadService {
   }
 
   public UnidadDTO get(Long id){
-    var u = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Unidad no encontrada"));
+    var u = repo.findById(id)
+      .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Unidad no encontrada"));
     return toDTO(u);
   }
 
@@ -40,7 +41,7 @@ public class UnidadService {
     if (v.getModelo().isTrackeaImei()) {
       if (dto.imei()==null || dto.imei().isBlank())
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"IMEI requerido para este modelo");
-      if (repo.findByImei(dto.imei()).isPresent())
+      if (repo.existsByImei(dto.imei()))
         throw new ResponseStatusException(HttpStatus.CONFLICT,"IMEI ya registrado");
     }
 
@@ -50,7 +51,7 @@ public class UnidadService {
       .numeroSerie(dto.numeroSerie())
       .bateriaCondicionPct(dto.bateriaCondicionPct())
       .costoUnitario(dto.costoUnitario())
-      .estadoStock(EstadoStock.EN_STOCK)
+      .estadoStock(EstadoStock.EN_STOCK) // default
       .observaciones(dto.observaciones())
       .build();
 
@@ -59,18 +60,31 @@ public class UnidadService {
 
   @Transactional
   public UnidadDTO update(Long id, UnidadUpdateDTO dto){
-    var u = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Unidad no encontrada"));
+    var u = repo.findById(id)
+      .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Unidad no encontrada"));
+
     if (dto.bateriaCondicionPct()!=null) u.setBateriaCondicionPct(dto.bateriaCondicionPct());
-    if (dto.costoUnitario()!=null) u.setCostoUnitario(dto.costoUnitario());
-    if (dto.observaciones()!=null) u.setObservaciones(dto.observaciones());
-    if (dto.estadoStock()!=null) u.setEstadoStock(dto.estadoStock());
+    if (dto.costoUnitario()!=null)     u.setCostoUnitario(dto.costoUnitario());
+    if (dto.observaciones()!=null)     u.setObservaciones(dto.observaciones());
+    if (dto.estadoStock()!=null)       u.setEstadoStock(dto.estadoStock());
+
     return toDTO(repo.save(u));
   }
 
+  // Versión “simple” (tuya), sólo EN_STOCK
   public List<UnidadDTO> listByVariante(Long varianteId){
     var v = varianteRepo.findById(varianteId)
       .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Variante no encontrada"));
     return repo.findByVarianteAndEstadoStock(v, EstadoStock.EN_STOCK)
+      .stream().map(this::toDTO).toList();
+  }
+
+  // Versión alternativa con filtro opcional de estados (por query param)
+  public List<UnidadDTO> listByVariante(Long varianteId, List<EstadoStock> estados){
+    if (!varianteRepo.existsById(varianteId))
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Variante no encontrada");
+    var filtros = (estados==null || estados.isEmpty()) ? List.of(EstadoStock.EN_STOCK) : estados;
+    return repo.findAllByVariante_IdAndEstadoStockIn(varianteId, filtros)
       .stream().map(this::toDTO).toList();
   }
 }

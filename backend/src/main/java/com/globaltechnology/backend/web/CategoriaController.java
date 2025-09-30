@@ -15,6 +15,7 @@ public class CategoriaController {
   public CategoriaController(CategoriaService service){ this.service = service; }
 
   @GetMapping public List<CategoriaDTO> list(){ return service.list(); }
+  
   @GetMapping("/{id}") public CategoriaDTO get(@PathVariable Long id){ return service.get(id); }
 
   @PostMapping @ResponseStatus(HttpStatus.CREATED)
