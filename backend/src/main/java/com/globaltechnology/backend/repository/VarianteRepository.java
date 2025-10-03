@@ -1,4 +1,3 @@
-// VarianteRepository.java
 package com.globaltechnology.backend.repository;
 
 import com.globaltechnology.backend.domain.*;
@@ -9,10 +8,8 @@ import java.util.Collection;
 import java.util.List;
 
 public interface VarianteRepository extends JpaRepository<Variante, Long> {
-  List<Variante> findByModeloAndActivoTrue(Modelo modelo);
     boolean existsByModelo_Id(Long modeloId);
   boolean existsByModeloAndColorAndCapacidad(Modelo modelo, Color color, Capacidad capacidad);
-  boolean existsBySku(String sku);
   List<Variante> findAllByModelo_Id(Long modeloId);
   List<Variante> findAllByIdIn(Collection<Long> ids);
 
@@ -28,6 +25,7 @@ public interface VarianteRepository extends JpaRepository<Variante, Long> {
     Long getModeloId();
     long getVariantes();
   }
+  List<Variante> findByModelo(Modelo modelo);
+  List<Variante> findAllByModelo_IdIn(List<Long> modeloIds);
 
-    List<Variante> findAllByModelo_IdInAndActivoTrue(Collection<Long> modeloIds);
 }

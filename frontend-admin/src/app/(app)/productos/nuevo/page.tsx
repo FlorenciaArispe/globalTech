@@ -155,6 +155,7 @@ export default function NuevoProductoPage() {
   };
 
   const handleCrearModelo = async () => {
+      console.log("entre" )
     if (!categoriaId || !marcaId || !nuevoModeloNombre.trim()) {
       toast({ status: 'warning', title: 'Completá categoría, marca y nombre' });
       return;
@@ -170,6 +171,7 @@ export default function NuevoProductoPage() {
         requiereColor: Boolean(nuevoModeloReqColor),
         requiereCapacidad: Boolean(nuevoModeloReqCap),
       };
+      console.log("payload", payload)
       const token = localStorage.getItem('jwt');
       const resp = await api.post('/api/modelos', payload, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -183,7 +185,7 @@ export default function NuevoProductoPage() {
         toast({ status: 'success', title: 'Modelo creado' });
       } else {
         toast({ status: 'error', title: `Respuesta inesperada (${resp.status})` });
-        console.log('POST /api/modelos resp', resp.status, resp.data);
+        console.log('POST /api/modelos resp', resp);
       }
     } catch (e: any) {
       const status = e?.response?.status;
@@ -286,8 +288,6 @@ export default function NuevoProductoPage() {
         modeloId,
         colorId: requiereColor ? colorId : null,
         capacidadId: requiereCapacidad ? capacidadId : null,
-        activo,
-        sku: sku?.trim() || null,
       });
       toast({ status: 'success', title: 'Producto creado' });
       router.replace('/productos');
@@ -429,10 +429,10 @@ export default function NuevoProductoPage() {
             </HStack>
           </FormControl>
 
-          <FormControl>
+          {/* <FormControl>
             <FormLabel>SKU (opcional)</FormLabel>
             <Input placeholder="SKU interno" value={sku} onChange={(e) => setSku(e.target.value)} />
-          </FormControl>
+          </FormControl> */}
 
           {requiereColor && (
             <FormControl isRequired>
@@ -482,10 +482,10 @@ export default function NuevoProductoPage() {
             </FormControl>
           )}
 
-          <FormControl display="flex" alignItems="center">
+          {/* <FormControl display="flex" alignItems="center">
             <FormLabel mb="0">Activo</FormLabel>
             <Switch isChecked={activo} onChange={(e) => setActivo(e.target.checked)} />
-          </FormControl>
+          </FormControl> */}
         </SimpleGrid>
 
         <HStack justify="flex-end" mt={4}>
@@ -524,7 +524,6 @@ export default function NuevoProductoPage() {
             <Button mr={3} onClick={() => setIsModeloOpen(false)}>Cancelar</Button>
             <Button colorScheme="blue"
               onClick={() => {
-                console.log('[UI] click Crear modelo');
                 handleCrearModelo();
               }}
               isLoading={creatingModelo}>

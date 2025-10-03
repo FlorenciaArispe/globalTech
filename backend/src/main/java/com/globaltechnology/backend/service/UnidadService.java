@@ -21,9 +21,9 @@ public class UnidadService {
 
   private UnidadDTO toDTO(Unidad u){
     return new UnidadDTO(
-      u.getId(), u.getVariante().getId(), u.getVariante().getSku(), u.getImei(),
-      u.getNumeroSerie(), u.getBateriaCondicionPct(), u.getCostoUnitario(),
-      u.getEstadoStock(), u.getObservaciones(), u.getCreatedAt(), u.getUpdatedAt()
+      u.getId(), u.getVariante().getId(), u.getImei(),
+      u.getBateriaCondicionPct(), u.getCostoUnitario(),
+       u.getEstadoStock(), u.getCreatedAt(), u.getUpdatedAt()
     );
   }
 
@@ -48,12 +48,10 @@ public class UnidadService {
     var u = Unidad.builder()
       .variante(v)
       .imei(dto.imei())
-      .numeroSerie(dto.numeroSerie())
       .bateriaCondicionPct(dto.bateriaCondicionPct())
       .costoUnitario(dto.costoUnitario())
-      .estadoStock(EstadoStock.EN_STOCK) // default
-      .observaciones(dto.observaciones())
-      .build();
+  .estadoStock(EstadoStock.EN_STOCK)
+        .build();
 
     return toDTO(repo.save(u));
   }
@@ -65,9 +63,7 @@ public class UnidadService {
 
     if (dto.bateriaCondicionPct()!=null) u.setBateriaCondicionPct(dto.bateriaCondicionPct());
     if (dto.costoUnitario()!=null)     u.setCostoUnitario(dto.costoUnitario());
-    if (dto.observaciones()!=null)     u.setObservaciones(dto.observaciones());
-    if (dto.estadoStock()!=null)       u.setEstadoStock(dto.estadoStock());
-
+ if (dto.estadoStock()!=null)       u.setEstadoStock(dto.estadoStock());
     return toDTO(repo.save(u));
   }
 

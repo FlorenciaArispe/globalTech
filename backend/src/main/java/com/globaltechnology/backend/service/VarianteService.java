@@ -33,8 +33,6 @@ public class VarianteService {
       (v.getColor() != null ? v.getColor().getNombre() : null),
       (v.getCapacidad() != null ? v.getCapacidad().getId() : null),
       (v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null),
-      v.isActivo(),
-      v.getSku(),
       stock,
       v.getCreatedAt(),
       v.getUpdatedAt()
@@ -89,15 +87,8 @@ public class VarianteService {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una variante con esos atributos");
     }
 
-    // SKU único (si lo pasás)
-    if (dto.sku()!=null && !dto.sku().isBlank() && repo.existsBySku(dto.sku())) {
-      throw new ResponseStatusException(HttpStatus.CONFLICT, "SKU duplicado");
-    }
-
     var v = Variante.builder()
       .modelo(modelo).color(color).capacidad(cap)
-      .activo(dto.activo()==null ? true : dto.activo())
-      .sku((dto.sku()!=null && !dto.sku().isBlank()) ? dto.sku().trim() : null)
       .build();
 
     v = repo.save(v);
@@ -139,16 +130,9 @@ public class VarianteService {
       }
     }
 
-    if (dto.sku()!=null && !dto.sku().isBlank() && !dto.sku().equals(v.getSku()) && repo.existsBySku(dto.sku())) {
-      throw new ResponseStatusException(HttpStatus.CONFLICT, "SKU duplicado");
-    }
-
     v.setModelo(modelo);
     v.setColor(color);
     v.setCapacidad(cap);
-    if (dto.activo()!=null) v.setActivo(dto.activo());
-    v.setSku((dto.sku()!=null && !dto.sku().isBlank()) ? dto.sku().trim() : null);
-
     v = repo.save(v);
     long stock = unidadRepo.countByVariante_IdAndEstadoStockIn(v.getId(), DISPONIBLES);
     return toDTO(v, stock);
@@ -174,9 +158,9 @@ public class VarianteService {
     return unidadRepo.findByVarianteAndEstadoStock(v, EstadoStock.EN_STOCK)
       .stream()
       .map(u -> new UnidadDTO(
-        u.getId(), v.getId(), v.getSku(), u.getImei(), u.getNumeroSerie(),
+        u.getId(), v.getId(), u.getImei(), 
         u.getBateriaCondicionPct(), u.getCostoUnitario(), u.getEstadoStock(),
-        u.getObservaciones(), u.getCreatedAt(), u.getUpdatedAt()
+        u.getCreatedAt(), u.getUpdatedAt()
       )).toList();
   }
 }

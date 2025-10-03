@@ -19,10 +19,7 @@ public class Unidad extends Auditable {
   private Variante variante;
 
   @Column(name = "imei", unique = true, length = 20)
-  private String imei; // nullable si no aplica
-
-  @Column(name = "numero_serie", length = 50)
-  private String numeroSerie;
+  private String imei;
 
   @Column(name = "bateria_condicion_pct")
   private Integer bateriaCondicionPct; 
@@ -34,6 +31,4 @@ public class Unidad extends Auditable {
   @Column(name = "estado_stock", nullable = false, length = 20)
   private EstadoStock estadoStock = EstadoStock.EN_STOCK;
 
-  @Column(name = "observaciones", length = 500)
-  private String observaciones;
 }

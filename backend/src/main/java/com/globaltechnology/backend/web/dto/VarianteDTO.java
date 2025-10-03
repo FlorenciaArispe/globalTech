@@ -8,8 +8,6 @@ public record VarianteDTO(
   Long modeloId, String modeloNombre,
   Long colorId, String colorNombre,
   Long capacidadId, String capacidadEtiqueta,
-  Boolean activo,
-  String sku,
   Long stockDisponible,    
   Instant createdAt, Instant updatedAt
 ) {}

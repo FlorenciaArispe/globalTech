@@ -29,14 +29,9 @@ public class Variante extends Auditable {
   private Modelo modelo;
 
   @ManyToOne @JoinColumn(name = "color_id")
-  private Color color; // nullable
+  private Color color; 
 
   @ManyToOne @JoinColumn(name = "capacidad_id")
-  private Capacidad capacidad; // nullable
+  private Capacidad capacidad;
 
-  @Column(name = "activo", nullable = false)
-  private boolean activo = true;
-
-  @Column(name = "sku", unique = true, length = 80)
-  private String sku; // opcional
 }

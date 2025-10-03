@@ -4,6 +4,9 @@ package com.globaltechnology.backend.service;
 import com.globaltechnology.backend.domain.*;
 import com.globaltechnology.backend.repository.*;
 import com.globaltechnology.backend.web.dto.*;
+
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@Slf4j
 @Service
 public class ModeloService {
   private final ModeloRepository repo;
@@ -116,94 +120,73 @@ public class ModeloService {
   }
 
 
- public List<ModeloTablaDTO> tabla(Long categoriaId, Long marcaId) {
-    // 1) Traer modelos (ENTIDADES) con los filtros que ya usa tu front
-    List<Modelo> modelos;
-    if (categoriaId != null && marcaId != null) {
-      modelos = repo.findAll().stream()
-          .filter(m -> Objects.equals(m.getCategoria().getId(), categoriaId))
-          .filter(m -> Objects.equals(m.getMarca().getId(), marcaId))
-          .toList();
-    } else if (categoriaId != null) {
-      modelos = repo.findAll().stream()
-          .filter(m -> Objects.equals(m.getCategoria().getId(), categoriaId))
-          .toList();
-    } else if (marcaId != null) {
-      modelos = repo.findAll().stream()
-          .filter(m -> Objects.equals(m.getMarca().getId(), marcaId))
-          .toList();
-    } else {
-      modelos = repo.findAll();
-    }
-
-    if (modelos.isEmpty()) return List.of();
-
-    modelos.sort(Comparator.comparing(Modelo::getNombre, String.CASE_INSENSITIVE_ORDER));
-
-    var modeloIds = modelos.stream().map(Modelo::getId).toList();
-
-    // 2) Traer TODAS las variantes activas de esos modelos
-    var variantes = varianteRepo.findAllByModelo_IdInAndActivoTrue(modeloIds);
-    if (variantes.isEmpty()) {
-      // Devolvemos modelos sin variantes
-      return modelos.stream()
-          .map(m -> new ModeloTablaDTO(
-              m.getId(), m.getNombre(),
-              m.getCategoria().getId(), m.getCategoria().getNombre(),
-              m.getMarca().getId(), m.getMarca().getNombre(),
-              List.of()
-          ))
-          .toList();
-    }
-
-    // 3) Stock por variante en batch
-    var varianteIds = variantes.stream().map(Variante::getId).toList();
-    var stockRows = unidadRepo.stockPorVariante(varianteIds, DISPONIBLES);
-    var stockMap = stockRows.stream()
-        .collect(toMap(UnidadRepository.VarianteStockRow::getVarianteId,
-                       UnidadRepository.VarianteStockRow::getStock));
-
-    // 4) Armar map modeloId -> variantesDTO (ordenadas)
-    Map<Long, List<VarianteResumenDTO>> variantesPorModelo = new HashMap<>();
-    for (var v : variantes) {
-      long stock = stockMap.getOrDefault(v.getId(), 0L);
-      String color = v.getColor() != null ? v.getColor().getNombre() : null;
-      String cap = v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null;
-
-      String label = buildVarianteLabel(color, cap);
-
-      // 👉 Si no tenés precio en DB, dejalo null por ahora:
-      Long precio = null;
-      Long precioPromo = null;
-
-      var dto = new VarianteResumenDTO(
-          v.getId(), label, color, cap, stock, precio, precioPromo
-      );
-
-      variantesPorModelo.computeIfAbsent(v.getModelo().getId(), k -> new ArrayList<>()).add(dto);
-    }
-
-    // Orden consistente de variantes: por color, luego capacidad, luego id
-    Comparator<VarianteResumenDTO> cmp =
-        Comparator.comparing((VarianteResumenDTO x) -> safeLower(x.colorNombre()), nullsLast(Comparator.naturalOrder()))
-                  .thenComparing(x -> safeLower(x.capacidadEtiqueta()), nullsLast(Comparator.naturalOrder()))
-                  .thenComparing(VarianteResumenDTO::id);
-
-    variantesPorModelo.values().forEach(list -> list.sort(cmp));
-
-    // 5) Armar salida final
-    List<ModeloTablaDTO> out = new ArrayList<>(modelos.size());
-    for (var m : modelos) {
-      var list = variantesPorModelo.getOrDefault(m.getId(), List.of());
-      out.add(new ModeloTablaDTO(
-          m.getId(), m.getNombre(),
-          m.getCategoria().getId(), m.getCategoria().getNombre(),
-          m.getMarca().getId(), m.getMarca().getNombre(),
-          list
-      ));
-    }
-    return out;
+ public List<ModeloTablaDTO> tablaProductos(Long categoriaId, Long marcaId) {
+      log.info("tablaProductos() categoriaId={}, marcaId={}", categoriaId, marcaId);
+  // 1) modelos filtrados (DB)
+  List<Modelo> modelos;
+  if (categoriaId != null && marcaId != null) {
+    modelos = repo.findAllByCategoria_IdAndMarca_Id(categoriaId, marcaId);
+  } else if (categoriaId != null) {
+    modelos = repo.findAllByCategoria_Id(categoriaId);
+  } else if (marcaId != null) {
+    modelos = repo.findAllByMarca_Id(marcaId);
+  } else {
+    modelos = repo.findAll();
   }
+  if (modelos.isEmpty()) return List.of();
+
+  modelos.sort(Comparator.comparing(Modelo::getNombre, String.CASE_INSENSITIVE_ORDER));
+  var modeloIds = modelos.stream().map(Modelo::getId).toList();
+
+  // 2) variantes de esos modelos (sin 'activo')
+  var variantes = varianteRepo.findAllByModelo_IdIn(modeloIds);
+  var varianteIds = variantes.stream().map(Variante::getId).toList();
+
+  // 3) stock por variante (EN_STOCK)
+  Map<Long, Long> stockMap = Map.of();
+  if (!varianteIds.isEmpty()) {
+    stockMap = unidadRepo.stockPorVariante(varianteIds, DISPONIBLES).stream()
+        .collect(java.util.stream.Collectors.toMap(
+            v -> v.getVarianteId(),
+            v -> v.getStock()
+        ));
+  }
+
+  // 4) agrupar variantes por modelo → VarianteTablaDTO
+  Map<Long, List<VarianteTablaDTO>> variantesPorModelo = new HashMap<>();
+  for (var v : variantes) {
+    long stock = stockMap.getOrDefault(v.getId(), 0L);
+    String color = v.getColor() != null ? v.getColor().getNombre() : null;
+    String cap   = v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null;
+
+    variantesPorModelo
+        .computeIfAbsent(v.getModelo().getId(), k -> new ArrayList<>())
+        .add(new VarianteTablaDTO(v.getId(), color, cap, stock));
+  }
+
+  // Ordenar variantes: color, capacidad, id
+  Comparator<VarianteTablaDTO> cmp =
+      Comparator.comparing((VarianteTablaDTO x) -> safeLower(x.colorNombre()), nullsLast(Comparator.naturalOrder()))
+                .thenComparing(x -> safeLower(x.capacidadEtiqueta()), nullsLast(Comparator.naturalOrder()))
+                .thenComparing(VarianteTablaDTO::id);
+  variantesPorModelo.values().forEach(list -> list.sort(cmp));
+
+  // 5) salida final
+  List<ModeloTablaDTO> out = new ArrayList<>(modelos.size());
+  for (var m : modelos) {
+    out.add(new ModeloTablaDTO(
+        m.getId(),
+        m.getNombre(),
+        m.getCategoria().getId(),
+        m.getCategoria().getNombre(),
+        variantesPorModelo.getOrDefault(m.getId(), List.of())
+    ));
+  }
+  return out;
+}
+
+
+  private static String safeLower(String s) { return s == null ? null : s.toLowerCase(); }
 
     private static String buildVarianteLabel(String color, String cap) {
     if (color != null && cap != null) return color + " " + cap;
@@ -212,38 +195,4 @@ public class ModeloService {
     return "Variante";
   }
 
-   private static String safeLower(String s) {
-    return s == null ? null : s.toLowerCase();
-  }
-
-  //   public List<ModeloStatsDTO> stats(Long categoriaId, Long marcaId) {
-  //   var modelos = list(categoriaId, marcaId).stream().toList(); 
-  //   if (modelos.isEmpty()) return List.of();
-
-  //   var modeloIds = modelos.stream().map(ModeloDTO::id).toList();
-
-  //   var variantesRows = varianteRepo.variantesPorModelo(modeloIds);
-  //   var variantesMap = variantesRows.stream()
-  //       .collect(toMap(VarianteRepository.ModeloVarianteCountRow::getModeloId,
-  //                      VarianteRepository.ModeloVarianteCountRow::getVariantes));
-
-  //   var stockRows = unidadRepo.stockPorModelo(modeloIds, DISPONIBLES);
-  //   var stockMap = stockRows.stream()
-  //       .collect(toMap(UnidadRepository.ModeloStockRow::getModeloId,
-  //                      UnidadRepository.ModeloStockRow::getStock));
-
-  //   var out = new ArrayList<ModeloStatsDTO>(modelos.size());
-  //   for (var m : modelos) {
-  //     long variantes = variantesMap.getOrDefault(m.id(), 0L);
-  //     long stock = stockMap.getOrDefault(m.id(), 0L);
-  //     out.add(new ModeloStatsDTO(
-  //         m.id(),
-  //         m.nombre(),
-  //         m.categoriaId(), m.categoriaNombre(),
-  //         m.marcaId(), m.marcaNombre(),
-  //         variantes, stock
-  //     ));
-  //   }
-  //   return out;
-  // }
 }

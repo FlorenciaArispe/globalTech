@@ -13,15 +13,14 @@ import { api } from '@/lib/axios';
 
 type Id = number | string;
 
-/** === Tipos devueltos por /api/modelos/tabla === */
 type VarianteResumenDTO = {
   id: Id;
-  nombre: string;              // ej: "Blanco 128GB", "Negro", "128GB"
   colorNombre?: string | null;
   capacidadEtiqueta?: string | null;
   stock: number;
-  precio?: number | null;      // si hoy no lo manejás, vendrá null
-  precioPromo?: number | null; // opcional
+  // precio/Promo pueden no venir; dejalos opcionales si más adelante los agregás
+  precio?: number | null;
+  precioPromo?: number | null;
 };
 
 type ModeloTablaDTO = {
@@ -29,10 +28,18 @@ type ModeloTablaDTO = {
   nombre: string;
   categoriaId: Id;
   categoriaNombre: string;
-  marcaId: Id;
-  marcaNombre: string;
+  // Estas dos probablemente ya no vienen del backend; hacelas opcionales o quitá
+  marcaId?: Id;
+  marcaNombre?: string;
   variantes: VarianteResumenDTO[];
 };
+
+const nombreVariante = (v: VarianteResumenDTO) => {
+  const partes = [v.colorNombre, v.capacidadEtiqueta].filter(Boolean) as string[];
+  if (partes.length === 0) return 'Variante';
+  return partes.join(' - ');
+};
+
 
 const PLACEHOLDER_DATAURI =
   'data:image/svg+xml;utf8,' +
@@ -62,7 +69,7 @@ export default function Productos() {
     (async () => {
       try {
         // ✅ ahora consumimos el endpoint de “modelos con variantes”
-        const { data } = await api.get<ModeloTablaDTO[]>('/api/modelos/tabla');
+        const { data } = await api.get<ModeloTablaDTO[]>('api/modelos/tabla');    
 
         console.log("TABLA", data)
 
@@ -95,7 +102,9 @@ export default function Productos() {
   const onDelete = async () => {
     if (!deletingId) return;
     try {
-      await api.delete(`/api/modelos/${deletingId}`);
+      // ✅ Donde eliminás (lo mismo: sin prefijo /api)
+await api.delete(`/modelos/${deletingId}`);
+
       setRows(prev => prev.filter(r => String(r.id) !== String(deletingId)));
       toast({ status: 'success', title: 'Modelo eliminado' });
     } catch (e: any) {
@@ -149,93 +158,77 @@ export default function Productos() {
 
         {!loading && rows.length > 0 && (
           <Box bg="white" borderRadius="md" borderWidth="1px" overflowX="auto">
-            <Table size="md">
+            <Table size="md" variant="unstyled">
+
               <Thead bg="gray.50">
                 <Tr>
                   <Th>Producto</Th>
-                  <Th>Stock</Th>
-                  <Th isNumeric>Precio</Th>
+                  {/* <Th>Stock</Th> */}
                   <Th>Variante</Th>
                   <Th textAlign="right">Acciones</Th>
                 </Tr>
               </Thead>
               <Tbody>
-                {rows.map(modelo => {
-                  const stockTotal = (modelo.variantes ?? []).reduce((acc, v) => acc + (v.stock ?? 0), 0);
-                  // precio mínimo a modo de resumen (puede ser null si no tenés precios aún)
-                  const precios = (modelo.variantes ?? []).map(v => v.precio).filter((p): p is number => p != null);
-                  const precioMin = precios.length ? Math.min(...precios) : null;
+  {rows.map((modelo, idx) => {
+     const rowBg = idx % 2 === 0 ? 'white' : 'gray.50';
 
-                  return (
-                    <Fragment key={String(modelo.id)}>
-                      <Tr _hover={{ bg: 'gray.50' }}>
-                        <Td>
-                          <HStack spacing={3}>
-                            <Image
-                              src={PLACEHOLDER_DATAURI}
-                              alt={modelo.nombre}
-                              boxSize="48px"
-                              borderRadius="md"
-                              objectFit="cover"
-                              border="1px solid"
-                              borderColor="gray.200"
-                            />
-                            <Text fontWeight={600}>{modelo.nombre}</Text>
-                          </HStack>
-                        </Td>
-                        <Td>
-                          {stockTotal > 0 ? (
-                            <Badge colorScheme="green">{stockTotal} u.</Badge>
-                          ) : (
-                            <Badge colorScheme="red">Sin stock</Badge>
-                          )}
-                        </Td>
-                        <Td isNumeric>
-                          <Text>{precioMin != null ? money(precioMin) : '—'}</Text>
-                        </Td>
-                        <Td></Td>
-                        <Td>
-                          <HStack justify="flex-end" spacing={1}>
-                            <IconButton
-                              aria-label="Editar modelo"
-                              icon={<Pencil size={16} />}
-                              variant="ghost"
-                              onClick={() => onEdit(modelo.id)}
-                            />
-                            <IconButton
-                              aria-label="Eliminar modelo"
-                              icon={<Trash2 size={16} />}
-                              variant="ghost"
-                              colorScheme="red"
-                              onClick={() => onAskDelete(modelo.id)}
-                            />
-                          </HStack>
-                        </Td>
-                      </Tr>
+    return (
+     
+      <Tr bg={rowBg}>
+          <Td>
+            <HStack spacing={3}>
+              <Image
+                src={PLACEHOLDER_DATAURI}
+                alt={modelo.nombre}
+                boxSize="48px"
+                borderRadius="md"
+                objectFit="cover"
+                border="1px solid"
+                borderColor="gray.200"
+              />
+              <Text fontWeight={600}>{modelo.nombre}</Text>
+            </HStack>
+          </Td>
 
-                      {(modelo.variantes ?? []).map((v) => (
-                        <Tr key={String(v.id)} _hover={{ bg: 'gray.50' }}>
-                          <Td />
-                          <Td>
-                            {v.stock > 0 ? (
-                              <Badge colorScheme="green">{v.stock} u.</Badge>
-                            ) : (
-                              <Badge colorScheme="red">Sin stock</Badge>
-                            )}
-                          </Td>
-                          <Td isNumeric>
-                            <Text>{v.precio != null ? money(v.precio) : '—'}</Text>
-                          </Td>
-                          <Td>
-                            <Tag>{v.nombre}</Tag>
-                          </Td>
-                          <Td>{/* acciones */}</Td>
-                        </Tr>
-                      ))}
-                    </Fragment>
-                  );
-                })}
-              </Tbody>
+        
+          <Td >
+          {(modelo.variantes ?? []).map((v, j) => (
+
+             <Flex direction={"row"} gap={3}>
+               {v.stock > 0 ? (
+                <Badge colorScheme="green">{v.stock} u.</Badge>
+              ) : (
+                <Badge colorScheme="red" w={"80px"} textAlign={"center"}>Sin stock</Badge>
+              )}    
+              <Text>{nombreVariante(v)}</Text>             
+           </Flex>
+           
+          ))}
+           </Td>
+          <Td>
+            <HStack justify="flex-end" spacing={1}>
+              <IconButton
+                aria-label="Editar modelo"
+                icon={<Pencil size={16} />}
+                variant="ghost"
+                onClick={() => onEdit(modelo.id)}
+              />
+              <IconButton
+                aria-label="Eliminar modelo"
+                icon={<Trash2 size={16} />}
+                variant="ghost"
+                colorScheme="red"
+                onClick={() => onAskDelete(modelo.id)}
+              />
+            </HStack>
+          </Td>
+        </Tr>
+         
+
+    );
+  })}
+</Tbody>
+
             </Table>
           </Box>
         )}

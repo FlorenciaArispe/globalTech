@@ -32,7 +32,7 @@ public class VentaService {
   private VentaDTO toDTO(Venta v, List<VentaItem> items){
     var itemsDTO = items.stream().map(it -> new VentaItemDTO(
       it.getId(), it.getUnidad().getId(), it.getVariante().getId(),
-      it.getVariante().getSku(), it.getPrecioUnitario(), it.getDescuentoItem(), it.getObservaciones()
+ it.getPrecioUnitario(), it.getDescuentoItem(), it.getObservaciones()
     )).toList();
     return new VentaDTO(
       v.getId(), v.getFecha(),
@@ -68,7 +68,7 @@ public class VentaService {
     for (var i : dto.items()){
       var unidad = unidadRepo.findById(i.unidadId())
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,"Unidad inválida"));
-      if (unidad.getEstadoStock()!=EstadoStock.EN_STOCK)
+   if (unidad.getEstadoStock()!=EstadoStock.EN_STOCK)
         throw new ResponseStatusException(HttpStatus.CONFLICT,"La unidad no está disponible");
 
       var variante = unidad.getVariante();
@@ -82,9 +82,7 @@ public class VentaService {
         .build();
       itemRepo.save(item);
       items.add(item);
-
-      // actualizar estado de la unidad
-      unidad.setEstadoStock(EstadoStock.VENDIDO);
+unidad.setEstadoStock(EstadoStock.VENDIDO);
       unidadRepo.save(unidad);
 
       // movimiento inventario

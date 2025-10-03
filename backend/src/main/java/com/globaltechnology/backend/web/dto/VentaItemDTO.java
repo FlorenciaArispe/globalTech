@@ -6,7 +6,6 @@ public record VentaItemDTO(
     Long id,
     Long unidadId,
     Long varianteId,
-    String varianteSku,
     BigDecimal precioUnitario,
     BigDecimal descuentoItem,
     String observaciones

@@ -5,7 +5,7 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // zonas públicas
-  const publicPaths = ['/((auth))/','/login','/_next','/api/public','/public','/favicon.ico','/robots.txt'];
+  const publicPaths = ['/((auth))/','/login','/_next','/api/public','/public','/robots.txt'];
   if (publicPaths.some(p => pathname.startsWith(p))) {
     return NextResponse.next();
   }
@@ -23,5 +23,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api/public|favicon.ico|robots.txt).*)'],
+  matcher: ['/((?!_next|api/public|robots.txt).*)'],
 };

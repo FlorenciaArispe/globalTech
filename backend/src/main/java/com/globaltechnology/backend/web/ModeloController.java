@@ -28,7 +28,7 @@ public class ModeloController {
    @GetMapping("/tabla")
   public List<ModeloTablaDTO> tabla(@RequestParam(required = false) Long categoriaId,
                                     @RequestParam(required = false) Long marcaId) {
-    return service.tabla(categoriaId, marcaId);
+    return service.tablaProductos(categoriaId, marcaId);
   }
 
   @PostMapping @ResponseStatus(HttpStatus.CREATED)
