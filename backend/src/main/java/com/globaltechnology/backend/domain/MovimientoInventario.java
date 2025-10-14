@@ -22,19 +22,24 @@ public class MovimientoInventario {
 
   @Enumerated(EnumType.STRING)
   @Column(name = "tipo", nullable = false, length = 20)
-  private TipoMovimiento tipo;
+  private TipoMovimiento tipo; // ENTRADA, SALIDA, AJUSTE (por ej.)
 
   @ManyToOne(optional = false) @JoinColumn(name = "variante_id", nullable = false)
   private Variante variante;
 
-  @ManyToOne(optional = false) @JoinColumn(name = "unidad_id", nullable = false)
+  // ✅ ahora opcional: null si el modelo NO trackea unidad
+  @ManyToOne @JoinColumn(name = "unidad_id")
   private Unidad unidad;
+
+  // ✅ cantidad firmada: +N entrada, -N salida, +/-N ajuste
+  @Column(name = "cantidad", nullable = false)
+  private Integer cantidad;
 
   @Column(name = "ref_tipo", length = 30)
   private String refTipo; // "venta", "compra", "ajuste", etc.
 
   @Column(name = "ref_id")
-  private Long refId; // id del documento (venta_id, compra_id, etc.)
+  private Long refId;
 
   @Column(name = "notas", length = 500)
   private String notas;

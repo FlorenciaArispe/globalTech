@@ -19,7 +19,7 @@ type Modelo = {
   nombre: string;
   categoriaId: Id;
   marcaId: Id;
-  trackeaImei: boolean;
+  trackeaUnidad: boolean;   // <— antes: trackeaImei
   requiereColor: boolean;
   requiereCapacidad: boolean;
 };
@@ -48,6 +48,8 @@ export default function NuevoProductoPage() {
   const [categoriaId, setCategoriaId] = useState<Id>('');
   const [marcaId, setMarcaId] = useState<Id>('');
   const [modeloId, setModeloId] = useState<Id | 'new'>('');
+  const [precioBase, setPrecioBase] = useState<string>(''); // string para permitir coma/punto
+
 
   const isNewModelo = modeloId === 'new' || !modeloId;
 
@@ -63,7 +65,7 @@ export default function NuevoProductoPage() {
 
   const [isModeloOpen, setIsModeloOpen] = useState(false);
   const [nuevoModeloNombre, setNuevoModeloNombre] = useState('');
-  const [nuevoModeloTrackeaImei, setNuevoModeloTrackeaImei] = useState(false);
+  const [nuevoModeloTrackeaUnidad, setNuevoModeloTrackeaUnidad] = useState(false);
   const [nuevoModeloReqColor, setNuevoModeloReqColor] = useState(false);
   const [nuevoModeloReqCap, setNuevoModeloReqCap] = useState(false);
   const [creatingModelo, setCreatingModelo] = useState(false);
@@ -148,7 +150,7 @@ export default function NuevoProductoPage() {
       return;
     }
     setNuevoModeloNombre('');
-    setNuevoModeloTrackeaImei(false);
+    setNuevoModeloTrackeaUnidad(false);
     setNuevoModeloReqColor(false);
     setNuevoModeloReqCap(false);
     setIsModeloOpen(true);
@@ -163,14 +165,15 @@ export default function NuevoProductoPage() {
 
     setCreatingModelo(true);
     try {
-      const payload = {
-        categoriaId: Number(categoriaId),
-        marcaId: Number(marcaId),
-        nombre: nuevoModeloNombre.trim(),
-        trackeaImei: Boolean(nuevoModeloTrackeaImei),
-        requiereColor: Boolean(nuevoModeloReqColor),
-        requiereCapacidad: Boolean(nuevoModeloReqCap),
-      };
+     const payload = {
+  categoriaId: Number(categoriaId),
+  marcaId: Number(marcaId),
+  nombre: nuevoModeloNombre.trim(),
+  trackeaUnidad: Boolean(nuevoModeloTrackeaUnidad), // <— era trackeaImei
+  requiereColor: Boolean(nuevoModeloReqColor),
+  requiereCapacidad: Boolean(nuevoModeloReqCap),
+};
+
       console.log("payload", payload)
       const token = localStorage.getItem('jwt');
       const resp = await api.post('/api/modelos', payload, {
@@ -264,39 +267,58 @@ export default function NuevoProductoPage() {
     }
   };
 
-  const handleCrearVariante = async () => {
-    if (!categoriaId || !marcaId) {
-      toast({ status: 'warning', title: 'Seleccioná categoría y marca' });
-      return;
-    }
-    if (!modeloId || modeloId === 'new') {
-      toast({ status: 'warning', title: 'Seleccioná un modelo (o crealo)' });
-      return;
-    }
-    if (requiereColor && !colorId) {
-      toast({ status: 'warning', title: 'Seleccioná color' });
-      return;
-    }
-    if (requiereCapacidad && !capacidadId) {
-      toast({ status: 'warning', title: 'Seleccioná capacidad' });
-      return;
-    }
+  function parsePrecio(v: string): number | null {
+  if (!v) return null;
+  const normalized = v.replace(/\./g, '').replace(',', '.'); // “1.234,56” → “1234.56”
+  const n = Number(normalized);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
 
-    setSubmitting(true);
-    try {
-      await api.post('/api/variantes', {
-        modeloId,
-        colorId: requiereColor ? colorId : null,
-        capacidadId: requiereCapacidad ? capacidadId : null,
-      });
-      toast({ status: 'success', title: 'Producto creado' });
-      router.replace('/productos');
-    } catch (e: any) {
-      toast({ status: 'error', title: 'No se pudo crear el producto', description: e?.response?.data?.message ?? e?.message });
-    } finally {
-      setSubmitting(false);
+
+ const handleCrearVariante = async () => {
+  if (!categoriaId || !marcaId) {
+    toast({ status: 'warning', title: 'Seleccioná categoría y marca' });
+    return;
+  }
+  if (!modeloId || modeloId === 'new') {
+    toast({ status: 'warning', title: 'Seleccioná un modelo (o crealo)' });
+    return;
+  }
+  if (requiereColor && !colorId) {
+    toast({ status: 'warning', title: 'Seleccioná color' });
+    return;
+  }
+  if (requiereCapacidad && !capacidadId) {
+    toast({ status: 'warning', title: 'Seleccioná capacidad' });
+    return;
+  }
+  const precio = parsePrecio(precioBase);
+  if (precio == null) {
+    toast({ status: 'warning', title: 'Precio base inválido', description: 'Usá números, con punto o coma.' });
+    return;
+  }
+
+  setSubmitting(true);
+  try {
+    await api.post('/api/variantes', {
+      modeloId: Number(modeloId),
+      colorId: requiereColor ? Number(colorId) : null,
+      capacidadId: requiereCapacidad ? Number(capacidadId) : null,
+       precioBase: Number(precio), 
+    });
+    toast({ status: 'success', title: 'Variante creada' });
+    router.replace('/productos');
+  } catch (e: any) {
+    const status = e?.response?.status;
+    if (status === 409) {
+      toast({ status: 'error', title: 'Duplicado', description: 'Ya existe una variante con esa combinación.' });
+    } else {
+      toast({ status: 'error', title: 'No se pudo crear la variante', description: e?.response?.data?.message ?? e?.message });
     }
-  };
+  } finally {
+    setSubmitting(false);
+  }
+};
 
 
   if (loadingBase) {
@@ -482,6 +504,17 @@ export default function NuevoProductoPage() {
             </FormControl>
           )}
 
+          <FormControl isRequired>
+  <FormLabel>Precio base</FormLabel>
+  <Input
+    placeholder="Ej: 999999.99"
+    value={precioBase}
+    onChange={(e) => setPrecioBase(e.target.value)}
+    inputMode="decimal"
+  />
+</FormControl>
+
+
           {/* <FormControl display="flex" alignItems="center">
             <FormLabel mb="0">Activo</FormLabel>
             <Switch isChecked={activo} onChange={(e) => setActivo(e.target.checked)} />
@@ -509,7 +542,7 @@ export default function NuevoProductoPage() {
                   placeholder="Ej: iPhone 13, Galaxy S22, Zenbook..."
                 />
               </FormControl>
-              <Checkbox isChecked={nuevoModeloTrackeaImei} onChange={(e) => setNuevoModeloTrackeaImei(e.target.checked)}>
+              <Checkbox isChecked={nuevoModeloTrackeaUnidad} onChange={(e) => setNuevoModeloTrackeaUnidad(e.target.checked)}>
                 Trackea IMEI
               </Checkbox>
               <Checkbox isChecked={nuevoModeloReqColor} onChange={(e) => setNuevoModeloReqColor(e.target.checked)}>

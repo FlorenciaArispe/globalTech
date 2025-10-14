@@ -5,7 +5,14 @@ import { useEffect, useState, useRef } from 'react';
 import {
   Box, Container, Text, HStack, IconButton, Table, Thead, Th, Tr, Tbody, Td,
   Image, Badge, Tag, Spinner, Button, useToast, AlertDialog, AlertDialogOverlay,
-  AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, Flex
+  AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, Flex,
+  Tooltip,
+  FormControl,
+  FormLabel,
+  Input,
+  Select,
+  NumberInput,
+  NumberInputField
 } from '@chakra-ui/react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -17,18 +24,20 @@ type VarianteResumenDTO = {
   id: Id;
   colorNombre?: string | null;
   capacidadEtiqueta?: string | null;
-  stock: number;
-  // precio/Promo pueden no venir; dejalos opcionales si más adelante los agregás
+  stock: number;                 // total
+  stockNuevos?: number | null;   // solo si trackeaUnidad
+  stockUsados?: number | null;   // solo si trackeaUnidad
   precio?: number | null;
   precioPromo?: number | null;
 };
+
 
 type ModeloTablaDTO = {
   id: Id;
   nombre: string;
   categoriaId: Id;
   categoriaNombre: string;
-  // Estas dos probablemente ya no vienen del backend; hacelas opcionales o quitá
+  trackeaUnidad: boolean;     // ⬅️ NUEVO
   marcaId?: Id;
   marcaNombre?: string;
   variantes: VarianteResumenDTO[];
@@ -52,8 +61,7 @@ const PLACEHOLDER_DATAURI =
     </svg>`
   );
 
-const money = (n: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(n ?? 0);
+type EstadoComercial = 'NUEVO' | 'USADO';
 
 export default function Productos() {
   const toast = useToast();
@@ -63,13 +71,19 @@ export default function Productos() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<Id | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [targetVarianteId, setTargetVarianteId] = useState<Id | null>(null);
+  const [formImei, setFormImei] = useState('');
+  const [formEstado, setFormEstado] = useState<EstadoComercial>('NUEVO');
+  const [formBateria, setFormBateria] = useState<string>(''); // %
+  const [formPrecioOverride, setFormPrecioOverride] = useState<string>(''); // opcional
+  const [savingUnidad, setSavingUnidad] = useState(false);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        // ✅ ahora consumimos el endpoint de “modelos con variantes”
-        const { data } = await api.get<ModeloTablaDTO[]>('api/modelos/tabla');    
+        const { data } = await api.get<ModeloTablaDTO[]>('api/modelos/tabla');
 
         console.log("TABLA", data)
 
@@ -97,13 +111,110 @@ export default function Productos() {
     router.push(`/modelos/${modeloId}/editar`);
   };
 
+  const openAddUnidad = (varianteId: Id) => {
+    setTargetVarianteId(varianteId);
+    setFormImei('');
+    setFormEstado('NUEVO');
+    setFormBateria('');
+    setFormPrecioOverride('');
+    setIsAddOpen(true);
+  };
+
+  function parsePrecio(v: string): number | null {
+    if (!v) return null;
+    const normalized = v.replace(/\./g, '').replace(',', '.');
+    const n = Number(normalized);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }
+
+  useEffect(() => {
+    if (formEstado === 'NUEVO') setFormPrecioOverride('');
+  }, [formEstado]);
+
+  const saveUnidad = async () => {
+    if (!targetVarianteId) return;
+
+    if (!formImei.trim()) {
+      toast({ status: 'warning', title: 'IMEI requerido' });
+      return;
+    }
+    // Batería obligatoria si USADO
+    const bateriaNum = formBateria ? Number(formBateria) : null;
+    if (formEstado === 'USADO' && (bateriaNum == null || !Number.isFinite(bateriaNum))) {
+      toast({ status: 'warning', title: 'Batería requerida (0–100) para usados' });
+      return;
+    }
+    if (bateriaNum != null && (bateriaNum < 0 || bateriaNum > 100)) {
+      toast({ status: 'warning', title: 'La batería debe estar entre 0 y 100' });
+      return;
+    }
+
+    const precioNum = formEstado === 'USADO' ? parsePrecio(formPrecioOverride) : null;
+    if (formEstado === 'USADO' && formPrecioOverride && precioNum == null) {
+      toast({ status: 'warning', title: 'Precio override inválido' });
+      setSavingUnidad(false);
+      return;
+    }
+    setSavingUnidad(true);
+    try {
+     await api.post('/api/unidades', {
+  varianteId: Number(targetVarianteId),
+  imei: formImei.trim(),
+  estadoProducto: formEstado,
+  bateriaCondicionPct: formEstado === 'USADO' ? bateriaNum : null,
+  precioOverride: (formEstado === 'USADO' && formPrecioOverride) ? precioNum : null,
+});
+
+      toast({ status: 'success', title: 'Unidad agregada' });
+
+     // dentro de saveUnidad(), luego del POST exitoso:
+setRows(prev => prev.map(m => ({
+  ...m,
+  variantes: m.variantes.map(v => {
+    if (String(v.id) !== String(targetVarianteId)) return v;
+    const nuevoTotal = (v.stock ?? 0) + 1;
+
+    if (formEstado === 'NUEVO') {
+      return {
+        ...v,
+        stock: nuevoTotal,
+        stockNuevos: (v.stockNuevos ?? 0) + 1
+      };
+    } else {
+      return {
+        ...v,
+        stock: nuevoTotal,
+        stockUsados: (v.stockUsados ?? 0) + 1
+      };
+    }
+  })
+})));
+
+
+      setIsAddOpen(false);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 409) {
+        toast({ status: 'error', title: 'IMEI duplicado' });
+      } else if (status === 400) {
+        toast({ status: 'error', title: 'Datos inválidos', description: e?.response?.data?.message ?? e?.message });
+      } else {
+        toast({ status: 'error', title: 'No se pudo crear la unidad', description: e?.response?.data?.message ?? e?.message });
+      }
+    } finally {
+      setSavingUnidad(false);
+    }
+  };
+
+  const closeAddUnidad = () => setIsAddOpen(false);
+
   const onAskDelete = (modeloId: Id) => setDeletingId(modeloId);
 
   const onDelete = async () => {
     if (!deletingId) return;
     try {
       // ✅ Donde eliminás (lo mismo: sin prefijo /api)
-await api.delete(`/modelos/${deletingId}`);
+      await api.delete(`/modelos/${deletingId}`);
 
       setRows(prev => prev.filter(r => String(r.id) !== String(deletingId)));
       toast({ status: 'success', title: 'Modelo eliminado' });
@@ -169,65 +280,92 @@ await api.delete(`/modelos/${deletingId}`);
                 </Tr>
               </Thead>
               <Tbody>
-  {rows.map((modelo, idx) => {
-     const rowBg = idx % 2 === 0 ? 'white' : 'gray.50';
+                {rows.map((modelo, idx) => {
+                  const rowBg = idx % 2 === 0 ? 'white' : 'gray.50';
+                  return (
+                    <Tr key={String(modelo.id)} bg={rowBg}>
+                      <Td>
+                        <HStack spacing={3}>
+                          <Image
+                            src={PLACEHOLDER_DATAURI}
+                            alt={modelo.nombre}
+                            boxSize="48px"
+                            borderRadius="md"
+                            objectFit="cover"
+                            border="1px solid"
+                            borderColor="gray.200"
+                          />
+                          <Box>
+                            <Text fontWeight={600}>{modelo.nombre}</Text>
+                            <Text fontSize="sm" color="gray.500">{modelo.categoriaNombre}</Text>
+                          </Box>
+                        </HStack>
+                      </Td>
 
-    return (
-     
-      <Tr bg={rowBg}>
-          <Td>
-            <HStack spacing={3}>
-              <Image
-                src={PLACEHOLDER_DATAURI}
-                alt={modelo.nombre}
-                boxSize="48px"
-                borderRadius="md"
-                objectFit="cover"
-                border="1px solid"
-                borderColor="gray.200"
-              />
-              <Text fontWeight={600}>{modelo.nombre}</Text>
-            </HStack>
-          </Td>
+                      <Td>
+                        {(modelo.variantes?.length ?? 0) === 0 && (
+                          <Text color="gray.500">Sin variantes</Text>
+                        )}
 
-        
-          <Td >
-          {(modelo.variantes ?? []).map((v, j) => (
+                        {(modelo.variantes ?? []).map((v) => (
+                          <HStack key={String(v.id)} spacing={3} mb={2} align="center">
+                  <Text flex="1">{nombreVariante(v)}</Text>
 
-             <Flex direction={"row"} gap={3}>
-               {v.stock > 0 ? (
-                <Badge colorScheme="green">{v.stock} u.</Badge>
-              ) : (
-                <Badge colorScheme="red" w={"80px"} textAlign={"center"}>Sin stock</Badge>
-              )}    
-              <Text>{nombreVariante(v)}</Text>             
-           </Flex>
-           
-          ))}
-           </Td>
-          <Td>
-            <HStack justify="flex-end" spacing={1}>
-              <IconButton
-                aria-label="Editar modelo"
-                icon={<Pencil size={16} />}
-                variant="ghost"
-                onClick={() => onEdit(modelo.id)}
-              />
-              <IconButton
-                aria-label="Eliminar modelo"
-                icon={<Trash2 size={16} />}
-                variant="ghost"
-                colorScheme="red"
-                onClick={() => onAskDelete(modelo.id)}
-              />
-            </HStack>
-          </Td>
-        </Tr>
-         
+{modelo.trackeaUnidad ? (
+  <HStack>
+    <Badge colorScheme="blue"  minW="72px" textAlign="center">{v.stock ?? 0} u. tot</Badge>
+    <Badge colorScheme="green" minW="72px" textAlign="center">{v.stockNuevos ?? 0} nuevo/s</Badge>
+    <Badge colorScheme="yellow"minW="72px" textAlign="center">{v.stockUsados ?? 0} usado/s</Badge>
 
-    );
-  })}
-</Tbody>
+    <Tooltip label="Agregar unidad">
+      <IconButton
+        aria-label="Agregar unidad"
+        icon={<Plus size={16} />}
+        size="sm"
+        variant="outline"
+        onClick={() => openAddUnidad(v.id)}
+      />
+    </Tooltip>
+  </HStack>
+) : (
+  <HStack>
+    <Badge colorScheme={v.stock > 0 ? 'green' : 'red'} minW="72px" textAlign="center">
+      {v.stock > 0 ? `${v.stock} u.` : 'Sin stock'}
+    </Badge>
+    <Tooltip label="Este producto no trackea por unidad (stock por movimientos)">
+      <Tag size="sm" colorScheme="gray">No trackea</Tag>
+    </Tooltip>
+  </HStack>
+)}
+
+
+
+                          </HStack>
+                        ))}
+                      </Td>
+
+                      <Td>
+                        <HStack justify="flex-end" spacing={1}>
+                          <IconButton
+                            aria-label="Editar modelo"
+                            icon={<Pencil size={16} />}
+                            variant="ghost"
+                            onClick={() => onEdit(modelo.id)}
+                          />
+                          <IconButton
+                            aria-label="Eliminar modelo"
+                            icon={<Trash2 size={16} />}
+                            variant="ghost"
+                            colorScheme="red"
+                            onClick={() => onAskDelete(modelo.id)}
+                          />
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </Tbody>
+
 
             </Table>
           </Box>
@@ -252,8 +390,60 @@ await api.delete(`/modelos/${deletingId}`);
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog isOpen={isAddOpen} leastDestructiveRef={cancelRef} onClose={closeAddUnidad} isCentered>
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Agregar unidad</AlertDialogHeader>
+          <AlertDialogBody>
+            <FormControl isRequired mb={3}>
+              <FormLabel>IMEI</FormLabel>
+              <Input value={formImei} onChange={e => setFormImei(e.target.value)} placeholder="Ej: 351234567890123" />
+            </FormControl>
+
+            <FormControl isRequired mb={3}>
+              <FormLabel>Estado del producto</FormLabel>
+              <Select value={formEstado} onChange={e => setFormEstado(e.target.value as EstadoComercial)}>
+                <option value="NUEVO">NUEVO</option>
+                <option value="USADO">USADO</option>
+              </Select>
+            </FormControl>
+
+            {formEstado === 'USADO' && (
+              <FormControl isRequired mb={3}>
+                <FormLabel>Batería (condición %)</FormLabel>
+                <NumberInput min={0} max={100} value={formBateria} onChange={(v) => setFormBateria(v)}>
+                  <NumberInputField placeholder="0 a 100" />
+                </NumberInput>
+              </FormControl>
+            )}
+
+            {formEstado === 'USADO' && (
+              <>
+                <FormControl mb={1}>
+                  <FormLabel>Precio (opcional)</FormLabel>
+                  <Input
+                    value={formPrecioOverride}
+                    onChange={e => setFormPrecioOverride(e.target.value)}
+                    placeholder="Ej: 499999.99"
+                    inputMode="decimal"
+                  />
+                </FormControl>
+                <Text fontSize="xs" color="gray.500">
+                  Si lo dejás vacío, se usa el precio base del sellado.
+                </Text>
+              </>
+            )}
+
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={cancelRef} onClick={closeAddUnidad}>Cancelar</Button>
+            <Button colorScheme="blue" ml={3} onClick={saveUnidad} isLoading={savingUnidad}>
+              Guardar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Box>
   );
 }
-
-import { Fragment } from 'react';

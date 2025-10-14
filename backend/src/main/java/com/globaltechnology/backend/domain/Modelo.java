@@ -29,7 +29,7 @@ public class Modelo {
   private String nombre;
 
   @Column(name = "trackea_imei", nullable = false)
-  private boolean trackeaImei;
+  private boolean trackeaUnidad;
 
   @Column(name = "requiere_color", nullable = false)
   private boolean requiereColor;

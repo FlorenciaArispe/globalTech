@@ -22,7 +22,7 @@ public interface UnidadRepository extends JpaRepository<Unidad, Long> {
 
   interface VarianteStockRow {
     Long getVarianteId();
-    long getStock();
+    Long getStock();
   }
 
   // ---- Métodos que usa tu service (faltaban)
@@ -45,6 +45,26 @@ public interface UnidadRepository extends JpaRepository<Unidad, Long> {
     group by v.modelo.id
   """)
   List<ModeloStockRow> stockPorModelo(Collection<Long> modeloIds, Collection<EstadoStock> estados);
+
+  // UnidadRepository.java
+@Query("""
+  select u.variante.id as varianteId,
+         u.estadoProducto as estadoProducto,
+         count(u) as stock
+  from Unidad u
+  where u.variante.id in :varianteIds
+    and u.estadoStock in :estados
+  group by u.variante.id, u.estadoProducto
+""")
+List<VarianteStockPorEstadoRow> stockPorVarianteYEstado(Collection<Long> varianteIds,
+                                                         Collection<EstadoStock> estados);
+
+public interface VarianteStockPorEstadoRow {
+  Long getVarianteId();
+  EstadoComercial getEstadoProducto();
+  long getStock();
+}
+
 
   interface ModeloStockRow {
     Long getModeloId();

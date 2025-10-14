@@ -15,14 +15,27 @@ public class VarianteService {
   private final ColorRepository colorRepo;
   private final CapacidadRepository capRepo;
   private final UnidadRepository unidadRepo;
+   private final MovimientoInventarioRepository movRepo;
 
   private static final List<EstadoStock> DISPONIBLES = List.of(EstadoStock.EN_STOCK);
 
   public VarianteService(VarianteRepository repo, ModeloRepository modeloRepo,
                          ColorRepository colorRepo, CapacidadRepository capRepo,
-                         UnidadRepository unidadRepo) {
+                         UnidadRepository unidadRepo,
+                         MovimientoInventarioRepository movRepo) { 
     this.repo = repo; this.modeloRepo = modeloRepo;
     this.colorRepo = colorRepo; this.capRepo = capRepo; this.unidadRepo = unidadRepo;
+    this.movRepo = movRepo; // ⬅️ NUEVO
+  }
+
+   private long stockDeVariante(Variante v) {
+    if (v.getModelo().isTrackeaUnidad()) {
+      return unidadRepo.countByVariante_IdAndEstadoStockIn(
+          v.getId(), DISPONIBLES);
+    } else {
+      Integer s = movRepo.stockNoTrackeadoDeVariante(v.getId());
+      return (s == null ? 0L : s.longValue());
+    }
   }
 
   private VarianteDTO toDTO(Variante v, Long stock) {
@@ -34,67 +47,106 @@ public class VarianteService {
       (v.getCapacidad() != null ? v.getCapacidad().getId() : null),
       (v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null),
       stock,
+      v.getPrecioBase(),
       v.getCreatedAt(),
       v.getUpdatedAt()
     );
   }
 
-  private VarianteDTO toDTO(Variante v) { return toDTO(v, null); }
 
   public List<VarianteDTO> list() {
-    var variantes = repo.findAll();
-    // si querés devolver stock en el listado:
-    var ids = variantes.stream().map(Variante::getId).toList();
-    var stockRows = unidadRepo.stockPorVariante(ids, DISPONIBLES);
-    var stockMap = new java.util.HashMap<Long, Long>();
-    stockRows.forEach(r -> stockMap.put(r.getVarianteId(), r.getStock()));
-    return variantes.stream()
-      .map(v -> toDTO(v, stockMap.getOrDefault(v.getId(), 0L)))
-      .toList();
+  var variantes = repo.findAll();
+
+  // separo por tipo de tracking
+  var tracked   = variantes.stream().filter(v -> v.getModelo().isTrackeaUnidad()).map(Variante::getId).toList();
+  var untracked = variantes.stream().filter(v -> !v.getModelo().isTrackeaUnidad()).map(Variante::getId).toList();
+
+  // stock por unidades (tracked)
+  var stockUnidadMap = new java.util.HashMap<Long, Long>();
+  if (!tracked.isEmpty()) {
+    var rows = unidadRepo.stockPorVariante(tracked, DISPONIBLES);
+    rows.forEach(r -> stockUnidadMap.put(r.getVarianteId(), r.getStock())); // getStock() debe ser Long
   }
+
+  // stock por movimientos (untracked)
+  var stockMovMap = new java.util.HashMap<Long, Long>();
+  if (!untracked.isEmpty()) {
+    var rows = movRepo.stockNoTrackeadoPorVariante(untracked);
+    rows.forEach(r -> stockMovMap.put(r.getVarianteId(), r.getStock() == null ? 0L : r.getStock().longValue()));
+  }
+
+  // merge: para cada variante, usa el mapa que corresponda
+  return variantes.stream()
+      .map(v -> {
+        long stock = v.getModelo().isTrackeaUnidad()
+            ? stockUnidadMap.getOrDefault(v.getId(), 0L)
+            : stockMovMap.getOrDefault(v.getId(), 0L);
+        return toDTO(v, stock);
+      })
+      .toList();
+}
+
 
   public VarianteDTO get(Long id){
-    var v = repo.findById(id)
+  var v = repo.findById(id)
       .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Variante no encontrada"));
-    long stock = unidadRepo.countByVariante_IdAndEstadoStockIn(id, DISPONIBLES);
-    return toDTO(v, stock);
-  }
+  long stock = stockDeVariante(v); // ⬅️ antes contabas sólo unidades
+  return toDTO(v, stock);
+}
+
 
   public VarianteDTO create(VarianteCreateDTO dto){
-    var modelo = modeloRepo.findById(dto.modeloId())
+  var modelo = modeloRepo.findById(dto.modeloId())
       .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,"Modelo inválido"));
 
-    Color color = null;
-    if (modelo.isRequiereColor()) {
-      if (dto.colorId()==null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Color requerido por el modelo");
-      color = colorRepo.findById(dto.colorId())
+  Color color = null;
+  if (modelo.isRequiereColor()) {
+    if (dto.colorId()==null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Color requerido por el modelo");
+    color = colorRepo.findById(dto.colorId())
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,"Color inválido"));
-    } else if (dto.colorId()!=null) {
-      color = colorRepo.findById(dto.colorId()).orElse(null);
-    }
+  } else if (dto.colorId()!=null) {
+    color = colorRepo.findById(dto.colorId()).orElse(null);
+  }
 
-    Capacidad cap = null;
-    if (modelo.isRequiereCapacidad()) {
-      if (dto.capacidadId()==null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Capacidad requerida por el modelo");
-      cap = capRepo.findById(dto.capacidadId())
+  Capacidad cap = null;
+  if (modelo.isRequiereCapacidad()) {
+    if (dto.capacidadId()==null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Capacidad requerida por el modelo");
+    cap = capRepo.findById(dto.capacidadId())
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,"Capacidad inválida"));
-    } else if (dto.capacidadId()!=null) {
-      cap = capRepo.findById(dto.capacidadId()).orElse(null);
-    }
+  } else if (dto.capacidadId()!=null) {
+    cap = capRepo.findById(dto.capacidadId()).orElse(null);
+  }
 
-    // Duplicado lógico (modelo + color + capacidad)
-    if (repo.existsByModeloAndColorAndCapacidad(modelo, color, cap)) {
-      throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una variante con esos atributos");
-    }
+  // ✅ Validar precio
+  if (dto.precioBase() == null || dto.precioBase().signum() < 0) {
+    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Precio base inválido");
+  }
 
-    var v = Variante.builder()
-      .modelo(modelo).color(color).capacidad(cap)
+  // ✅ Duplicado robusto (ver repo más abajo)
+  if (repo.existsByModeloAndAtributos(modelo.getId(),
+      color != null ? color.getId() : null,
+      cap != null ? cap.getId() : null)) {
+    throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una variante con esos atributos");
+  }
+
+  var v = Variante.builder()
+      .modelo(modelo)
+      .color(color)
+      .capacidad(cap)
+      .precioBase(dto.precioBase())     // ⬅️ SETEÁS EL PRECIO (era el 500)
       .build();
 
+  try {
     v = repo.save(v);
-    long stock = 0;
-    return toDTO(v, stock);
+  } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+    // por si la unique de DB salta igual
+    throw new ResponseStatusException(HttpStatus.CONFLICT, "Variante duplicada", ex);
   }
+
+  long stock = 0;
+  return toDTO(v, stock);
+}
+
 
   public VarianteDTO update(Long id, VarianteUpdateDTO dto){
     var v = repo.findById(id)
@@ -159,7 +211,7 @@ public class VarianteService {
       .stream()
       .map(u -> new UnidadDTO(
         u.getId(), v.getId(), u.getImei(), 
-        u.getBateriaCondicionPct(), u.getCostoUnitario(), u.getEstadoStock(),
+        u.getBateriaCondicionPct(), u.getPrecioOverride(), u.getEstadoStock(), u.getEstadoProducto(),
         u.getCreatedAt(), u.getUpdatedAt()
       )).toList();
   }

@@ -1,14 +1,19 @@
 package com.globaltechnology.backend.web.dto;
 
+import java.math.BigDecimal;
+
+import com.globaltechnology.backend.domain.EstadoComercial;
+
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
+// UnidadCreateDTO.java
 public record UnidadCreateDTO(
-  @NotNull Long varianteId,
+  Long varianteId,
   String imei,
-  String numeroSerie,
-  @Min(0) @Max(100) Integer bateriaCondicionPct,
-  @Min(0) Long costoUnitario,
-  String observaciones
+  Integer bateriaCondicionPct,
+  BigDecimal precioOverride,
+  EstadoComercial estadoProducto
 ) {}
+

@@ -7,7 +7,7 @@ public record ModeloUpdateDTO(
     @NotNull Long categoriaId,
     @NotNull Long marcaId,
     @NotBlank String nombre,
-    boolean trackeaImei,
+    boolean trackeaUnidad,
     boolean requiereColor,
     boolean requiereCapacidad
 ) {}

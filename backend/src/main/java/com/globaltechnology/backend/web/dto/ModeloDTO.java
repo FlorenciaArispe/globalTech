@@ -7,7 +7,7 @@ public record ModeloDTO(
     Long marcaId,
     String marcaNombre,
     String nombre,
-    boolean trackeaImei,
+    boolean trackeaUnidad,
     boolean requiereColor,
     boolean requiereCapacidad
 ) {}

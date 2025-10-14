@@ -1,5 +1,7 @@
 package com.globaltechnology.backend.domain;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,5 +35,9 @@ public class Variante extends Auditable {
 
   @ManyToOne @JoinColumn(name = "capacidad_id")
   private Capacidad capacidad;
+
+@Column(name = "precio", nullable = false , precision = 12, scale = 2)
+private BigDecimal precioBase;
+
 
 }
