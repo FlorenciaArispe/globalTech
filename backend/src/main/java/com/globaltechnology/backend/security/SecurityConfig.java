@@ -85,6 +85,13 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.PUT, "/api/variantes/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.DELETE, "/api/variantes/**").hasRole("ADMIN")
 
+            // INVENTARIO (listado de stock)
+            .requestMatchers(HttpMethod.GET, "/api/inventario/**").hasAnyRole("ADMIN", "OPERADOR")
+
+            // MOVIMIENTOS (no trackeados por unidad)
+            .requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyRole("ADMIN", "OPERADOR") // si exponés GET
+          .requestMatchers(HttpMethod.POST, "/api/movimientos/**").hasRole("ADMIN")
+
             // catch-all (si algo no matcheó arriba)
             .requestMatchers("/api/**").hasRole("ADMIN")
 

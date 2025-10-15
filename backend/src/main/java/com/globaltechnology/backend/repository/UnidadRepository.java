@@ -59,6 +59,10 @@ public interface UnidadRepository extends JpaRepository<Unidad, Long> {
 List<VarianteStockPorEstadoRow> stockPorVarianteYEstado(Collection<Long> varianteIds,
                                                          Collection<EstadoStock> estados);
 
+                                        
+List<Unidad> findAllByVariante_IdIn(Collection<Long> varianteIds);
+
+
 public interface VarianteStockPorEstadoRow {
   Long getVarianteId();
   EstadoComercial getEstadoProducto();

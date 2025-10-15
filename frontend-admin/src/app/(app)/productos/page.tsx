@@ -78,6 +78,10 @@ export default function Productos() {
   const [formBateria, setFormBateria] = useState<string>(''); // %
   const [formPrecioOverride, setFormPrecioOverride] = useState<string>(''); // opcional
   const [savingUnidad, setSavingUnidad] = useState(false);
+  const [isAddMovOpen, setIsAddMovOpen] = useState(false);
+const [movVarianteId, setMovVarianteId] = useState<Id | null>(null);
+const [movCantidad, setMovCantidad] = useState<string>(''); // string para input
+const [savingMov, setSavingMov] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -120,6 +124,13 @@ export default function Productos() {
     setIsAddOpen(true);
   };
 
+  const openAddMovimiento = (varianteId: Id) => {
+  setMovVarianteId(varianteId);
+  setMovCantidad('');
+  setIsAddMovOpen(true);
+};
+const closeAddMovimiento = () => setIsAddMovOpen(false);
+
   function parsePrecio(v: string): number | null {
     if (!v) return null;
     const normalized = v.replace(/\./g, '').replace(',', '.');
@@ -130,6 +141,48 @@ export default function Productos() {
   useEffect(() => {
     if (formEstado === 'NUEVO') setFormPrecioOverride('');
   }, [formEstado]);
+
+  const saveMovimientoEntrada = async () => {
+  if (!movVarianteId) return;
+  const n = Number(movCantidad);
+  if (!Number.isFinite(n) || n <= 0) {
+    toast({ status: 'warning', title: 'Cantidad inválida', description: 'Debe ser un número positivo.' });
+    return;
+  }
+  setSavingMov(true);
+  try {
+    // Endpoint esperado en backend: POST /api/movimientos
+    await api.post('/api/movimientos', {
+      varianteId: Number(movVarianteId),
+      tipo: 'ENTRADA',
+      cantidad: n,          // el backend lo guarda como +n
+      notas: 'Alta desde Productos',
+    });
+
+    // ✅ actualizar UI local (sumo n al stock de esa variante)
+    setRows(prev => prev.map(m => ({
+      ...m,
+      variantes: m.variantes.map(v =>
+        String(v.id) === String(movVarianteId)
+          ? { ...v, stock: (v.stock ?? 0) + n }
+          : v
+      )
+    })));
+
+    toast({ status: 'success', title: 'Stock agregado' });
+    setIsAddMovOpen(false);
+  } catch (e: any) {
+    const status = e?.response?.status;
+    if (status === 400 || status === 409) {
+      toast({ status: 'error', title: 'No se pudo crear el movimiento', description: e?.response?.data?.message ?? e?.message });
+    } else {
+      toast({ status: 'error', title: 'Error de red', description: e?.response?.data?.message ?? e?.message });
+    }
+  } finally {
+    setSavingMov(false);
+  }
+};
+
 
   const saveUnidad = async () => {
     if (!targetVarianteId) return;
@@ -157,38 +210,38 @@ export default function Productos() {
     }
     setSavingUnidad(true);
     try {
-     await api.post('/api/unidades', {
-  varianteId: Number(targetVarianteId),
-  imei: formImei.trim(),
-  estadoProducto: formEstado,
-  bateriaCondicionPct: formEstado === 'USADO' ? bateriaNum : null,
-  precioOverride: (formEstado === 'USADO' && formPrecioOverride) ? precioNum : null,
-});
+      await api.post('/api/unidades', {
+        varianteId: Number(targetVarianteId),
+        imei: formImei.trim(),
+        estadoProducto: formEstado,
+        bateriaCondicionPct: formEstado === 'USADO' ? bateriaNum : null,
+        precioOverride: (formEstado === 'USADO' && formPrecioOverride) ? precioNum : null,
+      });
 
       toast({ status: 'success', title: 'Unidad agregada' });
 
-     // dentro de saveUnidad(), luego del POST exitoso:
-setRows(prev => prev.map(m => ({
-  ...m,
-  variantes: m.variantes.map(v => {
-    if (String(v.id) !== String(targetVarianteId)) return v;
-    const nuevoTotal = (v.stock ?? 0) + 1;
+      // dentro de saveUnidad(), luego del POST exitoso:
+      setRows(prev => prev.map(m => ({
+        ...m,
+        variantes: m.variantes.map(v => {
+          if (String(v.id) !== String(targetVarianteId)) return v;
+          const nuevoTotal = (v.stock ?? 0) + 1;
 
-    if (formEstado === 'NUEVO') {
-      return {
-        ...v,
-        stock: nuevoTotal,
-        stockNuevos: (v.stockNuevos ?? 0) + 1
-      };
-    } else {
-      return {
-        ...v,
-        stock: nuevoTotal,
-        stockUsados: (v.stockUsados ?? 0) + 1
-      };
-    }
-  })
-})));
+          if (formEstado === 'NUEVO') {
+            return {
+              ...v,
+              stock: nuevoTotal,
+              stockNuevos: (v.stockNuevos ?? 0) + 1
+            };
+          } else {
+            return {
+              ...v,
+              stock: nuevoTotal,
+              stockUsados: (v.stockUsados ?? 0) + 1
+            };
+          }
+        })
+      })));
 
 
       setIsAddOpen(false);
@@ -309,34 +362,46 @@ setRows(prev => prev.map(m => ({
 
                         {(modelo.variantes ?? []).map((v) => (
                           <HStack key={String(v.id)} spacing={3} mb={2} align="center">
-                  <Text flex="1">{nombreVariante(v)}</Text>
+                            <Text flex="1">{nombreVariante(v)}</Text>
 
-{modelo.trackeaUnidad ? (
-  <HStack>
-    <Badge colorScheme="blue"  minW="72px" textAlign="center">{v.stock ?? 0} u. tot</Badge>
-    <Badge colorScheme="green" minW="72px" textAlign="center">{v.stockNuevos ?? 0} nuevo/s</Badge>
-    <Badge colorScheme="yellow"minW="72px" textAlign="center">{v.stockUsados ?? 0} usado/s</Badge>
+                            {modelo.trackeaUnidad ? (
+                              <HStack>
+                                <Badge colorScheme="blue" minW="72px" textAlign="center">{v.stock ?? 0} u. tot</Badge>
+                                <Badge colorScheme="green" minW="72px" textAlign="center">{v.stockNuevos ?? 0} nuevo/s</Badge>
+                                <Badge colorScheme="yellow" minW="72px" textAlign="center">{v.stockUsados ?? 0} usado/s</Badge>
 
-    <Tooltip label="Agregar unidad">
-      <IconButton
-        aria-label="Agregar unidad"
-        icon={<Plus size={16} />}
-        size="sm"
-        variant="outline"
-        onClick={() => openAddUnidad(v.id)}
-      />
-    </Tooltip>
-  </HStack>
-) : (
-  <HStack>
+                                <Tooltip label="Agregar unidad">
+                                  <IconButton
+                                    aria-label="Agregar unidad"
+                                    icon={<Plus size={16} />}
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openAddUnidad(v.id)}
+                                  />
+                                </Tooltip>
+                              </HStack>
+                            ) : (
+                               <HStack>
     <Badge colorScheme={v.stock > 0 ? 'green' : 'red'} minW="72px" textAlign="center">
       {v.stock > 0 ? `${v.stock} u.` : 'Sin stock'}
     </Badge>
+
     <Tooltip label="Este producto no trackea por unidad (stock por movimientos)">
       <Tag size="sm" colorScheme="gray">No trackea</Tag>
     </Tooltip>
+
+    {/* ⬇️ NUEVO: Agregar stock por movimiento */}
+    <Tooltip label="Agregar stock (movimiento ENTRADA)">
+      <IconButton
+        aria-label="Agregar stock"
+        icon={<Plus size={16} />}
+        size="sm"
+        variant="outline"
+        onClick={() => openAddMovimiento(v.id)}
+      />
+    </Tooltip>
   </HStack>
-)}
+                            )}
 
 
 
@@ -444,6 +509,31 @@ setRows(prev => prev.map(m => ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog isOpen={isAddMovOpen} leastDestructiveRef={cancelRef} onClose={closeAddMovimiento} isCentered>
+  <AlertDialogOverlay />
+  <AlertDialogContent>
+    <AlertDialogHeader>Agregar stock (no trackeado)</AlertDialogHeader>
+    <AlertDialogBody>
+      <FormControl isRequired mb={3}>
+        <FormLabel>Cantidad a ingresar</FormLabel>
+        <NumberInput min={1} value={movCantidad} onChange={(v) => setMovCantidad(v)}>
+          <NumberInputField placeholder="Ej: 5" />
+        </NumberInput>
+      </FormControl>
+      <Text fontSize="sm" color="gray.500">
+        Esto crea un Movimiento de Inventario de tipo <b>ENTRADA</b> para la variante seleccionada.
+      </Text>
+    </AlertDialogBody>
+    <AlertDialogFooter>
+      <Button ref={cancelRef} onClick={closeAddMovimiento}>Cancelar</Button>
+      <Button colorScheme="blue" ml={3} onClick={saveMovimientoEntrada} isLoading={savingMov}>
+        Guardar
+      </Button>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+
     </Box>
   );
 }

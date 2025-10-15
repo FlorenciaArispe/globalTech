@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Box, Container, Text, SimpleGrid, FormControl, FormLabel, Select, Button,
   HStack, Input, Switch, useToast, IconButton, Modal, ModalOverlay, ModalContent,
-  ModalHeader, ModalBody, ModalFooter, Checkbox, Spinner
+  ModalHeader, ModalBody, ModalFooter, Checkbox, Spinner,
+  AlertDialog
 } from '@chakra-ui/react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -49,6 +50,10 @@ export default function NuevoProductoPage() {
   const [marcaId, setMarcaId] = useState<Id>('');
   const [modeloId, setModeloId] = useState<Id | 'new'>('');
   const [precioBase, setPrecioBase] = useState<string>(''); // string para permitir coma/punto
+// arriba, junto con otros useState
+const [isMarcaOpen, setIsMarcaOpen] = useState(false);
+const [nuevaMarcaNombre, setNuevaMarcaNombre] = useState('');
+const [creatingMarca, setCreatingMarca] = useState(false);
 
 
   const isNewModelo = modeloId === 'new' || !modeloId;
@@ -218,6 +223,38 @@ export default function NuevoProductoPage() {
     setNuevaCapEtiqueta('');
     setIsCapOpen(true);
   };
+
+  const handleCrearMarca = async () => {
+  if (!nuevaMarcaNombre.trim()) {
+    toast({ status: 'warning', title: 'Ingresá un nombre de marca' });
+    return;
+  }
+  setCreatingMarca(true);
+  try {
+    const payload = { nombre: nuevaMarcaNombre.trim() };
+    const { data: created } = await api.post<Marca>('/api/marcas', payload);
+    // actualizar lista local y seleccionar la nueva
+    setMarcas(prev => [created, ...prev]);
+    setMarcaId(String(created.id));
+    setIsMarcaOpen(false);
+    toast({ status: 'success', title: 'Marca creada' });
+  } catch (e: any) {
+    const status = e?.response?.status;
+    if (status === 409) {
+      toast({ status: 'error', title: 'Duplicado', description: 'Ya existe una marca con ese nombre.' });
+    } else if (status === 401) {
+      toast({ status: 'error', title: 'Sesión expirada' });
+      router.replace('/login?next=/productos/nuevo');
+    } else if (status === 403) {
+      toast({ status: 'error', title: 'Sin permisos', description: 'Necesitás rol ADMIN para crear marcas.' });
+    } else {
+      toast({ status: 'error', title: 'No se pudo crear la marca', description: e?.response?.data?.message ?? e?.message });
+    }
+  } finally {
+    setCreatingMarca(false);
+  }
+};
+
 
   const handleCrearCapacidad = async () => {
     if (!nuevaCapEtiqueta.trim()) {
@@ -417,12 +454,29 @@ export default function NuevoProductoPage() {
             </Select>
           </FormControl>
 
-          <FormControl isRequired>
-            <FormLabel>Marca</FormLabel>
-            <Select placeholder="Elegí marca" value={String(marcaId)} onChange={(e) => setMarcaId(e.target.value)}>
-              {marcas.map(m => <option key={m.id} value={String(m.id)}>{m.nombre}</option>)}
-            </Select>
-          </FormControl>
+         <FormControl isRequired>
+  <FormLabel>Marca</FormLabel>
+  <Select
+    placeholder="Elegí marca"
+    value={String(marcaId)}
+    onChange={(e) => {
+      const v = e.target.value;
+      if (v === 'new-marca') {
+        // limpiar y abrir modal
+        setNuevaMarcaNombre('');
+        setIsMarcaOpen(true);
+        return;
+      }
+      setMarcaId(v);
+    }}
+  >
+    {marcas.map(m => (
+      <option key={m.id} value={String(m.id)}>{m.nombre}</option>
+    ))}
+    <option value="new-marca">➕ Crear nueva marca…</option>
+  </Select>
+</FormControl>
+
 
           <FormControl isRequired isDisabled={!categoriaId || !marcaId}>
             <FormLabel>Modelo</FormLabel>
@@ -611,6 +665,32 @@ export default function NuevoProductoPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+       <Modal isOpen={isMarcaOpen} onClose={() => setIsMarcaOpen(false)} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Nueva marca</ModalHeader>
+          <ModalBody>
+             <FormControl isRequired>
+        <FormLabel>Nombre de la marca</FormLabel>
+        <Input
+          value={nuevaMarcaNombre}
+          onChange={(e) => setNuevaMarcaNombre(e.target.value)}
+          placeholder="Ej: Apple, Samsung, Sony…"
+        />
+      </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button mr={3} onClick={() => setIsMarcaOpen(false)}>Cancelar</Button>
+            <Button colorScheme="blue" onClick={handleCrearMarca} isLoading={creatingMarca}>
+              Crear marca
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+     
+
     </Box>
   );
 }
