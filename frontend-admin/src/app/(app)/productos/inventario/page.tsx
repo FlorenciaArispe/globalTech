@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box, Container, Text, HStack, Table, Thead, Tr, Th, Tbody, Td, Image, Badge,
   Flex, Spinner, IconButton, Tooltip, Button, useToast, AlertDialogOverlay,
@@ -117,6 +117,13 @@ const [editBateria, setEditBateria] = useState<string>('');          // solo USA
 const [editPrecioOverride, setEditPrecioOverride] = useState<string>(''); // solo USADO
 const [editPrecioBase, setEditPrecioBase] = useState<string>('');    // solo NUEVO (variante)
 const [savingEdit, setSavingEdit] = useState(false);
+
+// Refs requeridos por AlertDialog (botón no destructivo)
+const cancelRefAdd = useRef<HTMLButtonElement>(null);
+const cancelRefMov = useRef<HTMLButtonElement>(null);
+const cancelRefEditUnidad = useRef<HTMLButtonElement>(null);
+const cancelRefDelUnidad = useRef<HTMLButtonElement>(null);
+
 
 const openEdit = (r: InventarioRowDTO) => {
   setEditRow(r);
@@ -585,7 +592,7 @@ const confirmDeleteUnidad = async () => {
       </Container>
 
       {/* Modal: Agregar unidad */}
-      <AlertDialog isOpen={isAddUnidadOpen} onClose={closeAddUnidad} isCentered>
+      <AlertDialog isOpen={isAddUnidadOpen} onClose={closeAddUnidad} isCentered  leastDestructiveRef={cancelRefAdd}>
         <AlertDialogOverlay />
         <AlertDialogContent>
           <AlertDialogHeader>Agregar unidad</AlertDialogHeader>
@@ -639,7 +646,7 @@ const confirmDeleteUnidad = async () => {
       </AlertDialog>
 
       {/* Modal: Movimiento (entrada/salida) */}
-      <AlertDialog isOpen={isMovOpen} onClose={closeMovimiento} isCentered>
+      <AlertDialog isOpen={isMovOpen} onClose={closeMovimiento} isCentered  leastDestructiveRef={cancelRefMov}>
         <AlertDialogOverlay />
         <AlertDialogContent>
           <AlertDialogHeader>Movimiento de inventario</AlertDialogHeader>
@@ -673,7 +680,7 @@ const confirmDeleteUnidad = async () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog isOpen={isEditUnidadOpen} onClose={closeEditUnidad} isCentered>
+      <AlertDialog isOpen={isEditUnidadOpen} onClose={closeEditUnidad} isCentered leastDestructiveRef={cancelRefEditUnidad}>
   <AlertDialogOverlay />
   <AlertDialogContent>
     <AlertDialogHeader>Editar unidad</AlertDialogHeader>
@@ -721,7 +728,7 @@ const confirmDeleteUnidad = async () => {
   </AlertDialogContent>
 </AlertDialog>
 
-<AlertDialog isOpen={isDelUnidadOpen} onClose={closeDeleteUnidad} isCentered>
+<AlertDialog isOpen={isDelUnidadOpen} onClose={closeDeleteUnidad} isCentered  leastDestructiveRef={cancelRefDelUnidad}>
   <AlertDialogOverlay />
   <AlertDialogContent>
     <AlertDialogHeader>Eliminar unidad</AlertDialogHeader>
