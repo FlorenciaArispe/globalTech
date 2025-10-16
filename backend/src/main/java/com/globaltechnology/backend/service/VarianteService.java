@@ -6,6 +6,8 @@ import com.globaltechnology.backend.web.dto.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -51,6 +53,24 @@ public class VarianteService {
       v.getCreatedAt(),
       v.getUpdatedAt()
     );
+  }
+
+   public Variante updatePrecioBase(Long varianteId, BigDecimal nuevoPrecio) {
+    if (nuevoPrecio == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "precioBase es requerido");
+    }
+    if (nuevoPrecio.signum() < 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "precioBase no puede ser negativo");
+    }
+
+    var v = repo.findById(varianteId)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Variante no encontrada"));
+
+    // si querés limitar decimales:
+    nuevoPrecio = nuevoPrecio.setScale(2, java.math.RoundingMode.HALF_UP);
+
+    v.setPrecioBase(nuevoPrecio);
+    return repo.save(v);
   }
 
 
