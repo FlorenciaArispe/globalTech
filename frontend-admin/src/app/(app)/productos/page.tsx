@@ -14,7 +14,7 @@ import {
   NumberInput,
   NumberInputField
 } from '@chakra-ui/react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Minus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/axios';
 
@@ -79,9 +79,10 @@ export default function Productos() {
   const [formPrecioOverride, setFormPrecioOverride] = useState<string>(''); // opcional
   const [savingUnidad, setSavingUnidad] = useState(false);
   const [isAddMovOpen, setIsAddMovOpen] = useState(false);
-const [movVarianteId, setMovVarianteId] = useState<Id | null>(null);
-const [movCantidad, setMovCantidad] = useState<string>(''); // string para input
-const [savingMov, setSavingMov] = useState(false);
+  const [movVarianteId, setMovVarianteId] = useState<Id | null>(null);
+  const [movCantidad, setMovCantidad] = useState<string>(''); // string para input
+  const [savingMov, setSavingMov] = useState(false);
+  const [movTipo, setMovTipo] = useState<'ENTRADA' | 'SALIDA'>('ENTRADA');
 
   useEffect(() => {
     let alive = true;
@@ -124,12 +125,14 @@ const [savingMov, setSavingMov] = useState(false);
     setIsAddOpen(true);
   };
 
-  const openAddMovimiento = (varianteId: Id) => {
-  setMovVarianteId(varianteId);
-  setMovCantidad('');
-  setIsAddMovOpen(true);
-};
-const closeAddMovimiento = () => setIsAddMovOpen(false);
+  const openAddMovimiento = (varianteId: Id, tipo: 'ENTRADA' | 'SALIDA' = 'ENTRADA') => {
+    setMovVarianteId(varianteId);
+    setMovCantidad('');
+    setMovTipo(tipo);
+    setIsAddMovOpen(true);
+  };
+
+  const closeAddMovimiento = () => setIsAddMovOpen(false);
 
   function parsePrecio(v: string): number | null {
     if (!v) return null;
@@ -142,46 +145,63 @@ const closeAddMovimiento = () => setIsAddMovOpen(false);
     if (formEstado === 'NUEVO') setFormPrecioOverride('');
   }, [formEstado]);
 
-  const saveMovimientoEntrada = async () => {
-  if (!movVarianteId) return;
-  const n = Number(movCantidad);
-  if (!Number.isFinite(n) || n <= 0) {
-    toast({ status: 'warning', title: 'Cantidad inválida', description: 'Debe ser un número positivo.' });
-    return;
-  }
-  setSavingMov(true);
-  try {
-    // Endpoint esperado en backend: POST /api/movimientos
-    await api.post('/api/movimientos', {
-      varianteId: Number(movVarianteId),
-      tipo: 'ENTRADA',
-      cantidad: n,          // el backend lo guarda como +n
-      notas: 'Alta desde Productos',
-    });
+  const saveMovimiento = async () => {
+    if (!movVarianteId) return;
 
-    // ✅ actualizar UI local (sumo n al stock de esa variante)
-    setRows(prev => prev.map(m => ({
-      ...m,
-      variantes: m.variantes.map(v =>
-        String(v.id) === String(movVarianteId)
-          ? { ...v, stock: (v.stock ?? 0) + n }
-          : v
-      )
-    })));
-
-    toast({ status: 'success', title: 'Stock agregado' });
-    setIsAddMovOpen(false);
-  } catch (e: any) {
-    const status = e?.response?.status;
-    if (status === 400 || status === 409) {
-      toast({ status: 'error', title: 'No se pudo crear el movimiento', description: e?.response?.data?.message ?? e?.message });
-    } else {
-      toast({ status: 'error', title: 'Error de red', description: e?.response?.data?.message ?? e?.message });
+    const n = Number(movCantidad);
+    if (!Number.isFinite(n) || n <= 0) {
+      toast({ status: 'warning', title: 'Cantidad inválida', description: 'Debe ser un número positivo.' });
+      return;
     }
-  } finally {
-    setSavingMov(false);
-  }
-};
+
+    // Validación local opcional para SALIDA: no permitir salir más de lo disponible
+    const current = (() => {
+      for (const m of rows) {
+        const found = m.variantes.find(v => String(v.id) === String(movVarianteId));
+        if (found) return found.stock ?? 0;
+      }
+      return 0;
+    })();
+
+    if (movTipo === 'SALIDA' && n > current) {
+      toast({ status: 'warning', title: 'Stock insuficiente', description: `Disponibles: ${current}` });
+      return;
+    }
+
+    setSavingMov(true);
+    try {
+      await api.post('/api/movimientos', {
+        varianteId: Number(movVarianteId),
+        tipo: movTipo,       // 'ENTRADA' | 'SALIDA'
+        cantidad: n,         // el backend interpreta el signo por "tipo"
+        notas: movTipo === 'ENTRADA' ? 'Alta desde Productos' : 'Baja desde Productos',
+      });
+
+      // ✅ actualizar UI local
+      setRows(prev => prev.map(m => ({
+        ...m,
+        variantes: m.variantes.map(v => {
+          if (String(v.id) !== String(movVarianteId)) return v;
+          const total = v.stock ?? 0;
+          const nuevo = movTipo === 'ENTRADA' ? total + n : total - n;
+          return { ...v, stock: Math.max(0, nuevo) };
+        })
+      })));
+
+      toast({ status: 'success', title: `Movimiento registrado (${movTipo.toLowerCase()})` });
+      setIsAddMovOpen(false);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 400 || status === 409) {
+        toast({ status: 'error', title: 'No se pudo crear el movimiento', description: e?.response?.data?.message ?? e?.message });
+      } else {
+        toast({ status: 'error', title: 'Error de red', description: e?.response?.data?.message ?? e?.message });
+      }
+    } finally {
+      setSavingMov(false);
+    }
+  };
+
 
 
   const saveUnidad = async () => {
@@ -366,9 +386,9 @@ const closeAddMovimiento = () => setIsAddMovOpen(false);
 
                             {modelo.trackeaUnidad ? (
                               <HStack>
-                                <Badge colorScheme="blue" minW="72px" textAlign="center">{v.stock ?? 0} u. tot</Badge>
-                                <Badge colorScheme="green" minW="72px" textAlign="center">{v.stockNuevos ?? 0} nuevo/s</Badge>
-                                <Badge colorScheme="yellow" minW="72px" textAlign="center">{v.stockUsados ?? 0} usado/s</Badge>
+                                <Badge colorScheme="blue" minW="72px" textAlign="center">TOTAL: {v.stock ?? 0}</Badge>
+                                <Badge colorScheme="green" minW="72px" textAlign="center">NUEVOS: {v.stockNuevos ?? 0}</Badge>
+                                <Badge colorScheme="yellow" minW="72px" textAlign="center">USADOS: {v.stockUsados ?? 0}</Badge>
 
                                 <Tooltip label="Agregar unidad">
                                   <IconButton
@@ -381,26 +401,32 @@ const closeAddMovimiento = () => setIsAddMovOpen(false);
                                 </Tooltip>
                               </HStack>
                             ) : (
-                               <HStack>
-    <Badge colorScheme={v.stock > 0 ? 'green' : 'red'} minW="72px" textAlign="center">
-      {v.stock > 0 ? `${v.stock} u.` : 'Sin stock'}
-    </Badge>
+                              <HStack>
+                                <Badge colorScheme="blue" minW="72px" textAlign="center">
+                                  TOTAL: {v.stock > 0 ? v.stock : 0}
+                                </Badge>
 
-    <Tooltip label="Este producto no trackea por unidad (stock por movimientos)">
-      <Tag size="sm" colorScheme="gray">No trackea</Tag>
-    </Tooltip>
+                                <Tooltip label="Agregar stock (movimiento ENTRADA)">
+                                  <IconButton
+                                    aria-label="Agregar stock"
+                                    icon={<Plus size={16} />}
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openAddMovimiento(v.id, 'ENTRADA')}
+                                  />
+                                </Tooltip>
 
-    {/* ⬇️ NUEVO: Agregar stock por movimiento */}
-    <Tooltip label="Agregar stock (movimiento ENTRADA)">
-      <IconButton
-        aria-label="Agregar stock"
-        icon={<Plus size={16} />}
-        size="sm"
-        variant="outline"
-        onClick={() => openAddMovimiento(v.id)}
-      />
-    </Tooltip>
-  </HStack>
+                                <Tooltip label="Quitar stock (movimiento SALIDA)">
+                                  <IconButton
+                                    aria-label="Quitar stock"
+                                    icon={<Minus size={16} />}
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openAddMovimiento(v.id, 'SALIDA')}
+                                  />
+                                </Tooltip>
+                              </HStack>
+
                             )}
 
 
@@ -511,28 +537,34 @@ const closeAddMovimiento = () => setIsAddMovOpen(false);
       </AlertDialog>
 
       <AlertDialog isOpen={isAddMovOpen} leastDestructiveRef={cancelRef} onClose={closeAddMovimiento} isCentered>
-  <AlertDialogOverlay />
-  <AlertDialogContent>
-    <AlertDialogHeader>Agregar stock (no trackeado)</AlertDialogHeader>
-    <AlertDialogBody>
-      <FormControl isRequired mb={3}>
-        <FormLabel>Cantidad a ingresar</FormLabel>
-        <NumberInput min={1} value={movCantidad} onChange={(v) => setMovCantidad(v)}>
-          <NumberInputField placeholder="Ej: 5" />
-        </NumberInput>
-      </FormControl>
-      <Text fontSize="sm" color="gray.500">
-        Esto crea un Movimiento de Inventario de tipo <b>ENTRADA</b> para la variante seleccionada.
-      </Text>
-    </AlertDialogBody>
-    <AlertDialogFooter>
-      <Button ref={cancelRef} onClick={closeAddMovimiento}>Cancelar</Button>
-      <Button colorScheme="blue" ml={3} onClick={saveMovimientoEntrada} isLoading={savingMov}>
-        Guardar
-      </Button>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            {movTipo === 'ENTRADA' ? 'Agregar stock (ENTRADA)' : 'Quitar stock (SALIDA)'}
+          </AlertDialogHeader>
+
+          <AlertDialogBody>
+            <FormControl isRequired mb={3}>
+              <FormLabel>Cantidad
+              </FormLabel>
+              <NumberInput min={1} value={movCantidad} onChange={(v) => setMovCantidad(v)}>
+                <NumberInputField placeholder="Ej: 5" />
+              </NumberInput>
+            </FormControl>
+            <Text fontSize="sm" color="gray.500">
+              Esto crea un Movimiento de Inventario de tipo <b>{movTipo}</b> para la variante seleccionada.
+            </Text>
+
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={cancelRef} onClick={closeAddMovimiento}>Cancelar</Button>
+            <Button colorScheme="blue" ml={3} onClick={saveMovimiento} isLoading={savingMov}>
+              Guardar
+            </Button>
+
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </Box>
   );

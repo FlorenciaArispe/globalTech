@@ -101,39 +101,39 @@ export default function InventarioPage() {
   const [savingMov, setSavingMov] = useState(false);
 
   // Editar unidad (solo trackeadas)
-const [isEditUnidadOpen, setIsEditUnidadOpen] = useState(false);
-const [editUnidadId, setEditUnidadId] = useState<Id | null>(null);
-const [editEstado, setEditEstado] = useState<EstadoComercial>('NUEVO');
-// Eliminar unidad
-const [isDelUnidadOpen, setIsDelUnidadOpen] = useState(false);
-const [delUnidadId, setDelUnidadId] = useState<Id | null>(null);
-const [deletingUnidad, setDeletingUnidad] = useState(false);
+  const [isEditUnidadOpen, setIsEditUnidadOpen] = useState(false);
+  const [editUnidadId, setEditUnidadId] = useState<Id | null>(null);
+  const [editEstado, setEditEstado] = useState<EstadoComercial>('NUEVO');
+  // Eliminar unidad
+  const [isDelUnidadOpen, setIsDelUnidadOpen] = useState(false);
+  const [delUnidadId, setDelUnidadId] = useState<Id | null>(null);
+  const [deletingUnidad, setDeletingUnidad] = useState(false);
 
-// === Editar unidad / precio base (variante si NUEVO)
-const [isEditOpen, setIsEditOpen] = useState(false);
-const [editRow, setEditRow] = useState<InventarioRowDTO | null>(null);
-const [editImei, setEditImei] = useState('');
-const [editBateria, setEditBateria] = useState<string>('');          // solo USADO
-const [editPrecioOverride, setEditPrecioOverride] = useState<string>(''); // solo USADO
-const [editPrecioBase, setEditPrecioBase] = useState<string>('');    // solo NUEVO (variante)
-const [savingEdit, setSavingEdit] = useState(false);
+  // === Editar unidad / precio base (variante si NUEVO)
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editRow, setEditRow] = useState<InventarioRowDTO | null>(null);
+  const [editImei, setEditImei] = useState('');
+  const [editBateria, setEditBateria] = useState<string>('');          // solo USADO
+  const [editPrecioOverride, setEditPrecioOverride] = useState<string>(''); // solo USADO
+  const [editPrecioBase, setEditPrecioBase] = useState<string>('');    // solo NUEVO (variante)
+  const [savingEdit, setSavingEdit] = useState(false);
 
-// Refs requeridos por AlertDialog (botón no destructivo)
-const cancelRefAdd = useRef<HTMLButtonElement>(null);
-const cancelRefMov = useRef<HTMLButtonElement>(null);
-const cancelRefEditUnidad = useRef<HTMLButtonElement>(null);
-const cancelRefDelUnidad = useRef<HTMLButtonElement>(null);
+  // Refs requeridos por AlertDialog (botón no destructivo)
+  const cancelRefAdd = useRef<HTMLButtonElement>(null);
+  const cancelRefMov = useRef<HTMLButtonElement>(null);
+  const cancelRefEditUnidad = useRef<HTMLButtonElement>(null);
+  const cancelRefDelUnidad = useRef<HTMLButtonElement>(null);
 
 
-const openEdit = (r: InventarioRowDTO) => {
-  setEditRow(r);
-  setEditImei(r.imei ?? '');
-  setEditBateria(r.bateriaCondicionPct != null ? String(r.bateriaCondicionPct) : '');
-  setEditPrecioOverride(r.precioOverride != null ? String(r.precioOverride) : '');
-  setEditPrecioBase(r.precioBase != null ? String(r.precioBase) : '');
-  setIsEditOpen(true);
-};
-const closeEdit = () => setIsEditOpen(false);
+  const openEdit = (r: InventarioRowDTO) => {
+    setEditRow(r);
+    setEditImei(r.imei ?? '');
+    setEditBateria(r.bateriaCondicionPct != null ? String(r.bateriaCondicionPct) : '');
+    setEditPrecioOverride(r.precioOverride != null ? String(r.precioOverride) : '');
+    setEditPrecioBase(r.precioBase != null ? String(r.precioBase) : '');
+    setIsEditOpen(true);
+  };
+  const closeEdit = () => setIsEditOpen(false);
 
 
 
@@ -238,153 +238,153 @@ const closeEdit = () => setIsEditOpen(false);
     }
   };
 
- // Abrir modal de edición precargando datos de la fila
-const openEditUnidad = (r: InventarioRowDTO) => {
-  if (!r.unidadId) return;
-  setEditUnidadId(r.unidadId);
-  setEditEstado((r.estadoProducto as EstadoComercial) || 'NUEVO');
-  setEditBateria(r.bateriaCondicionPct != null ? String(r.bateriaCondicionPct) : '');
-  setEditPrecioOverride(r.precioOverride != null ? String(r.precioOverride) : '');
-  setIsEditUnidadOpen(true);
-};
-const closeEditUnidad = () => setIsEditUnidadOpen(false);
+  // Abrir modal de edición precargando datos de la fila
+  const openEditUnidad = (r: InventarioRowDTO) => {
+    if (!r.unidadId) return;
+    setEditUnidadId(r.unidadId);
+    setEditEstado((r.estadoProducto as EstadoComercial) || 'NUEVO');
+    setEditBateria(r.bateriaCondicionPct != null ? String(r.bateriaCondicionPct) : '');
+    setEditPrecioOverride(r.precioOverride != null ? String(r.precioOverride) : '');
+    setIsEditUnidadOpen(true);
+  };
+  const closeEditUnidad = () => setIsEditUnidadOpen(false);
 
-const saveEdit = async () => {
-  if (!editRow || !editRow.unidadId) return;
+  const saveEdit = async () => {
+    if (!editRow || !editRow.unidadId) return;
 
-  // Validaciones
-  if (!editImei.trim()) {
-    toast({ status: 'warning', title: 'IMEI requerido' });
-    return;
-  }
-
-  const unidadPayload: any = { imei: editImei.trim() };
-
-  if (editRow.estadoProducto === 'USADO') {
-    const bat = editBateria ? Number(editBateria) : null;
-    if (bat == null || !Number.isFinite(bat) || bat < 0 || bat > 100) {
-      toast({ status: 'warning', title: 'Batería inválida (0–100)' });
+    // Validaciones
+    if (!editImei.trim()) {
+      toast({ status: 'warning', title: 'IMEI requerido' });
       return;
     }
-    unidadPayload.bateriaCondicionPct = bat;
 
-    if (editPrecioOverride) {
-      const p = parsePrecio(editPrecioOverride);
-      if (p == null) {
-        toast({ status: 'warning', title: 'Precio override inválido' });
+    const unidadPayload: any = { imei: editImei.trim() };
+
+    if (editRow.estadoProducto === 'USADO') {
+      const bat = editBateria ? Number(editBateria) : null;
+      if (bat == null || !Number.isFinite(bat) || bat < 0 || bat > 100) {
+        toast({ status: 'warning', title: 'Batería inválida (0–100)' });
         return;
       }
-      unidadPayload.precioOverride = p;
-    } else {
-      unidadPayload.precioOverride = null; // limpiar override
-    }
-  }
+      unidadPayload.bateriaCondicionPct = bat;
 
-  // Si NUEVO, también necesitamos precioBase válido
-  let nuevoPrecioBase: number | null = null;
-  if (editRow.estadoProducto === 'NUEVO') {
-    const p = parsePrecio(editPrecioBase);
-    if (p == null) {
-      toast({ status: 'warning', title: 'Precio base inválido' });
+      if (editPrecioOverride) {
+        const p = parsePrecio(editPrecioOverride);
+        if (p == null) {
+          toast({ status: 'warning', title: 'Precio override inválido' });
+          return;
+        }
+        unidadPayload.precioOverride = p;
+      } else {
+        unidadPayload.precioOverride = null; // limpiar override
+      }
+    }
+
+    // Si NUEVO, también necesitamos precioBase válido
+    let nuevoPrecioBase: number | null = null;
+    if (editRow.estadoProducto === 'NUEVO') {
+      const p = parsePrecio(editPrecioBase);
+      if (p == null) {
+        toast({ status: 'warning', title: 'Precio base inválido' });
+        return;
+      }
+      nuevoPrecioBase = p;
+    }
+
+    setSavingEdit(true);
+    try {
+      // 1) Actualizar UNIDAD
+      await api.put(`/api/unidades/${editRow.unidadId}`, unidadPayload);
+
+      // 2) Actualizar VARIANTE (solo si NUEVO)
+      if (editRow.estadoProducto === 'NUEVO' && nuevoPrecioBase != null) {
+        await api.patch(`/api/variantes/${editRow.varianteId}/precio-base`, {
+          precioBase: nuevoPrecioBase,
+        });
+      }
+
+      // 3) Refrescar listado
+      const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
+      setRows(Array.isArray(data) ? data : []);
+
+      toast({ status: 'success', title: 'Cambios guardados' });
+      setIsEditOpen(false);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 409) {
+        toast({ status: 'error', title: 'Conflicto', description: e?.response?.data?.message ?? e?.message });
+      } else if (status === 400) {
+        toast({ status: 'error', title: 'Datos inválidos', description: e?.response?.data?.message ?? e?.message });
+      } else {
+        toast({ status: 'error', title: 'No se pudo guardar', description: e?.response?.data?.message ?? e?.message });
+      }
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+
+  const saveEditUnidad = async () => {
+    if (!editUnidadId) return;
+    // validaciones simples
+    const bNum = editBateria ? Number(editBateria) : null;
+    if (editEstado === 'USADO' && (bNum == null || !Number.isFinite(bNum) || bNum < 0 || bNum > 100)) {
+      toast({ status: 'warning', title: 'Batería inválida (0–100) para usados' });
       return;
     }
-    nuevoPrecioBase = p;
-  }
-
-  setSavingEdit(true);
-  try {
-    // 1) Actualizar UNIDAD
-    await api.put(`/api/unidades/${editRow.unidadId}`, unidadPayload);
-
-    // 2) Actualizar VARIANTE (solo si NUEVO)
-    if (editRow.estadoProducto === 'NUEVO' && nuevoPrecioBase != null) {
-     await api.patch(`/api/variantes/${editRow.varianteId}/precio-base`, {
-  precioBase: nuevoPrecioBase,
-});
+    const precioNum = editPrecioOverride
+      ? Number(editPrecioOverride.replace(/\./g, '').replace(',', '.'))
+      : null;
+    if (editPrecioOverride && !Number.isFinite(precioNum as number)) {
+      toast({ status: 'warning', title: 'Precio override inválido' });
+      return;
     }
 
-    // 3) Refrescar listado
-    const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
-    setRows(Array.isArray(data) ? data : []);
+    setSavingEdit(true);
+    try {
+      await api.put(`/api/unidades/${editUnidadId}`, {
+        estadoProducto: editEstado,
+        bateriaCondicionPct: editEstado === 'USADO' ? bNum : null,
+        precioOverride: editEstado === 'USADO' ? (precioNum ?? null) : null,
+      });
+      toast({ status: 'success', title: 'Unidad actualizada' });
 
-    toast({ status: 'success', title: 'Cambios guardados' });
-    setIsEditOpen(false);
-  } catch (e: any) {
-    const status = e?.response?.status;
-    if (status === 409) {
-      toast({ status: 'error', title: 'Conflicto', description: e?.response?.data?.message ?? e?.message });
-    } else if (status === 400) {
-      toast({ status: 'error', title: 'Datos inválidos', description: e?.response?.data?.message ?? e?.message });
-    } else {
-      toast({ status: 'error', title: 'No se pudo guardar', description: e?.response?.data?.message ?? e?.message });
+      // refresco listado
+      const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
+      setRows(Array.isArray(data) ? data : []);
+
+      setIsEditUnidadOpen(false);
+    } catch (e: any) {
+      toast({ status: 'error', title: 'No se pudo actualizar', description: e?.response?.data?.message ?? e?.message });
+    } finally {
+      setSavingEdit(false);
     }
-  } finally {
-    setSavingEdit(false);
-  }
-};
+  };
 
+  // Eliminar unidad
+  const openDeleteUnidad = (unidadId: Id) => {
+    setDelUnidadId(unidadId);
+    setIsDelUnidadOpen(true);
+  };
+  const closeDeleteUnidad = () => setIsDelUnidadOpen(false);
 
-const saveEditUnidad = async () => {
-  if (!editUnidadId) return;
-  // validaciones simples
-  const bNum = editBateria ? Number(editBateria) : null;
-  if (editEstado === 'USADO' && (bNum == null || !Number.isFinite(bNum) || bNum < 0 || bNum > 100)) {
-    toast({ status: 'warning', title: 'Batería inválida (0–100) para usados' });
-    return;
-  }
-  const precioNum = editPrecioOverride
-    ? Number(editPrecioOverride.replace(/\./g, '').replace(',', '.'))
-    : null;
-  if (editPrecioOverride && !Number.isFinite(precioNum as number)) {
-    toast({ status: 'warning', title: 'Precio override inválido' });
-    return;
-  }
+  const confirmDeleteUnidad = async () => {
+    if (!delUnidadId) return;
+    setDeletingUnidad(true);
+    try {
+      await api.delete(`/api/unidades/${delUnidadId}`);
+      toast({ status: 'success', title: 'Unidad eliminada' });
 
-  setSavingEdit(true);
-  try {
-    await api.put(`/api/unidades/${editUnidadId}`, {
-      estadoProducto: editEstado,
-      bateriaCondicionPct: editEstado === 'USADO' ? bNum : null,
-      precioOverride: editEstado === 'USADO' ? (precioNum ?? null) : null,
-    });
-    toast({ status: 'success', title: 'Unidad actualizada' });
+      const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
+      setRows(Array.isArray(data) ? data : []);
 
-    // refresco listado
-    const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
-    setRows(Array.isArray(data) ? data : []);
-
-    setIsEditUnidadOpen(false);
-  } catch (e: any) {
-    toast({ status: 'error', title: 'No se pudo actualizar', description: e?.response?.data?.message ?? e?.message });
-  } finally {
-    setSavingEdit(false);
-  }
-};
-
-// Eliminar unidad
-const openDeleteUnidad = (unidadId: Id) => {
-  setDelUnidadId(unidadId);
-  setIsDelUnidadOpen(true);
-};
-const closeDeleteUnidad = () => setIsDelUnidadOpen(false);
-
-const confirmDeleteUnidad = async () => {
-  if (!delUnidadId) return;
-  setDeletingUnidad(true);
-  try {
-    await api.delete(`/api/unidades/${delUnidadId}`);
-    toast({ status: 'success', title: 'Unidad eliminada' });
-
-    const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
-    setRows(Array.isArray(data) ? data : []);
-
-    setIsDelUnidadOpen(false);
-  } catch (e: any) {
-    toast({ status: 'error', title: 'No se pudo eliminar', description: e?.response?.data?.message ?? e?.message });
-  } finally {
-    setDeletingUnidad(false);
-  }
-};
+      setIsDelUnidadOpen(false);
+    } catch (e: any) {
+      toast({ status: 'error', title: 'No se pudo eliminar', description: e?.response?.data?.message ?? e?.message });
+    } finally {
+      setDeletingUnidad(false);
+    }
+  };
 
 
   const openMovimiento = (varianteId: Id, tipo: 'ENTRADA' | 'SALIDA') => {
@@ -539,23 +539,23 @@ const confirmDeleteUnidad = async () => {
 
                             <HStack justify="flex-end" spacing={2} >
                               {r.trackeaUnidad ? (
-                                  <Menu>
-    <MenuButton
-      as={IconButton}
-      aria-label="Acciones"
-      icon={<MoreVertical size={16} />}
-      size="sm"
-      variant="outline"
-    />
-    <MenuList>
-      <MenuItem icon={<Pencil size={14} />} onClick={() => openEdit(r)}>
-        Editar
-      </MenuItem>
-      <MenuItem icon={<Trash2 size={14} />} color="red.500" onClick={() => {/* tu delete de unidad */}}>
-        Eliminar
-      </MenuItem>
-    </MenuList>
-  </Menu>
+                                <Menu>
+                                  <MenuButton
+                                    as={IconButton}
+                                    aria-label="Acciones"
+                                    icon={<MoreVertical size={16} />}
+                                    size="sm"
+                                    variant="outline"
+                                  />
+                                  <MenuList>
+                                    <MenuItem icon={<Pencil size={14} />} onClick={() => openEdit(r)}>
+                                      Editar
+                                    </MenuItem>
+                                    <MenuItem icon={<Trash2 size={14} />} color="red.500" onClick={() => {/* tu delete de unidad */ }}>
+                                      Eliminar
+                                    </MenuItem>
+                                  </MenuList>
+                                </Menu>
                               ) : (
                                 <>
                                   <Tooltip label="Registrar entrada">
@@ -592,7 +592,7 @@ const confirmDeleteUnidad = async () => {
       </Container>
 
       {/* Modal: Agregar unidad */}
-      <AlertDialog isOpen={isAddUnidadOpen} onClose={closeAddUnidad} isCentered  leastDestructiveRef={cancelRefAdd}>
+      <AlertDialog isOpen={isAddUnidadOpen} onClose={closeAddUnidad} isCentered leastDestructiveRef={cancelRefAdd}>
         <AlertDialogOverlay />
         <AlertDialogContent>
           <AlertDialogHeader>Agregar unidad</AlertDialogHeader>
@@ -646,7 +646,7 @@ const confirmDeleteUnidad = async () => {
       </AlertDialog>
 
       {/* Modal: Movimiento (entrada/salida) */}
-      <AlertDialog isOpen={isMovOpen} onClose={closeMovimiento} isCentered  leastDestructiveRef={cancelRefMov}>
+      <AlertDialog isOpen={isMovOpen} onClose={closeMovimiento} isCentered leastDestructiveRef={cancelRefMov}>
         <AlertDialogOverlay />
         <AlertDialogContent>
           <AlertDialogHeader>Movimiento de inventario</AlertDialogHeader>
@@ -681,128 +681,128 @@ const confirmDeleteUnidad = async () => {
       </AlertDialog>
 
       <AlertDialog isOpen={isEditUnidadOpen} onClose={closeEditUnidad} isCentered leastDestructiveRef={cancelRefEditUnidad}>
-  <AlertDialogOverlay />
-  <AlertDialogContent>
-    <AlertDialogHeader>Editar unidad</AlertDialogHeader>
-    <AlertDialogBody>
-      <FormControl isRequired mb={3}>
-        <FormLabel>Estado del producto</FormLabel>
-        <Select value={editEstado} onChange={e => setEditEstado(e.target.value as EstadoComercial)}>
-          <option value="NUEVO">NUEVO</option>
-          <option value="USADO">USADO</option>
-        </Select>
-      </FormControl>
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Editar unidad</AlertDialogHeader>
+          <AlertDialogBody>
+            <FormControl isRequired mb={3}>
+              <FormLabel>Estado del producto</FormLabel>
+              <Select value={editEstado} onChange={e => setEditEstado(e.target.value as EstadoComercial)}>
+                <option value="NUEVO">NUEVO</option>
+                <option value="USADO">USADO</option>
+              </Select>
+            </FormControl>
 
-      {editEstado === 'USADO' && (
-        <FormControl isRequired mb={3}>
-          <FormLabel>Batería (condición %)</FormLabel>
-          <NumberInput min={0} max={100} value={editBateria} onChange={v => setEditBateria(v)}>
-            <NumberInputField placeholder="0 a 100" />
-          </NumberInput>
-        </FormControl>
-      )}
+            {editEstado === 'USADO' && (
+              <FormControl isRequired mb={3}>
+                <FormLabel>Batería (condición %)</FormLabel>
+                <NumberInput min={0} max={100} value={editBateria} onChange={v => setEditBateria(v)}>
+                  <NumberInputField placeholder="0 a 100" />
+                </NumberInput>
+              </FormControl>
+            )}
 
-      {editEstado === 'USADO' && (
-        <>
-          <FormControl mb={1}>
-            <FormLabel>Precio</FormLabel>
-            <Input
-              value={editPrecioOverride}
-              onChange={e => setEditPrecioOverride(e.target.value)}
-              placeholder="Ej: 499999.99"
-              inputMode="decimal"
-            />
-          </FormControl>
-          <Text fontSize="xs" color="gray.500">
-            Si lo dejás vacío, se usa el precio base de la variante.
-          </Text>
-        </>
-      )}
-    </AlertDialogBody>
-    <AlertDialogFooter>
-      <Button onClick={closeEditUnidad}>Cancelar</Button>
-      <Button colorScheme="blue" ml={3} onClick={saveEditUnidad} isLoading={savingEdit}>
-        Guardar
-      </Button>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
+            {editEstado === 'USADO' && (
+              <>
+                <FormControl mb={1}>
+                  <FormLabel>Precio</FormLabel>
+                  <Input
+                    value={editPrecioOverride}
+                    onChange={e => setEditPrecioOverride(e.target.value)}
+                    placeholder="Ej: 499999.99"
+                    inputMode="decimal"
+                  />
+                </FormControl>
+                <Text fontSize="xs" color="gray.500">
+                  Si lo dejás vacío, se usa el precio base de la variante.
+                </Text>
+              </>
+            )}
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button onClick={closeEditUnidad}>Cancelar</Button>
+            <Button colorScheme="blue" ml={3} onClick={saveEditUnidad} isLoading={savingEdit}>
+              Guardar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-<AlertDialog isOpen={isDelUnidadOpen} onClose={closeDeleteUnidad} isCentered  leastDestructiveRef={cancelRefDelUnidad}>
-  <AlertDialogOverlay />
-  <AlertDialogContent>
-    <AlertDialogHeader>Eliminar unidad</AlertDialogHeader>
-    <AlertDialogBody>
-      ¿Seguro que querés eliminar esta unidad? Esta acción no se puede deshacer.
-    </AlertDialogBody>
-    <AlertDialogFooter>
-      <Button onClick={closeDeleteUnidad}>Cancelar</Button>
-      <Button colorScheme="red" ml={3} onClick={confirmDeleteUnidad} isLoading={deletingUnidad}>
-        Eliminar
-      </Button>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
+      <AlertDialog isOpen={isDelUnidadOpen} onClose={closeDeleteUnidad} isCentered leastDestructiveRef={cancelRefDelUnidad}>
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Eliminar unidad</AlertDialogHeader>
+          <AlertDialogBody>
+            ¿Seguro que querés eliminar esta unidad? Esta acción no se puede deshacer.
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button onClick={closeDeleteUnidad}>Cancelar</Button>
+            <Button colorScheme="red" ml={3} onClick={confirmDeleteUnidad} isLoading={deletingUnidad}>
+              Eliminar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-<Modal isOpen={isEditOpen} onClose={closeEdit} isCentered>
-  <ModalOverlay />
-  <ModalContent>
-    <ModalHeader>Editar unidad {editRow?.imei ? `(${editRow.imei})` : ''}</ModalHeader>
-    <ModalBody>
-      <FormControl mb={3}>
-        <FormLabel>IMEI</FormLabel>
-        <Input value={editImei} onChange={(e) => setEditImei(e.target.value)} />
-      </FormControl>
+      <Modal isOpen={isEditOpen} onClose={closeEdit} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Editar unidad {editRow?.imei ? `(${editRow.imei})` : ''}</ModalHeader>
+          <ModalBody>
+            <FormControl mb={3}>
+              <FormLabel>IMEI</FormLabel>
+              <Input value={editImei} onChange={(e) => setEditImei(e.target.value)} />
+            </FormControl>
 
-      {editRow?.estadoProducto === 'USADO' && (
-        <>
-          <FormControl isRequired mb={3}>
-            <FormLabel>Batería (condición %)</FormLabel>
-            <NumberInput min={0} max={100} value={editBateria} onChange={(v) => setEditBateria(v)}>
-              <NumberInputField placeholder="0 a 100" />
-            </NumberInput>
-          </FormControl>
+            {editRow?.estadoProducto === 'USADO' && (
+              <>
+                <FormControl isRequired mb={3}>
+                  <FormLabel>Batería (condición %)</FormLabel>
+                  <NumberInput min={0} max={100} value={editBateria} onChange={(v) => setEditBateria(v)}>
+                    <NumberInputField placeholder="0 a 100" />
+                  </NumberInput>
+                </FormControl>
 
-          <FormControl mb={1}>
-            <FormLabel>Precio (override, opcional)</FormLabel>
-            <Input
-              value={editPrecioOverride}
-              onChange={(e) => setEditPrecioOverride(e.target.value)}
-              placeholder="Ej: 499999.99"
-              inputMode="decimal"
-            />
-          </FormControl>
-          <Text fontSize="xs" color="gray.500" mb={2}>
-            Si lo dejás vacío, se usa el precio base de la variante.
-          </Text>
-        </>
-      )}
+                <FormControl mb={1}>
+                  <FormLabel>Precio (override, opcional)</FormLabel>
+                  <Input
+                    value={editPrecioOverride}
+                    onChange={(e) => setEditPrecioOverride(e.target.value)}
+                    placeholder="Ej: 499999.99"
+                    inputMode="decimal"
+                  />
+                </FormControl>
+                <Text fontSize="xs" color="gray.500" mb={2}>
+                  Si lo dejás vacío, se usa el precio base de la variante.
+                </Text>
+              </>
+            )}
 
-      {editRow?.estadoProducto === 'NUEVO' && (
-        <>
-          <FormControl isRequired mb={3}>
-            <FormLabel>Precio base (variante)</FormLabel>
-            <Input
-              value={editPrecioBase}
-              onChange={(e) => setEditPrecioBase(e.target.value)}
-              placeholder="Ej: 999999.99"
-              inputMode="decimal"
-            />
-          </FormControl>
-          <Text fontSize="xs" color="gray.500">
-            Modificás el precio base de la <b>variante</b> (afecta a todos los nuevos).
-          </Text>
-        </>
-      )}
-    </ModalBody>
-    <ModalFooter>
-      <Button onClick={closeEdit}>Cancelar</Button>
-      <Button colorScheme="blue" ml={3} onClick={async () => { await saveEdit(); }} isLoading={savingEdit}>
-        Guardar
-      </Button>
-    </ModalFooter>
-  </ModalContent>
-</Modal>
+            {editRow?.estadoProducto === 'NUEVO' && (
+              <>
+                <FormControl isRequired mb={3}>
+                  <FormLabel>Precio base (variante)</FormLabel>
+                  <Input
+                    value={editPrecioBase}
+                    onChange={(e) => setEditPrecioBase(e.target.value)}
+                    placeholder="Ej: 999999.99"
+                    inputMode="decimal"
+                  />
+                </FormControl>
+                <Text fontSize="xs" color="gray.500">
+                  Modificás el precio base de la <b>variante</b> (afecta a todos los nuevos).
+                </Text>
+              </>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={closeEdit}>Cancelar</Button>
+            <Button colorScheme="blue" ml={3} onClick={async () => { await saveEdit(); }} isLoading={savingEdit}>
+              Guardar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
 
 
