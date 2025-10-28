@@ -32,9 +32,12 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       SERVER_PORT: 8080
+      APP_UPLOAD_DIR: /app/uploads
       APP_JWT_SECRET: ${APP_JWT_SECRET}
       APP_JWT_EXP_MIN: 120
       APP_JWT_ISSUER: globaltechnology
+    volumes:
+      - uploads_data:/app/uploads 
     ports:
       - "8085:8080"
 
@@ -116,3 +119,4 @@ services:
 
 volumes:
   db_data:
+  uploads_data: 

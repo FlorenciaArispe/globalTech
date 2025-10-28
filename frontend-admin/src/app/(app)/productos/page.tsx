@@ -14,7 +14,7 @@ import {
   NumberInput,
   NumberInputField
 } from '@chakra-ui/react';
-import { Plus, Pencil, Trash2, Minus } from 'lucide-react';
+import { Plus, Pencil, Trash2, Minus, Image as ImageIcon } from 'lucide-react'; // ✅ NUEVO
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/axios';
 
@@ -29,15 +29,15 @@ type VarianteResumenDTO = {
   stockUsados?: number | null;   // solo si trackeaUnidad
   precio?: number | null;
   precioPromo?: number | null;
+  imagenUrl?: string | null;     // ✅ NUEVO
 };
-
 
 type ModeloTablaDTO = {
   id: Id;
   nombre: string;
   categoriaId: Id;
   categoriaNombre: string;
-  trackeaUnidad: boolean;     // ⬅️ NUEVO
+  trackeaUnidad: boolean;
   marcaId?: Id;
   marcaNombre?: string;
   variantes: VarianteResumenDTO[];
@@ -48,7 +48,6 @@ const nombreVariante = (v: VarianteResumenDTO) => {
   if (partes.length === 0) return 'Variante';
   return partes.join(' - ');
 };
-
 
 const PLACEHOLDER_DATAURI =
   'data:image/svg+xml;utf8,' +
@@ -69,28 +68,38 @@ export default function Productos() {
 
   const [rows, setRows] = useState<ModeloTablaDTO[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // delete modelo
   const [deletingId, setDeletingId] = useState<Id | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
+
+  // agregar unidad
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [targetVarianteId, setTargetVarianteId] = useState<Id | null>(null);
   const [formImei, setFormImei] = useState('');
   const [formEstado, setFormEstado] = useState<EstadoComercial>('NUEVO');
-  const [formBateria, setFormBateria] = useState<string>(''); // %
-  const [formPrecioOverride, setFormPrecioOverride] = useState<string>(''); // opcional
+  const [formBateria, setFormBateria] = useState<string>('');
+  const [formPrecioOverride, setFormPrecioOverride] = useState<string>('');
   const [savingUnidad, setSavingUnidad] = useState(false);
+
+  // movimientos stock
   const [isAddMovOpen, setIsAddMovOpen] = useState(false);
   const [movVarianteId, setMovVarianteId] = useState<Id | null>(null);
-  const [movCantidad, setMovCantidad] = useState<string>(''); // string para input
+  const [movCantidad, setMovCantidad] = useState<string>('');
   const [savingMov, setSavingMov] = useState(false);
   const [movTipo, setMovTipo] = useState<'ENTRADA' | 'SALIDA'>('ENTRADA');
+
+  // ✅ NUEVO: subir imagen variante
+  const [isUploadOpen, setIsUploadOpen] = useState(false);        // abrir modal subir imagen
+  const [uploadVarianteId, setUploadVarianteId] = useState<Id | null>(null); // a qué variante le subo
+  const [uploadFile, setUploadFile] = useState<File | null>(null); // archivo elegido
+  const [uploadingImg, setUploadingImg] = useState(false);         // loading subir imagen
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const { data } = await api.get<ModeloTablaDTO[]>('api/modelos/tabla');
-
-        console.log("TABLA", data)
 
         if (!alive) return;
         setRows(Array.isArray(data) ? data : []);
@@ -134,6 +143,14 @@ export default function Productos() {
 
   const closeAddMovimiento = () => setIsAddMovOpen(false);
 
+  // ✅ NUEVO: abrir modal de subir imagen
+  const openUploadImagen = (varianteId: Id) => {
+    setUploadVarianteId(varianteId);
+    setUploadFile(null);
+    setIsUploadOpen(true);
+  };
+  const closeUploadImagen = () => setIsUploadOpen(false);
+
   function parsePrecio(v: string): number | null {
     if (!v) return null;
     const normalized = v.replace(/\./g, '').replace(',', '.');
@@ -154,7 +171,6 @@ export default function Productos() {
       return;
     }
 
-    // Validación local opcional para SALIDA: no permitir salir más de lo disponible
     const current = (() => {
       for (const m of rows) {
         const found = m.variantes.find(v => String(v.id) === String(movVarianteId));
@@ -172,12 +188,12 @@ export default function Productos() {
     try {
       await api.post('/api/movimientos', {
         varianteId: Number(movVarianteId),
-        tipo: movTipo,       // 'ENTRADA' | 'SALIDA'
-        cantidad: n,         // el backend interpreta el signo por "tipo"
+        tipo: movTipo,
+        cantidad: n,
         notas: movTipo === 'ENTRADA' ? 'Alta desde Productos' : 'Baja desde Productos',
       });
 
-      // ✅ actualizar UI local
+      // actualizar UI local del stock
       setRows(prev => prev.map(m => ({
         ...m,
         variantes: m.variantes.map(v => {
@@ -202,8 +218,6 @@ export default function Productos() {
     }
   };
 
-
-
   const saveUnidad = async () => {
     if (!targetVarianteId) return;
 
@@ -211,7 +225,6 @@ export default function Productos() {
       toast({ status: 'warning', title: 'IMEI requerido' });
       return;
     }
-    // Batería obligatoria si USADO
     const bateriaNum = formBateria ? Number(formBateria) : null;
     if (formEstado === 'USADO' && (bateriaNum == null || !Number.isFinite(bateriaNum))) {
       toast({ status: 'warning', title: 'Batería requerida (0–100) para usados' });
@@ -225,9 +238,9 @@ export default function Productos() {
     const precioNum = formEstado === 'USADO' ? parsePrecio(formPrecioOverride) : null;
     if (formEstado === 'USADO' && formPrecioOverride && precioNum == null) {
       toast({ status: 'warning', title: 'Precio override inválido' });
-      setSavingUnidad(false);
       return;
     }
+
     setSavingUnidad(true);
     try {
       await api.post('/api/unidades', {
@@ -240,7 +253,6 @@ export default function Productos() {
 
       toast({ status: 'success', title: 'Unidad agregada' });
 
-      // dentro de saveUnidad(), luego del POST exitoso:
       setRows(prev => prev.map(m => ({
         ...m,
         variantes: m.variantes.map(v => {
@@ -262,7 +274,6 @@ export default function Productos() {
           }
         })
       })));
-
 
       setIsAddOpen(false);
     } catch (e: any) {
@@ -286,7 +297,6 @@ export default function Productos() {
   const onDelete = async () => {
     if (!deletingId) return;
     try {
-      // ✅ Donde eliminás (lo mismo: sin prefijo /api)
       await api.delete(`/modelos/${deletingId}`);
 
       setRows(prev => prev.filter(r => String(r.id) !== String(deletingId)));
@@ -305,6 +315,78 @@ export default function Productos() {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  // ✅ NUEVO: subir imagen variante
+  const saveImagenVariante = async () => {
+    if (!uploadVarianteId || !uploadFile) {
+      toast({ status: 'warning', title: 'Elegí un archivo primero' });
+      return;
+    }
+
+    setUploadingImg(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+
+      // IMPORTANTE: acá NO seteamos Content-Type manualmente
+      const { data: varianteActualizada } = await api.post(
+        `/api/variantes/${uploadVarianteId}/imagen`,
+        formData,
+        {
+          headers: {
+            // Authorization ya la maneja tu instancia `api` si corresponde
+          },
+        }
+      );
+
+      // varianteActualizada debería traer imagenUrl nueva
+      // ahora actualizamos el state local en rows
+      setRows(prev =>
+        prev.map(m => ({
+          ...m,
+          variantes: m.variantes.map(v => {
+            if (String(v.id) !== String(uploadVarianteId)) return v;
+            return {
+              ...v,
+              imagenUrl: varianteActualizada.imagenUrl ?? v.imagenUrl,
+            };
+          })
+        }))
+      );
+
+      toast({ status: 'success', title: 'Imagen actualizada' });
+      setIsUploadOpen(false);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 400) {
+        toast({ status: 'error', title: 'Archivo inválido', description: e?.response?.data?.message ?? e?.message });
+      } else if (status === 401) {
+        toast({ status: 'error', title: 'Sesión expirada. Iniciá sesión de nuevo.' });
+        router.replace('/login?next=/productos');
+      } else {
+        toast({ status: 'error', title: 'No se pudo subir la imagen', description: e?.response?.data?.message ?? e?.message });
+      }
+    } finally {
+      setUploadingImg(false);
+    }
+  };
+
+  // helper para mostrar imagen final (con fallback)
+  const resolveImgSrc = (v?: VarianteResumenDTO | null) => {
+    if (v?.imagenUrl) {
+      // backend sirve /uploads/**, y tu NEXT_PUBLIC_API_BASE apunta a http://localhost:8085
+      return `${process.env.NEXT_PUBLIC_API_BASE}${v.imagenUrl}`;
+    }
+    return PLACEHOLDER_DATAURI;
+  };
+
+  // para la card principal del modelo queremos alguna imagen
+  const firstVarianteConImagen = (modelo: ModeloTablaDTO): VarianteResumenDTO | null => {
+    if (!modelo.variantes || modelo.variantes.length === 0) return null;
+    // priorizá una variante que tenga imagenUrl
+    const withImg = modelo.variantes.find(v => v.imagenUrl);
+    return withImg ?? modelo.variantes[0];
   };
 
   return (
@@ -329,7 +411,6 @@ export default function Productos() {
           </Flex>
         )}
 
-
         {!loading && rows.length === 0 && (
           <Flex direction="column" gap={3} bg="white" borderRadius="md" borderWidth="1px" p={6} align="center">
             <Text color="gray.600">Aún no hay productos.</Text>
@@ -339,15 +420,12 @@ export default function Productos() {
           </Flex>
         )}
 
-
         {!loading && rows.length > 0 && (
           <Box bg="white" borderRadius="md" borderWidth="1px" overflowX="auto">
             <Table size="md" variant="unstyled">
-
               <Thead bg="gray.50">
                 <Tr>
                   <Th>Producto</Th>
-                  {/* <Th>Stock</Th> */}
                   <Th>Variante</Th>
                   <Th textAlign="right">Acciones</Th>
                 </Tr>
@@ -355,12 +433,15 @@ export default function Productos() {
               <Tbody>
                 {rows.map((modelo, idx) => {
                   const rowBg = idx % 2 === 0 ? 'white' : 'gray.50';
+                  const fotoModelo = firstVarianteConImagen(modelo);
+
                   return (
                     <Tr key={String(modelo.id)} bg={rowBg}>
                       <Td>
                         <HStack spacing={3}>
+                          {/* ✅ ahora mostramos imagen real si existe */}
                           <Image
-                            src={PLACEHOLDER_DATAURI}
+                            src={resolveImgSrc(fotoModelo)}
                             alt={modelo.nombre}
                             boxSize="48px"
                             borderRadius="md"
@@ -381,56 +462,79 @@ export default function Productos() {
                         )}
 
                         {(modelo.variantes ?? []).map((v) => (
-                          <HStack key={String(v.id)} spacing={3} mb={2} align="center">
-                            <Text flex="1">{nombreVariante(v)}</Text>
+                          <HStack key={String(v.id)} spacing={3} mb={2} align="flex-start" w="100%">
+                            <Box flex="1">
+                              <HStack align="flex-start" spacing={3}>
+                                {/* mini preview por variante */}
+                                <Image
+                                  src={resolveImgSrc(v)}
+                                  alt={nombreVariante(v)}
+                                  boxSize="40px"
+                                  borderRadius="md"
+                                  objectFit="cover"
+                                  border="1px solid"
+                                  borderColor="gray.200"
+                                />
+                                <Box>
+                                  <Text>{nombreVariante(v)}</Text>
 
-                            {modelo.trackeaUnidad ? (
-                              <HStack>
-                                <Badge colorScheme="blue" minW="72px" textAlign="center">TOTAL: {v.stock ?? 0}</Badge>
-                                <Badge colorScheme="green" minW="72px" textAlign="center">NUEVOS: {v.stockNuevos ?? 0}</Badge>
-                                <Badge colorScheme="yellow" minW="72px" textAlign="center">USADOS: {v.stockUsados ?? 0}</Badge>
+                                  {modelo.trackeaUnidad ? (
+                                    <HStack spacing={2} flexWrap="wrap" mt={1}>
+                                      <Badge colorScheme="blue" minW="72px" textAlign="center">TOTAL: {v.stock ?? 0}</Badge>
+                                      <Badge colorScheme="green" minW="72px" textAlign="center">NUEVOS: {v.stockNuevos ?? 0}</Badge>
+                                      <Badge colorScheme="yellow" minW="72px" textAlign="center">USADOS: {v.stockUsados ?? 0}</Badge>
 
-                                <Tooltip label="Agregar unidad">
-                                  <IconButton
-                                    aria-label="Agregar unidad"
-                                    icon={<Plus size={16} />}
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openAddUnidad(v.id)}
-                                  />
-                                </Tooltip>
+                                      <Tooltip label="Agregar unidad">
+                                        <IconButton
+                                          aria-label="Agregar unidad"
+                                          icon={<Plus size={16} />}
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => openAddUnidad(v.id)}
+                                        />
+                                      </Tooltip>
+                                    </HStack>
+                                  ) : (
+                                    <HStack spacing={2} flexWrap="wrap" mt={1}>
+                                      <Badge colorScheme="blue" minW="72px" textAlign="center">
+                                        TOTAL: {v.stock > 0 ? v.stock : 0}
+                                      </Badge>
+
+                                      <Tooltip label="Agregar stock (movimiento ENTRADA)">
+                                        <IconButton
+                                          aria-label="Agregar stock"
+                                          icon={<Plus size={16} />}
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => openAddMovimiento(v.id, 'ENTRADA')}
+                                        />
+                                      </Tooltip>
+
+                                      <Tooltip label="Quitar stock (movimiento SALIDA)">
+                                        <IconButton
+                                          aria-label="Quitar stock"
+                                          icon={<Minus size={16} />}
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => openAddMovimiento(v.id, 'SALIDA')}
+                                        />
+                                      </Tooltip>
+                                    </HStack>
+                                  )}
+                                </Box>
                               </HStack>
-                            ) : (
-                              <HStack>
-                                <Badge colorScheme="blue" minW="72px" textAlign="center">
-                                  TOTAL: {v.stock > 0 ? v.stock : 0}
-                                </Badge>
+                            </Box>
 
-                                <Tooltip label="Agregar stock (movimiento ENTRADA)">
-                                  <IconButton
-                                    aria-label="Agregar stock"
-                                    icon={<Plus size={16} />}
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openAddMovimiento(v.id, 'ENTRADA')}
-                                  />
-                                </Tooltip>
-
-                                <Tooltip label="Quitar stock (movimiento SALIDA)">
-                                  <IconButton
-                                    aria-label="Quitar stock"
-                                    icon={<Minus size={16} />}
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openAddMovimiento(v.id, 'SALIDA')}
-                                  />
-                                </Tooltip>
-                              </HStack>
-
-                            )}
-
-
-
+                            {/* botón subir imagen de esta variante */}
+                            <Tooltip label="Subir / cambiar imagen">
+                              <IconButton
+                                aria-label="Subir imagen"
+                                icon={<ImageIcon size={16} />}
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => openUploadImagen(v.id)}
+                              />
+                            </Tooltip>
                           </HStack>
                         ))}
                       </Td>
@@ -456,13 +560,12 @@ export default function Productos() {
                   );
                 })}
               </Tbody>
-
-
             </Table>
           </Box>
         )}
       </Container>
 
+      {/* Dialog eliminar modelo */}
       <AlertDialog
         isOpen={!!deletingId}
         leastDestructiveRef={cancelRef}
@@ -482,6 +585,7 @@ export default function Productos() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Dialog agregar unidad */}
       <AlertDialog isOpen={isAddOpen} leastDestructiveRef={cancelRef} onClose={closeAddUnidad} isCentered>
         <AlertDialogOverlay />
         <AlertDialogContent>
@@ -536,6 +640,7 @@ export default function Productos() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Dialog movimiento stock */}
       <AlertDialog isOpen={isAddMovOpen} leastDestructiveRef={cancelRef} onClose={closeAddMovimiento} isCentered>
         <AlertDialogOverlay />
         <AlertDialogContent>
@@ -545,8 +650,7 @@ export default function Productos() {
 
           <AlertDialogBody>
             <FormControl isRequired mb={3}>
-              <FormLabel>Cantidad
-              </FormLabel>
+              <FormLabel>Cantidad</FormLabel>
               <NumberInput min={1} value={movCantidad} onChange={(v) => setMovCantidad(v)}>
                 <NumberInputField placeholder="Ej: 5" />
               </NumberInput>
@@ -554,14 +658,48 @@ export default function Productos() {
             <Text fontSize="sm" color="gray.500">
               Esto crea un Movimiento de Inventario de tipo <b>{movTipo}</b> para la variante seleccionada.
             </Text>
-
           </AlertDialogBody>
           <AlertDialogFooter>
             <Button ref={cancelRef} onClick={closeAddMovimiento}>Cancelar</Button>
             <Button colorScheme="blue" ml={3} onClick={saveMovimiento} isLoading={savingMov}>
               Guardar
             </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
+      {/* ✅ NUEVO: Dialog subir imagen variante */}
+      <AlertDialog isOpen={isUploadOpen} leastDestructiveRef={cancelRef} onClose={closeUploadImagen} isCentered>
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Subir / Cambiar imagen</AlertDialogHeader>
+          <AlertDialogBody>
+            <FormControl isRequired mb={3}>
+              <FormLabel>Imagen del producto</FormLabel>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={e => {
+                  const file = e.target.files?.[0] || null;
+                  setUploadFile(file);
+                }}
+              />
+            </FormControl>
+            <Text fontSize="xs" color="gray.500">
+              Se usará esta imagen para mostrar la variante en el catálogo.
+            </Text>
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={cancelRef} onClick={closeUploadImagen}>Cancelar</Button>
+            <Button
+              colorScheme="blue"
+              ml={3}
+              onClick={saveImagenVariante}
+              isLoading={uploadingImg}
+              isDisabled={!uploadFile}
+            >
+              Subir
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

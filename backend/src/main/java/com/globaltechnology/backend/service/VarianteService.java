@@ -3,12 +3,22 @@ package com.globaltechnology.backend.service;
 import com.globaltechnology.backend.domain.*;
 import com.globaltechnology.backend.repository.*;
 import com.globaltechnology.backend.web.dto.*;
+
+import jakarta.transaction.Transactional;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+
+
 
 @Service
 public class VarianteService {
@@ -18,6 +28,9 @@ public class VarianteService {
   private final CapacidadRepository capRepo;
   private final UnidadRepository unidadRepo;
    private final MovimientoInventarioRepository movRepo;
+
+
+     private String uploadDir; 
 
   private static final List<EstadoStock> DISPONIBLES = List.of(EstadoStock.EN_STOCK);
 
@@ -29,6 +42,38 @@ public class VarianteService {
     this.colorRepo = colorRepo; this.capRepo = capRepo; this.unidadRepo = unidadRepo;
     this.movRepo = movRepo; // ⬅️ NUEVO
   }
+
+   private VarianteDTO toDTO(Variante v) {
+    return new VarianteDTO(
+        v.getId(),
+
+        // modelo
+        v.getModelo() != null ? v.getModelo().getId() : null,
+        v.getModelo() != null ? v.getModelo().getNombre() : null,
+
+        // color
+        v.getColor() != null ? v.getColor().getId() : null,
+        v.getColor() != null ? v.getColor().getNombre() : null,
+
+        // capacidad
+        v.getCapacidad() != null ? v.getCapacidad().getId() : null,
+        v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null,
+
+        // stockDisponible (esto depende de tu lógica, te doy 3 opciones abajo)
+        stockDeVariante(v),
+
+        // precioBase
+        v.getPrecioBase(), // asumiendo BigDecimal
+
+        // createdAt / updatedAt
+        v.getCreatedAt(),
+        v.getUpdatedAt(),
+
+        // imagenUrl
+        v.getImagenUrl()
+    );
+  }
+
 
    private long stockDeVariante(Variante v) {
     if (v.getModelo().isTrackeaUnidad()) {
@@ -51,7 +96,8 @@ public class VarianteService {
       stock,
       v.getPrecioBase(),
       v.getCreatedAt(),
-      v.getUpdatedAt()
+      v.getUpdatedAt(),
+       v.getImagenUrl() 
     );
   }
 
@@ -115,6 +161,46 @@ public class VarianteService {
 }
 
 
+ @Transactional
+  public VarianteDTO guardarImagen(Long id, MultipartFile file) {
+    Variante variante = repo.findById(id)
+        .orElseThrow(() -> new RuntimeException("Variante no encontrada"));
+
+    // 1. carpeta destino: /app/uploads/variantes/{id}
+    Path varianteDir = Paths.get(uploadDir, "variantes", String.valueOf(id));
+    try {
+      Files.createDirectories(varianteDir);
+    } catch (IOException e) {
+      throw new RuntimeException("No se pudo crear el directorio de subida", e);
+    }
+
+    // 2. nombre único para evitar cache y colisiones
+    String original = file.getOriginalFilename(); // ej: "foto.jpg"
+    String ext = (original != null && original.contains("."))
+        ? original.substring(original.lastIndexOf(".")) // ".jpg"
+        : ".jpg"; // fallback
+    String filename = "foto-" + System.currentTimeMillis() + ext;
+
+    Path destino = varianteDir.resolve(filename);
+
+    try {
+      file.transferTo(destino.toFile());
+    } catch (IOException e) {
+      throw new RuntimeException("Error guardando archivo en disco", e);
+    }
+
+    // 3. armar la URL pública que va a consumir el front
+    //    OJO: esto es una ruta HTTP servida por Spring, no el path físico
+    String publicUrl = "/uploads/variantes/" + id + "/" + filename;
+    variante.setImagenUrl(publicUrl);
+
+    Variante saved = repo.save(variante);
+
+    return toDTO(saved);
+  }
+
+  
+  
   public VarianteDTO create(VarianteCreateDTO dto){
   var modelo = modeloRepo.findById(dto.modeloId())
       .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,"Modelo inválido"));

@@ -31,6 +31,12 @@ public class SecurityConfig {
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
+
+          .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+
+            // permitir subir imagen (solo ADMIN)
+            .requestMatchers(HttpMethod.POST, "/api/variantes/*/imagen").hasRole("ADMIN")
+            
             .requestMatchers("/actuator/**", "/auth/login", "/error").permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 

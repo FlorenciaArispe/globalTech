@@ -7,37 +7,41 @@ import lombok.*;
 
 // Variante.java
 @Entity
-@Table(
-  name = "variantes",
-  indexes = {
+@Table(name = "variantes", indexes = {
     @Index(name = "idx_variante_modelo", columnList = "modelo_id"),
     @Index(name = "idx_variante_color", columnList = "color_id"),
     @Index(name = "idx_variante_capacidad", columnList = "capacidad_id")
-  },
-  uniqueConstraints = {
-    @UniqueConstraint(
-      name = "uk_variante_modelo_color_capacidad",
-      columnNames = {"modelo_id","color_id","capacidad_id"}
-    )
-  }
-)
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+}, uniqueConstraints = {
+    @UniqueConstraint(name = "uk_variante_modelo_color_capacidad", columnNames = { "modelo_id", "color_id",
+        "capacidad_id" })
+})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @EqualsAndHashCode(of = "id")
 public class Variante extends Auditable {
-  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @ManyToOne(optional = false) @JoinColumn(name = "modelo_id", nullable = false)
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "modelo_id", nullable = false)
   private Modelo modelo;
 
-  @ManyToOne @JoinColumn(name = "color_id")
-  private Color color; 
+  @ManyToOne
+  @JoinColumn(name = "color_id")
+  private Color color;
 
-  @ManyToOne @JoinColumn(name = "capacidad_id")
+  @ManyToOne
+  @JoinColumn(name = "capacidad_id")
   private Capacidad capacidad;
 
-@Column(name = "precio", nullable = false , precision = 12, scale = 2)
-private BigDecimal precioBase;
+  @Column(name = "precio", nullable = false, precision = 12, scale = 2)
+  private BigDecimal precioBase;
 
+  @Column(name = "imagen_url")
+  private String imagenUrl;
 
 }

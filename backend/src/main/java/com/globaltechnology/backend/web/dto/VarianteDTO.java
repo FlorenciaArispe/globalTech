@@ -9,7 +9,10 @@ public record VarianteDTO(
   Long modeloId, String modeloNombre,
   Long colorId, String colorNombre,
   Long capacidadId, String capacidadEtiqueta,
-  Long stockDisponible,    
+  Long stockDisponible,
   BigDecimal precioBase,
-  Instant createdAt, Instant updatedAt
+  Instant createdAt, Instant updatedAt,
+  String imagenUrl // 👈 agregado
 ) {}
+
+
