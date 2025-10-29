@@ -318,59 +318,61 @@ export default function Productos() {
   };
 
   // ✅ NUEVO: subir imagen variante
-  const saveImagenVariante = async () => {
-    if (!uploadVarianteId || !uploadFile) {
-      toast({ status: 'warning', title: 'Elegí un archivo primero' });
-      return;
-    }
+const saveImagenVariante = async () => {
+  if (!uploadVarianteId || !uploadFile) {
+    toast({ status: 'warning', title: 'Elegí un archivo primero' });
+    return;
+  }
 
-    setUploadingImg(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', uploadFile);
+  setUploadingImg(true);
+  try {
+    const formData = new FormData();
+    formData.append('file', uploadFile);
 
-      // IMPORTANTE: acá NO seteamos Content-Type manualmente
-      const { data: varianteActualizada } = await api.post(
-        `/api/variantes/${uploadVarianteId}/imagen`,
-        formData,
-        {
-          headers: {
-            // Authorization ya la maneja tu instancia `api` si corresponde
-          },
-        }
-      );
-
-      // varianteActualizada debería traer imagenUrl nueva
-      // ahora actualizamos el state local en rows
-      setRows(prev =>
-        prev.map(m => ({
-          ...m,
-          variantes: m.variantes.map(v => {
-            if (String(v.id) !== String(uploadVarianteId)) return v;
-            return {
-              ...v,
-              imagenUrl: varianteActualizada.imagenUrl ?? v.imagenUrl,
-            };
-          })
-        }))
-      );
-
-      toast({ status: 'success', title: 'Imagen actualizada' });
-      setIsUploadOpen(false);
-    } catch (e: any) {
-      const status = e?.response?.status;
-      if (status === 400) {
-        toast({ status: 'error', title: 'Archivo inválido', description: e?.response?.data?.message ?? e?.message });
-      } else if (status === 401) {
-        toast({ status: 'error', title: 'Sesión expirada. Iniciá sesión de nuevo.' });
-        router.replace('/login?next=/productos');
-      } else {
-        toast({ status: 'error', title: 'No se pudo subir la imagen', description: e?.response?.data?.message ?? e?.message });
+    const { data: varianteActualizada } = await api.post(
+      `/api/variantes/${uploadVarianteId}/imagen`,
+      formData,
+      {
+        headers: {
+          // NO forzar Content-Type acá
+          // Authorization ya la mete api si la tenés configurada
+        },
       }
-    } finally {
-      setUploadingImg(false);
+    );
+
+    // actualizamos la tabla en memoria
+    setRows(prev =>
+      prev.map(m => ({
+        ...m,
+        variantes: m.variantes.map(v => {
+          if (String(v.id) !== String(uploadVarianteId)) return v;
+          return {
+            ...v,
+            imagenUrl: varianteActualizada.imagenUrl ?? v.imagenUrl,
+          };
+        })
+      }))
+    );
+
+    toast({ status: 'success', title: 'Imagen actualizada' });
+    setIsUploadOpen(false);
+  } catch (e: any) {
+    const status = e?.response?.status;
+    if (status === 401) {
+      toast({ status: 'error', title: 'Sesión expirada. Iniciá sesión de nuevo.' });
+      router.replace('/login?next=/productos');
+    } else {
+      toast({
+        status: 'error',
+        title: 'No se pudo subir la imagen',
+        description: e?.response?.data?.message ?? e?.message,
+      });
     }
-  };
+  } finally {
+    setUploadingImg(false);
+  }
+};
+
 
   // helper para mostrar imagen final (con fallback)
   const resolveImgSrc = (v?: VarianteResumenDTO | null) => {
@@ -677,13 +679,14 @@ export default function Productos() {
             <FormControl isRequired mb={3}>
               <FormLabel>Imagen del producto</FormLabel>
               <Input
-                type="file"
-                accept="image/*"
-                onChange={e => {
-                  const file = e.target.files?.[0] || null;
-                  setUploadFile(file);
-                }}
-              />
+  type="file"
+  accept="image/*"
+  onChange={e => {
+    const file = e.target.files?.[0] || null;
+    setUploadFile(file);
+  }}
+/>
+
             </FormControl>
             <Text fontSize="xs" color="gray.500">
               Se usará esta imagen para mostrar la variante en el catálogo.
@@ -691,15 +694,16 @@ export default function Productos() {
           </AlertDialogBody>
           <AlertDialogFooter>
             <Button ref={cancelRef} onClick={closeUploadImagen}>Cancelar</Button>
-            <Button
-              colorScheme="blue"
-              ml={3}
-              onClick={saveImagenVariante}
-              isLoading={uploadingImg}
-              isDisabled={!uploadFile}
-            >
-              Subir
-            </Button>
+           <Button
+  colorScheme="blue"
+  ml={3}
+  onClick={saveImagenVariante}
+  isLoading={uploadingImg}
+  isDisabled={!uploadFile}
+>
+  Subir
+</Button>
+
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
