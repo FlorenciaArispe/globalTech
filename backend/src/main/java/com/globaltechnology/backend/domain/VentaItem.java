@@ -23,7 +23,7 @@ public class VentaItem {
   private Variante variante;
 
   @ManyToOne(optional = false) @JoinColumn(name = "unidad_id", nullable = false)
-  private Unidad unidad; // 1 fila = 1 unidad física
+  private Unidad unidad;
 
   @Column(name = "precio_unitario", precision = 14, scale = 2, nullable = false)
   private BigDecimal precioUnitario;

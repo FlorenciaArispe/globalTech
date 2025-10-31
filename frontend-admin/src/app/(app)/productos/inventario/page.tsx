@@ -18,40 +18,29 @@ import {
   Modal,
   ModalHeader
 } from '@chakra-ui/react';
-import { Plus, Minus, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Minus, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/axios';
 
 type Id = number | string;
-
 type EstadoComercial = 'NUEVO' | 'USADO';
 type EstadoStock = 'EN_STOCK' | 'RESERVADO' | 'VENDIDO';
 
 type InventarioRowDTO = {
-  // modelo / variante
   modeloId: Id;
   modeloNombre: string;
   varianteId: Id;
   colorNombre?: string | null;
   capacidadEtiqueta?: string | null;
-
-  // unidad (solo si trackea)
   unidadId?: Id | null;
   imei?: string | null;
   bateriaCondicionPct?: number | null;
-  estadoProducto?: EstadoComercial | null; // NUEVO/USADO
+  estadoProducto?: EstadoComercial | null;
   estadoStock?: EstadoStock | null;
-
-  // precios
-  precioBase?: number | null;      // de variante
-  precioOverride?: number | null;  // de unidad usada (opcional)
-  precioEfectivo?: number | null;  // override || base
-
-  // stock
-  stockAcumulado?: number | null;  // solo untracked
-
-  // control
+  precioBase?: number | null;
+  precioOverride?: number | null;
+  precioEfectivo?: number | null;
+  stockAcumulado?: number | null;
   trackeaUnidad: boolean;
-
   createdAt: string;
   updatedAt: string;
 };
@@ -70,60 +59,44 @@ const PLACEHOLDER_DATAURI =
 const money = (n?: number | null) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
     .format(n ?? 0);
-// ej: moneyUSD(1234.56) => "US$ 1.234,56"
-
-
-const varianteLabel = (r: InventarioRowDTO) => {
-  const partes = [r.colorNombre, r.capacidadEtiqueta].filter(Boolean) as string[];
-  return partes.length ? partes.join(' - ') : 'Variante';
-};
 
 export default function InventarioPage() {
   const toast = useToast();
   const [rows, setRows] = useState<InventarioRowDTO[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Modal: agregar unidad (para trackeados)
   const [isAddUnidadOpen, setIsAddUnidadOpen] = useState(false);
   const [targetVarianteId, setTargetVarianteId] = useState<Id | null>(null);
   const [formImei, setFormImei] = useState('');
   const [formEstado, setFormEstado] = useState<EstadoComercial>('NUEVO');
-  const [formBateria, setFormBateria] = useState<string>(''); // %
-  const [formPrecioOverride, setFormPrecioOverride] = useState<string>(''); // opcional
+  const [formBateria, setFormBateria] = useState<string>('');
+  const [formPrecioOverride, setFormPrecioOverride] = useState<string>('');
   const [savingUnidad, setSavingUnidad] = useState(false);
-
-  // Modal: movimiento (para NO trackeados)
   const [isMovOpen, setIsMovOpen] = useState(false);
   const [movVarianteId, setMovVarianteId] = useState<Id | null>(null);
   const [movTipo, setMovTipo] = useState<'ENTRADA' | 'SALIDA'>('ENTRADA');
   const [movCantidad, setMovCantidad] = useState<string>('1');
   const [movNotas, setMovNotas] = useState('');
   const [savingMov, setSavingMov] = useState(false);
-
-  // Editar unidad (solo trackeadas)
   const [isEditUnidadOpen, setIsEditUnidadOpen] = useState(false);
   const [editUnidadId, setEditUnidadId] = useState<Id | null>(null);
   const [editEstado, setEditEstado] = useState<EstadoComercial>('NUEVO');
-  // Eliminar unidad
   const [isDelUnidadOpen, setIsDelUnidadOpen] = useState(false);
   const [delUnidadId, setDelUnidadId] = useState<Id | null>(null);
   const [deletingUnidad, setDeletingUnidad] = useState(false);
-
-  // === Editar unidad / precio base (variante si NUEVO)
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editRow, setEditRow] = useState<InventarioRowDTO | null>(null);
   const [editImei, setEditImei] = useState('');
-  const [editBateria, setEditBateria] = useState<string>('');          // solo USADO
-  const [editPrecioOverride, setEditPrecioOverride] = useState<string>(''); // solo USADO
-  const [editPrecioBase, setEditPrecioBase] = useState<string>('');    // solo NUEVO (variante)
+  const [editBateria, setEditBateria] = useState<string>('');
+  const [editPrecioOverride, setEditPrecioOverride] = useState<string>('');
+  const [editPrecioBase, setEditPrecioBase] = useState<string>('');
   const [savingEdit, setSavingEdit] = useState(false);
-
-  // Refs requeridos por AlertDialog (botón no destructivo)
   const cancelRefAdd = useRef<HTMLButtonElement>(null);
   const cancelRefMov = useRef<HTMLButtonElement>(null);
   const cancelRefEditUnidad = useRef<HTMLButtonElement>(null);
   const cancelRefDelUnidad = useRef<HTMLButtonElement>(null);
-
+  const [isEditVarianteOpen, setIsEditVarianteOpen] = useState(false);
+  const [editVarianteId, setEditVarianteId] = useState<Id | null>(null);
+  const [editVarPrecioBase, setEditVarPrecioBase] = useState<string>('');
 
   const openEdit = (r: InventarioRowDTO) => {
     setEditRow(r);
@@ -135,17 +108,10 @@ export default function InventarioPage() {
   };
   const closeEdit = () => setIsEditOpen(false);
 
-
-
-  // filtros opcionales (si más adelante querés sumar selects de categoría/marca)
-  // const [categoriaId, setCategoriaId] = useState<Id | ''>('');
-  // const [marcaId, setMarcaId] = useState<Id | ''>('');
-
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        // podés pasar params ?categoriaId=&marcaId= si querés
         const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
         if (!alive) return;
         setRows(Array.isArray(data) ? data : []);
@@ -161,8 +127,6 @@ export default function InventarioPage() {
     })();
     return () => { alive = false; };
   }, [toast]);
-
-  // ======== Agregar UNIDAD (tracked) ========
 
   useEffect(() => {
     if (formEstado === 'NUEVO') setFormPrecioOverride('');
@@ -192,7 +156,6 @@ export default function InventarioPage() {
       toast({ status: 'warning', title: 'IMEI requerido' });
       return;
     }
-    // batería obligatoria si USADO
     const bateriaNum = formBateria ? Number(formBateria) : null;
     if (formEstado === 'USADO' && (bateriaNum == null || !Number.isFinite(bateriaNum))) {
       toast({ status: 'warning', title: 'Batería requerida (0–100) para usados' });
@@ -221,7 +184,6 @@ export default function InventarioPage() {
 
       toast({ status: 'success', title: 'Unidad agregada' });
 
-      // Refresco rápido: volvé a pedir inventario o actualizá local si querés micro-optimizar.
       const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
       setRows(Array.isArray(data) ? data : []);
 
@@ -238,21 +200,48 @@ export default function InventarioPage() {
     }
   };
 
-  // Abrir modal de edición precargando datos de la fila
-  const openEditUnidad = (r: InventarioRowDTO) => {
-    if (!r.unidadId) return;
-    setEditUnidadId(r.unidadId);
-    setEditEstado((r.estadoProducto as EstadoComercial) || 'NUEVO');
-    setEditBateria(r.bateriaCondicionPct != null ? String(r.bateriaCondicionPct) : '');
-    setEditPrecioOverride(r.precioOverride != null ? String(r.precioOverride) : '');
-    setIsEditUnidadOpen(true);
+  const openEditVariante = (r: InventarioRowDTO) => {
+    setEditVarianteId(r.varianteId);
+    setEditVarPrecioBase(
+      r.precioBase != null ? String(r.precioBase) : ''
+    );
+    setIsEditVarianteOpen(true);
   };
+
+  const closeEditVariante = () => setIsEditVarianteOpen(false);
+
+  const saveEditVariante = async () => {
+    if (!editVarianteId) return;
+
+    const p = parsePrecio(editVarPrecioBase);
+    if (p == null) {
+      toast({ status: 'warning', title: 'Precio base inválido' });
+      return;
+    }
+
+    try {
+      await api.patch(`/api/variantes/${editVarianteId}/precio-base`, { precioBase: p });
+
+      const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
+      setRows(Array.isArray(data) ? data : []);
+
+      toast({ status: 'success', title: 'Precio base actualizado' });
+      setIsEditVarianteOpen(false);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 400 || status === 409) {
+        toast({ status: 'error', title: 'No se pudo actualizar', description: e?.response?.data?.message ?? e?.message });
+      } else {
+        toast({ status: 'error', title: 'Error de red', description: e?.response?.data?.message ?? e?.message });
+      }
+    }
+  };
+
   const closeEditUnidad = () => setIsEditUnidadOpen(false);
 
   const saveEdit = async () => {
     if (!editRow || !editRow.unidadId) return;
 
-    // Validaciones
     if (!editImei.trim()) {
       toast({ status: 'warning', title: 'IMEI requerido' });
       return;
@@ -276,11 +265,10 @@ export default function InventarioPage() {
         }
         unidadPayload.precioOverride = p;
       } else {
-        unidadPayload.precioOverride = null; // limpiar override
+        unidadPayload.precioOverride = null;
       }
     }
 
-    // Si NUEVO, también necesitamos precioBase válido
     let nuevoPrecioBase: number | null = null;
     if (editRow.estadoProducto === 'NUEVO') {
       const p = parsePrecio(editPrecioBase);
@@ -293,17 +281,14 @@ export default function InventarioPage() {
 
     setSavingEdit(true);
     try {
-      // 1) Actualizar UNIDAD
       await api.put(`/api/unidades/${editRow.unidadId}`, unidadPayload);
 
-      // 2) Actualizar VARIANTE (solo si NUEVO)
       if (editRow.estadoProducto === 'NUEVO' && nuevoPrecioBase != null) {
         await api.patch(`/api/variantes/${editRow.varianteId}/precio-base`, {
           precioBase: nuevoPrecioBase,
         });
       }
 
-      // 3) Refrescar listado
       const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
       setRows(Array.isArray(data) ? data : []);
 
@@ -323,10 +308,9 @@ export default function InventarioPage() {
     }
   };
 
-
   const saveEditUnidad = async () => {
     if (!editUnidadId) return;
-    // validaciones simples
+
     const bNum = editBateria ? Number(editBateria) : null;
     if (editEstado === 'USADO' && (bNum == null || !Number.isFinite(bNum) || bNum < 0 || bNum > 100)) {
       toast({ status: 'warning', title: 'Batería inválida (0–100) para usados' });
@@ -349,7 +333,6 @@ export default function InventarioPage() {
       });
       toast({ status: 'success', title: 'Unidad actualizada' });
 
-      // refresco listado
       const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
       setRows(Array.isArray(data) ? data : []);
 
@@ -361,7 +344,27 @@ export default function InventarioPage() {
     }
   };
 
-  // Eliminar unidad
+  const deleteVariante = async (varianteId: Id) => {
+    const ok = window.confirm('¿Eliminar esta variante y su stock asociado? Esta acción no se puede deshacer.');
+    if (!ok) return;
+
+    try {
+      await api.delete(`/api/variantes/${varianteId}`);
+      toast({ status: 'success', title: 'Variante eliminada' });
+
+      // refresco del inventario
+      const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
+      setRows(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 409) {
+        toast({ status: 'error', title: 'No se puede eliminar', description: e?.response?.data?.message ?? e?.message });
+      } else {
+        toast({ status: 'error', title: 'Error al eliminar', description: e?.response?.data?.message ?? e?.message });
+      }
+    }
+  };
+
   const openDeleteUnidad = (unidadId: Id) => {
     setDelUnidadId(unidadId);
     setIsDelUnidadOpen(true);
@@ -386,7 +389,6 @@ export default function InventarioPage() {
     }
   };
 
-
   const openMovimiento = (varianteId: Id, tipo: 'ENTRADA' | 'SALIDA') => {
     setMovVarianteId(varianteId);
     setMovTipo(tipo);
@@ -408,15 +410,14 @@ export default function InventarioPage() {
     try {
       await api.post('/api/movimientos', {
         varianteId: Number(movVarianteId),
-        tipo: movTipo,                 // 'ENTRADA' | 'SALIDA'
-        cantidad: Number(movCantidad), // siempre >= 1
+        tipo: movTipo,
+        cantidad: Number(movCantidad),
         refTipo: 'ajuste',
         notas: movNotas?.trim() || null,
       });
 
       toast({ status: 'success', title: `Movimiento registrado (${movTipo.toLowerCase()})` });
 
-      // Refrescar listado
       const { data } = await api.get<InventarioRowDTO[]>('/api/inventario');
       setRows(Array.isArray(data) ? data : []);
 
@@ -428,7 +429,6 @@ export default function InventarioPage() {
     }
   };
 
-  // agrupado visual opcional por modelo (se ve más ordenado)
   const grupos = useMemo(() => {
     const map = new Map<string, InventarioRowDTO[]>();
     for (const r of rows) {
@@ -447,9 +447,6 @@ export default function InventarioPage() {
       <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
         <HStack justify="space-between" align="center" mb={4}>
           <Text fontSize="30px" fontWeight={600}>Inventario</Text>
-          {/* Botón global opcional: podrías abrir un pequeño menú para elegir acción,
-              pero como las acciones dependen de la fila (tracked/untracked),
-              dejamos los + dentro de cada fila */}
         </HStack>
 
         {loading ? (
@@ -486,9 +483,7 @@ export default function InventarioPage() {
                           border="1px solid"
                           borderColor="gray.200"
                         />
-
                         <Text fontWeight={600}>{g.modeloNombre}</Text>
-
                       </HStack>
                     </Td>
 
@@ -499,9 +494,7 @@ export default function InventarioPage() {
                             <Box flex="1" >
                               {!r.trackeaUnidad ? (
                                 <HStack mt={1} spacing={2}>
-
                                   <Tag size="sm"> {(r.stockAcumulado ?? 0) > 0 ? `${r.stockAcumulado} UNIDADES` : 'Sin stock'}</Tag>
-
                                 </HStack>
                               ) : (
                                 <HStack mt={1} spacing={2}>
@@ -530,54 +523,61 @@ export default function InventarioPage() {
                                 </SimpleGrid>
                               ) : (
                                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
-
                                   <Text fontSize="sm"><b>Precio:</b> {money(r.precioBase)}</Text>
-
                                 </SimpleGrid>
                               )}
                             </Box>
 
                             <HStack justify="flex-end" spacing={2} >
-                              {r.trackeaUnidad ? (
-                                <Menu>
-                                  <MenuButton
-                                    as={IconButton}
-                                    aria-label="Acciones"
-                                    icon={<MoreVertical size={16} />}
+                              <Tooltip label="Agregar unidad">
+                                <IconButton
+                                  aria-label="Agregar unidad"
+                                  icon={<Plus size={16} />}
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={r.trackeaUnidad ? () => openAddUnidad(r.varianteId) : () => openMovimiento(r.varianteId, 'ENTRADA')}
+                                />
+                              </Tooltip>
+
+                              {!r.trackeaUnidad && (
+                                <Tooltip label="Quitar stock (movimiento SALIDA)">
+                                  <IconButton
+                                    aria-label="Quitar stock"
+                                    icon={<Minus size={16} />}
                                     size="sm"
                                     variant="outline"
+                                    onClick={() => openMovimiento(r.varianteId, 'SALIDA')}
                                   />
-                                  <MenuList>
-                                    <MenuItem icon={<Pencil size={14} />} onClick={() => openEdit(r)}>
-                                      Editar
-                                    </MenuItem>
-                                    <MenuItem icon={<Trash2 size={14} />} color="red.500" onClick={() => {/* tu delete de unidad */ }}>
-                                      Eliminar
-                                    </MenuItem>
-                                  </MenuList>
-                                </Menu>
-                              ) : (
-                                <>
-                                  <Tooltip label="Registrar entrada">
-                                    <IconButton
-                                      aria-label="Entrada"
-                                      icon={<Plus size={16} />}
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => openMovimiento(r.varianteId, 'ENTRADA')}
-                                    />
-                                  </Tooltip>
-                                  <Tooltip label="Registrar salida">
-                                    <IconButton
-                                      aria-label="Salida"
-                                      icon={<Minus size={16} />}
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => openMovimiento(r.varianteId, 'SALIDA')}
-                                    />
-                                  </Tooltip>
-                                </>
+                                </Tooltip>
                               )}
+
+                              <Menu>
+                                <MenuButton
+                                  as={IconButton}
+                                  aria-label="Acciones"
+                                  icon={<MoreVertical size={16} />}
+                                  size="sm"
+                                  variant="outline"
+                                />
+                                <MenuList>
+                                  <MenuItem
+                                    icon={<Pencil size={14} />}
+                                    onClick={r.trackeaUnidad ? () => openEdit(r) : () => openEditVariante(r)}
+                                  >
+                                    Editar
+                                  </MenuItem>
+
+                                  <MenuItem
+                                    icon={<Trash2 size={14} />}
+                                    color="red.500"
+                                    onClick={r.trackeaUnidad ? () => (r.unidadId && openDeleteUnidad(r.unidadId)) : () => deleteVariante(r.varianteId)}
+                                  >
+                                    Eliminar
+                                  </MenuItem>
+
+                                </MenuList>
+                              </Menu>
+
                             </HStack>
                           </Flex>
                         ))}
@@ -591,7 +591,6 @@ export default function InventarioPage() {
         )}
       </Container>
 
-      {/* Modal: Agregar unidad */}
       <AlertDialog isOpen={isAddUnidadOpen} onClose={closeAddUnidad} isCentered leastDestructiveRef={cancelRefAdd}>
         <AlertDialogOverlay />
         <AlertDialogContent>
@@ -645,7 +644,6 @@ export default function InventarioPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal: Movimiento (entrada/salida) */}
       <AlertDialog isOpen={isMovOpen} onClose={closeMovimiento} isCentered leastDestructiveRef={cancelRefMov}>
         <AlertDialogOverlay />
         <AlertDialogContent>
@@ -804,8 +802,32 @@ export default function InventarioPage() {
         </ModalContent>
       </Modal>
 
-
-
+      <Modal isOpen={isEditVarianteOpen} onClose={closeEditVariante} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Editar precio base de la variante</ModalHeader>
+          <ModalBody>
+            <FormControl isRequired mb={3}>
+              <FormLabel>Precio base (USD)</FormLabel>
+              <Input
+                value={editVarPrecioBase}
+                onChange={(e) => setEditVarPrecioBase(e.target.value)}
+                placeholder="Ej: 999999.99"
+                inputMode="decimal"
+              />
+            </FormControl>
+            <Text fontSize="xs" color="gray.500">
+              Afecta a todas las unidades <b>NUEVAS</b> de esta variante (los usados pueden tener override).
+            </Text>
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={closeEditVariante}>Cancelar</Button>
+            <Button colorScheme="blue" ml={3} onClick={saveEditVariante}>
+              Guardar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
     </Box>
   );

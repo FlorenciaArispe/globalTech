@@ -50,10 +50,10 @@ export default function NuevoProductoPage() {
   const [marcaId, setMarcaId] = useState<Id>('');
   const [modeloId, setModeloId] = useState<Id | 'new'>('');
   const [precioBase, setPrecioBase] = useState<string>(''); // string para permitir coma/punto
-// arriba, junto con otros useState
-const [isMarcaOpen, setIsMarcaOpen] = useState(false);
-const [nuevaMarcaNombre, setNuevaMarcaNombre] = useState('');
-const [creatingMarca, setCreatingMarca] = useState(false);
+  // arriba, junto con otros useState
+  const [isMarcaOpen, setIsMarcaOpen] = useState(false);
+  const [nuevaMarcaNombre, setNuevaMarcaNombre] = useState('');
+  const [creatingMarca, setCreatingMarca] = useState(false);
 
 
   const isNewModelo = modeloId === 'new' || !modeloId;
@@ -162,7 +162,7 @@ const [creatingMarca, setCreatingMarca] = useState(false);
   };
 
   const handleCrearModelo = async () => {
-      console.log("entre" )
+    console.log("entre")
     if (!categoriaId || !marcaId || !nuevoModeloNombre.trim()) {
       toast({ status: 'warning', title: 'Completá categoría, marca y nombre' });
       return;
@@ -170,14 +170,14 @@ const [creatingMarca, setCreatingMarca] = useState(false);
 
     setCreatingModelo(true);
     try {
-     const payload = {
-  categoriaId: Number(categoriaId),
-  marcaId: Number(marcaId),
-  nombre: nuevoModeloNombre.trim(),
-  trackeaUnidad: Boolean(nuevoModeloTrackeaUnidad), // <— era trackeaImei
-  requiereColor: Boolean(nuevoModeloReqColor),
-  requiereCapacidad: Boolean(nuevoModeloReqCap),
-};
+      const payload = {
+        categoriaId: Number(categoriaId),
+        marcaId: Number(marcaId),
+        nombre: nuevoModeloNombre.trim(),
+        trackeaUnidad: Boolean(nuevoModeloTrackeaUnidad), 
+        requiereColor: Boolean(nuevoModeloReqColor),
+        requiereCapacidad: Boolean(nuevoModeloReqCap),
+      };
 
       console.log("payload", payload)
       const token = localStorage.getItem('jwt');
@@ -225,36 +225,34 @@ const [creatingMarca, setCreatingMarca] = useState(false);
   };
 
   const handleCrearMarca = async () => {
-  if (!nuevaMarcaNombre.trim()) {
-    toast({ status: 'warning', title: 'Ingresá un nombre de marca' });
-    return;
-  }
-  setCreatingMarca(true);
-  try {
-    const payload = { nombre: nuevaMarcaNombre.trim() };
-    const { data: created } = await api.post<Marca>('/api/marcas', payload);
-    // actualizar lista local y seleccionar la nueva
-    setMarcas(prev => [created, ...prev]);
-    setMarcaId(String(created.id));
-    setIsMarcaOpen(false);
-    toast({ status: 'success', title: 'Marca creada' });
-  } catch (e: any) {
-    const status = e?.response?.status;
-    if (status === 409) {
-      toast({ status: 'error', title: 'Duplicado', description: 'Ya existe una marca con ese nombre.' });
-    } else if (status === 401) {
-      toast({ status: 'error', title: 'Sesión expirada' });
-      router.replace('/login?next=/productos/nuevo');
-    } else if (status === 403) {
-      toast({ status: 'error', title: 'Sin permisos', description: 'Necesitás rol ADMIN para crear marcas.' });
-    } else {
-      toast({ status: 'error', title: 'No se pudo crear la marca', description: e?.response?.data?.message ?? e?.message });
+    if (!nuevaMarcaNombre.trim()) {
+      toast({ status: 'warning', title: 'Ingresá un nombre de marca' });
+      return;
     }
-  } finally {
-    setCreatingMarca(false);
-  }
-};
-
+    setCreatingMarca(true);
+    try {
+      const payload = { nombre: nuevaMarcaNombre.trim() };
+      const { data: created } = await api.post<Marca>('/api/marcas', payload);
+      setMarcas(prev => [created, ...prev]);
+      setMarcaId(String(created.id));
+      setIsMarcaOpen(false);
+      toast({ status: 'success', title: 'Marca creada' });
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 409) {
+        toast({ status: 'error', title: 'Duplicado', description: 'Ya existe una marca con ese nombre.' });
+      } else if (status === 401) {
+        toast({ status: 'error', title: 'Sesión expirada' });
+        router.replace('/login?next=/productos/nuevo');
+      } else if (status === 403) {
+        toast({ status: 'error', title: 'Sin permisos', description: 'Necesitás rol ADMIN para crear marcas.' });
+      } else {
+        toast({ status: 'error', title: 'No se pudo crear la marca', description: e?.response?.data?.message ?? e?.message });
+      }
+    } finally {
+      setCreatingMarca(false);
+    }
+  };
 
   const handleCrearCapacidad = async () => {
     if (!nuevaCapEtiqueta.trim()) {
@@ -305,58 +303,57 @@ const [creatingMarca, setCreatingMarca] = useState(false);
   };
 
   function parsePrecio(v: string): number | null {
-  if (!v) return null;
-  const normalized = v.replace(/\./g, '').replace(',', '.'); // “1.234,56” → “1234.56”
-  const n = Number(normalized);
-  return Number.isFinite(n) && n >= 0 ? n : null;
-}
-
-
- const handleCrearVariante = async () => {
-  if (!categoriaId || !marcaId) {
-    toast({ status: 'warning', title: 'Seleccioná categoría y marca' });
-    return;
-  }
-  if (!modeloId || modeloId === 'new') {
-    toast({ status: 'warning', title: 'Seleccioná un modelo (o crealo)' });
-    return;
-  }
-  if (requiereColor && !colorId) {
-    toast({ status: 'warning', title: 'Seleccioná color' });
-    return;
-  }
-  if (requiereCapacidad && !capacidadId) {
-    toast({ status: 'warning', title: 'Seleccioná capacidad' });
-    return;
-  }
-  const precio = parsePrecio(precioBase);
-  if (precio == null) {
-    toast({ status: 'warning', title: 'Precio base inválido', description: 'Usá números, con punto o coma.' });
-    return;
+    if (!v) return null;
+    const normalized = v.replace(/\./g, '').replace(',', '.'); // “1.234,56” → “1234.56”
+    const n = Number(normalized);
+    return Number.isFinite(n) && n >= 0 ? n : null;
   }
 
-  setSubmitting(true);
-  try {
-    await api.post('/api/variantes', {
-      modeloId: Number(modeloId),
-      colorId: requiereColor ? Number(colorId) : null,
-      capacidadId: requiereCapacidad ? Number(capacidadId) : null,
-       precioBase: Number(precio), 
-    });
-    toast({ status: 'success', title: 'Variante creada' });
-    router.replace('/productos');
-  } catch (e: any) {
-    const status = e?.response?.status;
-    if (status === 409) {
-      toast({ status: 'error', title: 'Duplicado', description: 'Ya existe una variante con esa combinación.' });
-    } else {
-      toast({ status: 'error', title: 'No se pudo crear la variante', description: e?.response?.data?.message ?? e?.message });
+
+  const handleCrearVariante = async () => {
+    if (!categoriaId || !marcaId) {
+      toast({ status: 'warning', title: 'Seleccioná categoría y marca' });
+      return;
     }
-  } finally {
-    setSubmitting(false);
-  }
-};
+    if (!modeloId || modeloId === 'new') {
+      toast({ status: 'warning', title: 'Seleccioná un modelo (o crealo)' });
+      return;
+    }
+    if (requiereColor && !colorId) {
+      toast({ status: 'warning', title: 'Seleccioná color' });
+      return;
+    }
+    if (requiereCapacidad && !capacidadId) {
+      toast({ status: 'warning', title: 'Seleccioná capacidad' });
+      return;
+    }
+    const precio = parsePrecio(precioBase);
+    if (precio == null) {
+      toast({ status: 'warning', title: 'Precio base inválido', description: 'Usá números, con punto o coma.' });
+      return;
+    }
 
+    setSubmitting(true);
+    try {
+      await api.post('/api/variantes', {
+        modeloId: Number(modeloId),
+        colorId: requiereColor ? Number(colorId) : null,
+        capacidadId: requiereCapacidad ? Number(capacidadId) : null,
+        precioBase: Number(precio),
+      });
+      toast({ status: 'success', title: 'Variante creada' });
+      router.replace('/productos');
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 409) {
+        toast({ status: 'error', title: 'Duplicado', description: 'Ya existe una variante con esa combinación.' });
+      } else {
+        toast({ status: 'error', title: 'No se pudo crear la variante', description: e?.response?.data?.message ?? e?.message });
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loadingBase) {
     return (
@@ -419,7 +416,6 @@ const [creatingMarca, setCreatingMarca] = useState(false);
     }
   };
 
-
   return (
     <Box bg="#f6f6f6" minH="100dvh">
       <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
@@ -454,29 +450,28 @@ const [creatingMarca, setCreatingMarca] = useState(false);
             </Select>
           </FormControl>
 
-         <FormControl isRequired>
-  <FormLabel>Marca</FormLabel>
-  <Select
-    placeholder="Elegí marca"
-    value={String(marcaId)}
-    onChange={(e) => {
-      const v = e.target.value;
-      if (v === 'new-marca') {
-        // limpiar y abrir modal
-        setNuevaMarcaNombre('');
-        setIsMarcaOpen(true);
-        return;
-      }
-      setMarcaId(v);
-    }}
-  >
-    {marcas.map(m => (
-      <option key={m.id} value={String(m.id)}>{m.nombre}</option>
-    ))}
-    <option value="new-marca">➕ Crear nueva marca…</option>
-  </Select>
-</FormControl>
-
+          <FormControl isRequired>
+            <FormLabel>Marca</FormLabel>
+            <Select
+              placeholder="Elegí marca"
+              value={String(marcaId)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'new-marca') {
+                  // limpiar y abrir modal
+                  setNuevaMarcaNombre('');
+                  setIsMarcaOpen(true);
+                  return;
+                }
+                setMarcaId(v);
+              }}
+            >
+              {marcas.map(m => (
+                <option key={m.id} value={String(m.id)}>{m.nombre}</option>
+              ))}
+              <option value="new-marca">➕ Crear nueva marca…</option>
+            </Select>
+          </FormControl>
 
           <FormControl isRequired isDisabled={!categoriaId || !marcaId}>
             <FormLabel>Modelo</FormLabel>
@@ -504,11 +499,6 @@ const [creatingMarca, setCreatingMarca] = useState(false);
               </Select>
             </HStack>
           </FormControl>
-
-          {/* <FormControl>
-            <FormLabel>SKU (opcional)</FormLabel>
-            <Input placeholder="SKU interno" value={sku} onChange={(e) => setSku(e.target.value)} />
-          </FormControl> */}
 
           {requiereColor && (
             <FormControl isRequired>
@@ -559,20 +549,15 @@ const [creatingMarca, setCreatingMarca] = useState(false);
           )}
 
           <FormControl isRequired>
-  <FormLabel>Precio base</FormLabel>
-  <Input
-    placeholder="Ej: 999999.99"
-    value={precioBase}
-    onChange={(e) => setPrecioBase(e.target.value)}
-    inputMode="decimal"
-  />
-</FormControl>
+            <FormLabel>Precio base</FormLabel>
+            <Input
+              placeholder="Ej: 999999.99"
+              value={precioBase}
+              onChange={(e) => setPrecioBase(e.target.value)}
+              inputMode="decimal"
+            />
+          </FormControl>
 
-
-          {/* <FormControl display="flex" alignItems="center">
-            <FormLabel mb="0">Activo</FormLabel>
-            <Switch isChecked={activo} onChange={(e) => setActivo(e.target.checked)} />
-          </FormControl> */}
         </SimpleGrid>
 
         <HStack justify="flex-end" mt={4}>
@@ -580,7 +565,6 @@ const [creatingMarca, setCreatingMarca] = useState(false);
           <Button colorScheme="blue" onClick={handleCrearVariante} isLoading={submitting}>Crear producto</Button>
         </HStack>
       </Container>
-
 
       <Modal isOpen={isModeloOpen} onClose={() => setIsModeloOpen(false)} isCentered>
         <ModalOverlay />
@@ -597,7 +581,7 @@ const [creatingMarca, setCreatingMarca] = useState(false);
                 />
               </FormControl>
               <Checkbox isChecked={nuevoModeloTrackeaUnidad} onChange={(e) => setNuevoModeloTrackeaUnidad(e.target.checked)}>
-                Trackea IMEI
+                Tiene IMEI
               </Checkbox>
               <Checkbox isChecked={nuevoModeloReqColor} onChange={(e) => setNuevoModeloReqColor(e.target.checked)}>
                 Requiere color
@@ -666,19 +650,19 @@ const [creatingMarca, setCreatingMarca] = useState(false);
         </ModalContent>
       </Modal>
 
-       <Modal isOpen={isMarcaOpen} onClose={() => setIsMarcaOpen(false)} isCentered>
+      <Modal isOpen={isMarcaOpen} onClose={() => setIsMarcaOpen(false)} isCentered>
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Nueva marca</ModalHeader>
           <ModalBody>
-             <FormControl isRequired>
-        <FormLabel>Nombre de la marca</FormLabel>
-        <Input
-          value={nuevaMarcaNombre}
-          onChange={(e) => setNuevaMarcaNombre(e.target.value)}
-          placeholder="Ej: Apple, Samsung, Sony…"
-        />
-      </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Nombre de la marca</FormLabel>
+              <Input
+                value={nuevaMarcaNombre}
+                onChange={(e) => setNuevaMarcaNombre(e.target.value)}
+                placeholder="Ej: Apple, Samsung, Sony…"
+              />
+            </FormControl>
           </ModalBody>
           <ModalFooter>
             <Button mr={3} onClick={() => setIsMarcaOpen(false)}>Cancelar</Button>
@@ -688,8 +672,6 @@ const [creatingMarca, setCreatingMarca] = useState(false);
           </ModalFooter>
         </ModalContent>
       </Modal>
-
-     
 
     </Box>
   );

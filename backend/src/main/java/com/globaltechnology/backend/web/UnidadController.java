@@ -23,17 +23,22 @@ public class UnidadController {
   @PutMapping("/{id}")
   public UnidadDTO update(@PathVariable Long id, @Valid @RequestBody UnidadUpdateDTO dto){ return service.update(id, dto); }
 
-  // lo tuyo:
   @GetMapping("/por-variante/{varianteId}")
   public List<UnidadDTO> porVariante(@PathVariable Long varianteId){
     return service.listByVariante(varianteId);
   }
 
-  // opcional: /api/unidades?varianteId=123&estados=EN_STOCK,RESERVADO
   @GetMapping
   public List<UnidadDTO> list(
       @RequestParam Long varianteId,
       @RequestParam(required = false) List<EstadoStock> estados) {
     return service.listByVariante(varianteId, estados);
   }
+
+  @DeleteMapping("/{id}")
+@ResponseStatus(HttpStatus.NO_CONTENT)
+public void delete(@PathVariable Long id) {
+    service.delete(id);
+}
+
 }

@@ -4,7 +4,7 @@ import NextLink from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import {
   Box, Container, Text, HStack, IconButton, Table, Thead, Th, Tr, Tbody, Td,
-  Image, Badge, Tag, Spinner, Button, useToast, AlertDialog, AlertDialogOverlay,
+  Image, Badge, Spinner, Button, useToast, AlertDialog, AlertDialogOverlay,
   AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, Flex,
   Tooltip,
   FormControl,
@@ -24,9 +24,9 @@ type VarianteResumenDTO = {
   id: Id;
   colorNombre?: string | null;
   capacidadEtiqueta?: string | null;
-  stock: number;                 // total
-  stockNuevos?: number | null;   // solo si trackeaUnidad
-  stockUsados?: number | null;   // solo si trackeaUnidad
+  stock: number;   
+  stockNuevos?: number | null;  
+  stockUsados?: number | null;
   precio?: number | null;
   precioPromo?: number | null;
 };
@@ -37,7 +37,7 @@ type ModeloTablaDTO = {
   nombre: string;
   categoriaId: Id;
   categoriaNombre: string;
-  trackeaUnidad: boolean;     // ⬅️ NUEVO
+  trackeaUnidad: boolean;  
   marcaId?: Id;
   marcaNombre?: string;
   variantes: VarianteResumenDTO[];
@@ -76,13 +76,14 @@ export default function Productos() {
   const [formImei, setFormImei] = useState('');
   const [formEstado, setFormEstado] = useState<EstadoComercial>('NUEVO');
   const [formBateria, setFormBateria] = useState<string>(''); // %
-  const [formPrecioOverride, setFormPrecioOverride] = useState<string>(''); // opcional
+  const [formPrecioOverride, setFormPrecioOverride] = useState<string>(''); 
   const [savingUnidad, setSavingUnidad] = useState(false);
   const [isAddMovOpen, setIsAddMovOpen] = useState(false);
   const [movVarianteId, setMovVarianteId] = useState<Id | null>(null);
-  const [movCantidad, setMovCantidad] = useState<string>(''); // string para input
+  const [movCantidad, setMovCantidad] = useState<string>(''); 
   const [savingMov, setSavingMov] = useState(false);
   const [movTipo, setMovTipo] = useState<'ENTRADA' | 'SALIDA'>('ENTRADA');
+  
 
   useEffect(() => {
     let alive = true;
@@ -112,9 +113,6 @@ export default function Productos() {
     return () => { alive = false; };
   }, [router, toast]);
 
-  const onEdit = (modeloId: Id) => {
-    router.push(`/modelos/${modeloId}/editar`);
-  };
 
   const openAddUnidad = (varianteId: Id) => {
     setTargetVarianteId(varianteId);
@@ -153,8 +151,6 @@ export default function Productos() {
       toast({ status: 'warning', title: 'Cantidad inválida', description: 'Debe ser un número positivo.' });
       return;
     }
-
-    // Validación local opcional para SALIDA: no permitir salir más de lo disponible
     const current = (() => {
       for (const m of rows) {
         const found = m.variantes.find(v => String(v.id) === String(movVarianteId));
@@ -202,8 +198,6 @@ export default function Productos() {
     }
   };
 
-
-
   const saveUnidad = async () => {
     if (!targetVarianteId) return;
 
@@ -211,7 +205,7 @@ export default function Productos() {
       toast({ status: 'warning', title: 'IMEI requerido' });
       return;
     }
-    // Batería obligatoria si USADO
+
     const bateriaNum = formBateria ? Number(formBateria) : null;
     if (formEstado === 'USADO' && (bateriaNum == null || !Number.isFinite(bateriaNum))) {
       toast({ status: 'warning', title: 'Batería requerida (0–100) para usados' });
@@ -281,12 +275,10 @@ export default function Productos() {
 
   const closeAddUnidad = () => setIsAddOpen(false);
 
-  const onAskDelete = (modeloId: Id) => setDeletingId(modeloId);
-
   const onDelete = async () => {
     if (!deletingId) return;
     try {
-      // ✅ Donde eliminás (lo mismo: sin prefijo /api)
+
       await api.delete(`/modelos/${deletingId}`);
 
       setRows(prev => prev.filter(r => String(r.id) !== String(deletingId)));
@@ -349,7 +341,7 @@ export default function Productos() {
                   <Th>Producto</Th>
                   {/* <Th>Stock</Th> */}
                   <Th>Variante</Th>
-                  <Th textAlign="right">Acciones</Th>
+                  {/* <Th textAlign="right">Acciones</Th> */}
                 </Tr>
               </Thead>
               <Tbody>
@@ -385,7 +377,7 @@ export default function Productos() {
                             <Text flex="1">{nombreVariante(v)}</Text>
 
                             {modelo.trackeaUnidad ? (
-                              <HStack>
+                              <HStack gap={10}>
                                 <Badge colorScheme="blue" minW="72px" textAlign="center">TOTAL: {v.stock ?? 0}</Badge>
                                 <Badge colorScheme="green" minW="72px" textAlign="center">NUEVOS: {v.stockNuevos ?? 0}</Badge>
                                 <Badge colorScheme="yellow" minW="72px" textAlign="center">USADOS: {v.stockUsados ?? 0}</Badge>
@@ -401,12 +393,12 @@ export default function Productos() {
                                 </Tooltip>
                               </HStack>
                             ) : (
-                              <HStack>
+                              <HStack gap={10}>
                                 <Badge colorScheme="blue" minW="72px" textAlign="center">
                                   TOTAL: {v.stock > 0 ? v.stock : 0}
                                 </Badge>
 
-                                <Tooltip label="Agregar stock (movimiento ENTRADA)">
+                                <Tooltip label="Agregar">
                                   <IconButton
                                     aria-label="Agregar stock"
                                     icon={<Plus size={16} />}
@@ -416,42 +408,14 @@ export default function Productos() {
                                   />
                                 </Tooltip>
 
-                                <Tooltip label="Quitar stock (movimiento SALIDA)">
-                                  <IconButton
-                                    aria-label="Quitar stock"
-                                    icon={<Minus size={16} />}
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openAddMovimiento(v.id, 'SALIDA')}
-                                  />
-                                </Tooltip>
                               </HStack>
 
                             )}
-
-
 
                           </HStack>
                         ))}
                       </Td>
 
-                      <Td>
-                        <HStack justify="flex-end" spacing={1}>
-                          <IconButton
-                            aria-label="Editar modelo"
-                            icon={<Pencil size={16} />}
-                            variant="ghost"
-                            onClick={() => onEdit(modelo.id)}
-                          />
-                          <IconButton
-                            aria-label="Eliminar modelo"
-                            icon={<Trash2 size={16} />}
-                            variant="ghost"
-                            colorScheme="red"
-                            onClick={() => onAskDelete(modelo.id)}
-                          />
-                        </HStack>
-                      </Td>
                     </Tr>
                   );
                 })}

@@ -4,6 +4,9 @@ import com.globaltechnology.backend.domain.*;
 import com.globaltechnology.backend.repository.UnidadRepository;
 import com.globaltechnology.backend.repository.VarianteRepository;
 import com.globaltechnology.backend.web.dto.*;
+
+import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -112,4 +115,12 @@ public UnidadDTO update(Long id, UnidadUpdateDTO dto) {
     return repo.findAllByVariante_IdAndEstadoStockIn(varianteId, filtros)
         .stream().map(this::toDTO).toList();
   }
+
+  @Transactional
+public void delete(Long id) {
+    Unidad unidad = repo.findById(id)
+        .orElseThrow(() -> new EntityNotFoundException("Unidad no encontrada"));
+    repo.delete(unidad);
+}
+
 }
