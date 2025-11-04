@@ -1,4 +1,3 @@
-// service/MovimientoInventarioService.java
 package com.globaltechnology.backend.service;
 
 import com.globaltechnology.backend.domain.*;
@@ -10,7 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.time.Instant;
 import java.util.Optional;
 

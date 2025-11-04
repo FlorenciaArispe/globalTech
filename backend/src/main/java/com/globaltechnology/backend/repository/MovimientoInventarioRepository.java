@@ -1,13 +1,9 @@
-// MovimientoInventarioRepository.java
 package com.globaltechnology.backend.repository;
 import com.globaltechnology.backend.domain.MovimientoInventario;
-
 import java.util.Collection;
 import java.util.List;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-
 
 public interface MovimientoInventarioRepository extends JpaRepository<MovimientoInventario, Long> {
 

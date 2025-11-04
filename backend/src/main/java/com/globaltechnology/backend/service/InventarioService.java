@@ -1,4 +1,3 @@
-// service/InventarioService.java
 package com.globaltechnology.backend.service;
 
 import com.globaltechnology.backend.domain.*;

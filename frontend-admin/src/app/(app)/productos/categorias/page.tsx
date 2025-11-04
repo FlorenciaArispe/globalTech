@@ -34,14 +34,14 @@ export default function CategoriasPage() {
 
   useEffect(() => {
     let alive = true;
-  
+
     const token = getToken();
-    console.log("TOKEN CATEGORIAS", token) 
+    console.log("TOKEN CATEGORIAS", token)
     if (!token) {
       router.replace('/login'); // sin token, a login
       return;
     }
-  
+
     (async () => {
       try {
         const { data } = await api.get<Categoria[]>('/api/categorias'); // 👈 path correcto
@@ -57,7 +57,7 @@ export default function CategoriasPage() {
         if (alive) setLoading(false);
       }
     })();
-  
+
     return () => { alive = false; };
   }, [router, toast]);
 
@@ -90,16 +90,16 @@ export default function CategoriasPage() {
       return;
     }
     try {
-     // en handleSave de CategoriasPage
-if (editingId) {
-  const { data: updated } = await api.put<Categoria>(`/api/categorias/${editingId}`, { nombre: nombre.trim() });
-  setCategorias(prev => prev.map(c => (c.id === updated.id ? updated : c)));
-  toast({ status: 'success', title: 'Categoría actualizada' });
-} else {
-  const { data: created } = await api.post<Categoria>('/api/categorias', { nombre: nombre.trim() });
-  setCategorias(prev => [created, ...prev]);
-  toast({ status: 'success', title: 'Categoría creada' });
-}
+      // en handleSave de CategoriasPage
+      if (editingId) {
+        const { data: updated } = await api.put<Categoria>(`/api/categorias/${editingId}`, { nombre: nombre.trim() });
+        setCategorias(prev => prev.map(c => (c.id === updated.id ? updated : c)));
+        toast({ status: 'success', title: 'Categoría actualizada' });
+      } else {
+        const { data: created } = await api.post<Categoria>('/api/categorias', { nombre: nombre.trim() });
+        setCategorias(prev => [created, ...prev]);
+        toast({ status: 'success', title: 'Categoría creada' });
+      }
 
       onClose();
     } catch (e: any) {

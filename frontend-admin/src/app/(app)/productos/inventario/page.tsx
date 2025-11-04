@@ -472,7 +472,7 @@ export default function InventarioPage() {
                 {grupos.map((g, gi) => (
                   <Tr key={g.key} bg={gi % 2 === 0 ? 'white' : 'gray.50'}>
 
-                    <Td verticalAlign="top" width="22%">
+                    <Td verticalAlign="top" >
                       <HStack spacing={3}>
                         <Image
                           src={PLACEHOLDER_DATAURI}
@@ -498,11 +498,15 @@ export default function InventarioPage() {
                                 </HStack>
                               ) : (
                                 <HStack mt={1} spacing={2}>
+                                   <Text fontSize="sm">
+                                    <b>{r.colorNombre}</b>
+                                  </Text>
                                   {r.estadoProducto && (
                                     <Badge colorScheme={r.estadoProducto === 'NUEVO' ? 'green' : 'yellow'}>
                                       {r.estadoProducto}
                                     </Badge>
                                   )}
+                                 
                                   {r.estadoStock && <Tag size="sm">{r.estadoStock}</Tag>}
                                 </HStack>
                               )}
@@ -512,6 +516,7 @@ export default function InventarioPage() {
                               {r.trackeaUnidad ? (
                                 <SimpleGrid columns={{ base: 1, md: 3 }} spacing={2}>
                                   <Text fontSize="sm"><b>IMEI:</b> {r.imei ?? '-'}</Text>
+                                   
                                   {r.bateriaCondicionPct != null ?
                                     <Text fontSize="sm"><b>Batería:</b> {`${r.bateriaCondicionPct}%`}</Text>
                                     : <Text fontSize="sm"><b>Sellado</b></Text>

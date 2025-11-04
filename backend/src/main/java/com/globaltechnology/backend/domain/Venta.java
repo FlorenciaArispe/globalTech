@@ -18,7 +18,7 @@ public class Venta extends Auditable {
   private Instant fecha;
 
   @ManyToOne @JoinColumn(name = "cliente_id")
-  private Cliente cliente; // nullable: venta mostrador
+  private Cliente cliente; 
 
   @Column(name = "subtotal", precision = 14, scale = 2)
   private BigDecimal subtotal;

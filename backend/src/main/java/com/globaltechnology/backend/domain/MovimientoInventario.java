@@ -8,8 +8,8 @@ import java.time.Instant;
 @Table(name = "movimientos_inventario",
        indexes = {
          @Index(name = "idx_mov_variante", columnList = "variante_id"),
-         @Index(name = "idx_mov_unidad", columnList = "unidad_id"),
-         @Index(name = "idx_mov_tipo_fecha", columnList = "tipo,fecha")
+         @Index(name = "idx_mov_unidad",   columnList = "unidad_id"),
+         @Index(name = "idx_mov_fecha",    columnList = "fecha")
        })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(of = "id")
@@ -17,26 +17,29 @@ public class MovimientoInventario {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "fecha", nullable = false)
+  @Column(nullable = false)
   private Instant fecha;
 
-  @Enumerated(EnumType.STRING)
-  @Column(name = "tipo", nullable = false, length = 20)
-  private TipoMovimiento tipo; // ENTRADA, SALIDA, AJUSTE (por ej.)
+  @Enumerated(EnumType.STRING)           // <— ¡MUY importante si la columna es VARCHAR!
+  @Column(nullable = false, length = 30)
+  private TipoMovimiento tipo;           // ENTRADA, SALIDA, VENTA
 
-  @ManyToOne(optional = false) @JoinColumn(name = "variante_id", nullable = false)
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "variante_id", nullable = false)
   private Variante variante;
 
-  // ✅ ahora opcional: null si el modelo NO trackea unidad
-  @ManyToOne @JoinColumn(name = "unidad_id")
+  // Para trackeados por unidad: puede NO ser null (venta de unidad específica)
+  // Para no-trackeados: quedará null
+  @ManyToOne
+  @JoinColumn(name = "unidad_id")
   private Unidad unidad;
 
-  // ✅ cantidad firmada: +N entrada, -N salida, +/-N ajuste
+  // Stock se mueve por unidades enteras (sugiero Integer)
   @Column(name = "cantidad", nullable = false)
   private Integer cantidad;
 
-  @Column(name = "ref_tipo", length = 30)
-  private String refTipo; // "venta", "compra", "ajuste", etc.
+  @Column(name = "ref_tipo", length = 50)
+  private String refTipo;
 
   @Column(name = "ref_id")
   private Long refId;

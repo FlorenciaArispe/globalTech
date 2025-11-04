@@ -92,6 +92,10 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyRole("ADMIN", "OPERADOR") // si exponés GET
           .requestMatchers(HttpMethod.POST, "/api/movimientos/**").hasRole("ADMIN")
 
+           // VENTAS
+    .requestMatchers(HttpMethod.GET,  "/api/ventas/**").hasAnyRole("ADMIN","OPERADOR")
+    .requestMatchers(HttpMethod.POST, "/api/ventas/**").hasAnyRole("ADMIN","OPERADOR")
+    
             // catch-all (si algo no matcheó arriba)
             .requestMatchers("/api/**").hasRole("ADMIN")
 

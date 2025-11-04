@@ -1,16 +1,12 @@
-// ModeloService.java
 package com.globaltechnology.backend.service;
 
 import com.globaltechnology.backend.domain.*;
 import com.globaltechnology.backend.repository.*;
 import com.globaltechnology.backend.web.dto.*;
-
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -25,20 +21,20 @@ public class ModeloService {
   private final MarcaRepository marcaRepo;
   private final VarianteRepository varianteRepo;
   private final UnidadRepository unidadRepo;
-  private final MovimientoInventarioRepository movRepo; // ✅
+  private final MovimientoInventarioRepository movRepo; 
 
   public ModeloService(ModeloRepository repo,
-                       CategoriaRepository catRepo,
-                       MarcaRepository marcaRepo,
-                       VarianteRepository varianteRepo,
-                       UnidadRepository unidadRepo,
-                       MovimientoInventarioRepository movRepo) { // ✅
+      CategoriaRepository catRepo,
+      MarcaRepository marcaRepo,
+      VarianteRepository varianteRepo,
+      UnidadRepository unidadRepo,
+      MovimientoInventarioRepository movRepo) { 
     this.repo = repo;
     this.catRepo = catRepo;
     this.marcaRepo = marcaRepo;
     this.varianteRepo = varianteRepo;
     this.unidadRepo = unidadRepo;
-    this.movRepo = movRepo; // ✅
+    this.movRepo = movRepo; 
   }
 
   private static final List<EstadoStock> DISPONIBLES = List.of(EstadoStock.EN_STOCK);
@@ -141,7 +137,8 @@ public class ModeloService {
       } else {
         modelos = repo.findAll();
       }
-      if (modelos.isEmpty()) return List.of();
+      if (modelos.isEmpty())
+        return List.of();
 
       modelos.sort(Comparator.comparing(Modelo::getNombre, String.CASE_INSENSITIVE_ORDER));
       var modeloIds = modelos.stream().map(Modelo::getId).toList();
@@ -153,63 +150,61 @@ public class ModeloService {
         for (var m : modelos) {
           out.add(new ModeloTablaDTO(
               m.getId(), m.getNombre(),
-              m.getCategoria().getId(), m.getCategoria().getNombre(),  m.isTrackeaUnidad(),    
-              List.of()
-          ));
+              m.getCategoria().getId(), m.getCategoria().getNombre(), m.isTrackeaUnidad(),
+              List.of()));
         }
         return out;
       }
 
       // separar por tracking
-      var trackedIds   = variantes.stream().filter(v -> v.getModelo().isTrackeaUnidad()).map(Variante::getId).toList();
+      var trackedIds = variantes.stream().filter(v -> v.getModelo().isTrackeaUnidad()).map(Variante::getId).toList();
       var untrackedIds = variantes.stream().filter(v -> !v.getModelo().isTrackeaUnidad()).map(Variante::getId).toList();
-Map<Long, Long> stockNuevoMap = new HashMap<>();
-Map<Long, Long> stockUsadoMap = new HashMap<>();
-if (!trackedIds.isEmpty()) {
-  for (var row : unidadRepo.stockPorVarianteYEstado(trackedIds, DISPONIBLES)) {
-    if (row.getEstadoProducto() == EstadoComercial.NUEVO) {
-      stockNuevoMap.put(row.getVarianteId(), row.getStock());
-    } else if (row.getEstadoProducto() == EstadoComercial.USADO) {
-      stockUsadoMap.put(row.getVarianteId(), row.getStock());
-    }
-  }
-}
+      Map<Long, Long> stockNuevoMap = new HashMap<>();
+      Map<Long, Long> stockUsadoMap = new HashMap<>();
+      if (!trackedIds.isEmpty()) {
+        for (var row : unidadRepo.stockPorVarianteYEstado(trackedIds, DISPONIBLES)) {
+          if (row.getEstadoProducto() == EstadoComercial.NUEVO) {
+            stockNuevoMap.put(row.getVarianteId(), row.getStock());
+          } else if (row.getEstadoProducto() == EstadoComercial.USADO) {
+            stockUsadoMap.put(row.getVarianteId(), row.getStock());
+          }
+        }
+      }
 
-// 3b) Stock por movimientos para variantes que NO trackean unidad
-Map<Long, Long> stockMovMap = new HashMap<>();
-if (!untrackedIds.isEmpty()) {
-  for (var row : movRepo.stockNoTrackeadoPorVariante(untrackedIds)) {
-    stockMovMap.put(row.getVarianteId(),
-        row.getStock() == null ? 0L : row.getStock().longValue());
-  }
-}
+      // 3b) Stock por movimientos para variantes que NO trackean unidad
+      Map<Long, Long> stockMovMap = new HashMap<>();
+      if (!untrackedIds.isEmpty()) {
+        for (var row : movRepo.stockNoTrackeadoPorVariante(untrackedIds)) {
+          stockMovMap.put(row.getVarianteId(),
+              row.getStock() == null ? 0L : row.getStock().longValue());
+        }
+      }
 
-    Map<Long, List<VarianteTablaDTO>> variantesPorModelo = new HashMap<>();
-for (var v : variantes) {
-  boolean trackea = v.getModelo().isTrackeaUnidad();
+      Map<Long, List<VarianteTablaDTO>> variantesPorModelo = new HashMap<>();
+      for (var v : variantes) {
+        boolean trackea = v.getModelo().isTrackeaUnidad();
 
-  Long stockNuevos = trackea ? stockNuevoMap.getOrDefault(v.getId(), 0L) : null;
-  Long stockUsados = trackea ? stockUsadoMap.getOrDefault(v.getId(), 0L) : null;
+        Long stockNuevos = trackea ? stockNuevoMap.getOrDefault(v.getId(), 0L) : null;
+        Long stockUsados = trackea ? stockUsadoMap.getOrDefault(v.getId(), 0L) : null;
 
-  long stockTotal = trackea
-      ? (stockNuevos + stockUsados)
-      : stockMovMap.getOrDefault(v.getId(), 0L);
+        long stockTotal = trackea
+            ? (stockNuevos + stockUsados)
+            : stockMovMap.getOrDefault(v.getId(), 0L);
 
-  String color = v.getColor() != null ? v.getColor().getNombre() : null;
-  String cap   = v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null;
+        String color = v.getColor() != null ? v.getColor().getNombre() : null;
+        String cap = v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null;
 
-  variantesPorModelo
-      .computeIfAbsent(v.getModelo().getId(), k -> new ArrayList<>())
-      .add(new VarianteTablaDTO(
-          v.getId(), color, cap,
-          stockTotal, stockNuevos, stockUsados
-      ));
-}
-
+        variantesPorModelo
+            .computeIfAbsent(v.getModelo().getId(), k -> new ArrayList<>())
+            .add(new VarianteTablaDTO(
+                v.getId(), color, cap,
+                stockTotal, stockNuevos, stockUsados));
+      }
 
       // ordenar variantes
       var cmp = Comparator
-          .comparing((VarianteTablaDTO x) -> safeLower(x.colorNombre()), Comparator.nullsLast(Comparator.naturalOrder()))
+          .comparing((VarianteTablaDTO x) -> safeLower(x.colorNombre()),
+              Comparator.nullsLast(Comparator.naturalOrder()))
           .thenComparing(x -> safeLower(x.capacidadEtiqueta()), Comparator.nullsLast(Comparator.naturalOrder()))
           .thenComparing(VarianteTablaDTO::id);
       variantesPorModelo.values().forEach(list -> list.sort(cmp));
@@ -217,15 +212,13 @@ for (var v : variantes) {
       // 5) salida final
       var out = new ArrayList<ModeloTablaDTO>(modelos.size());
       for (var m : modelos) {
-       // en ModeloService.tablaProductos(...) al construir el DTO:
-out.add(new ModeloTablaDTO(
-  m.getId(),
-  m.getNombre(),
-  m.getCategoria().getId(),
-  m.getCategoria().getNombre(),
-  m.isTrackeaUnidad(),                  // ⬅️ NUEVO
-  variantesPorModelo.getOrDefault(m.getId(), List.of())
-));
+        out.add(new ModeloTablaDTO(
+            m.getId(),
+            m.getNombre(),
+            m.getCategoria().getId(),
+            m.getCategoria().getNombre(),
+            m.isTrackeaUnidad(), 
+            variantesPorModelo.getOrDefault(m.getId(), List.of())));
 
       }
       return out;
@@ -236,11 +229,8 @@ out.add(new ModeloTablaDTO(
     }
   }
 
-  private static String safeLower(String s) { return s == null ? null : s.toLowerCase(); }
-  private static String buildVarianteLabel(String color, String cap) {
-    if (color != null && cap != null) return color + " " + cap;
-    if (color != null) return color;
-    if (cap != null) return cap;
-    return "Variante";
+  private static String safeLower(String s) {
+    return s == null ? null : s.toLowerCase();
   }
+
 }

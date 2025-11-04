@@ -3,24 +3,22 @@
 import StickyNotesBoard from '@/components/StickyNotesBoard';
 import { InfoOutlineIcon } from '@chakra-ui/icons';
 import { Box, Container, HStack, Icon, SimpleGrid, Stat, StatHelpText, StatLabel, StatNumber, Tab, TabList, Tabs, Text, Tooltip } from '@chakra-ui/react'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 
 type RangeKey = 'hoy' | 'ayer' | 'semana' | 'mes';
 
 export default function Home() {
-    const [range, setRange] = useState<RangeKey>('hoy');
-      const tabs: { label: string; key: RangeKey }[] = [
-    { label: 'Hoy',          key: 'hoy' },
-    { label: 'Ayer',         key: 'ayer' },
-    { label: 'Esta semana',  key: 'semana' },
-    { label: 'Último mes',   key: 'mes' },
+  const [range, setRange] = useState<RangeKey>('hoy');
+  const tabs: { label: string; key: RangeKey }[] = [
+    { label: 'Hoy', key: 'hoy' },
+    { label: 'Ayer', key: 'ayer' },
+    { label: 'Esta semana', key: 'semana' },
+    { label: 'Último mes', key: 'mes' },
   ];
-
- 
 
   const tabIndex = tabs.findIndex(t => t.key === range);
 
-    const stats = useMemo(() => {
+  const stats = useMemo(() => {
     return {
       total: 0,
       iphone: 0,
@@ -28,7 +26,7 @@ export default function Home() {
     };
   }, [range]);
 
-    const rangeLabel = useMemo(() => {
+  const rangeLabel = useMemo(() => {
     switch (range) {
       case 'hoy': return 'hoy';
       case 'ayer': return 'ayer';
@@ -38,7 +36,7 @@ export default function Home() {
   }, [range]);
 
   return (
-   <Box bg="#f6f6f6" minH="100dvh">
+    <Box bg="#f6f6f6" minH="100dvh">
       <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
         <Text fontSize="30px" fontWeight={600} mb={4}>Inicio</Text>
 
