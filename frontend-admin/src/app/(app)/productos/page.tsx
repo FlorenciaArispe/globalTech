@@ -93,6 +93,9 @@ export default function Productos() {
 
         console.log("TABLA", data)
 
+        const dataVARIANTES  = await api.get<[]>('api/variantes');
+        console.log("ACA DATA DE VARIANTES", dataVARIANTES)
+
         if (!alive) return;
         setRows(Array.isArray(data) ? data : []);
       } catch (e: any) {

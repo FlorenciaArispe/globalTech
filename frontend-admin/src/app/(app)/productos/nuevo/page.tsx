@@ -346,6 +346,7 @@ export default function NuevoProductoPage() {
     } catch (e: any) {
       const status = e?.response?.status;
       if (status === 409) {
+        console.log("errorrrr", e)
         toast({ status: 'error', title: 'Duplicado', description: 'Ya existe una variante con esa combinación.' });
       } else {
         toast({ status: 'error', title: 'No se pudo crear la variante', description: e?.response?.data?.message ?? e?.message });
