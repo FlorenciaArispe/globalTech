@@ -381,9 +381,10 @@ export default function Productos() {
 
                             {modelo.trackeaUnidad ? (
                               <HStack gap={10}>
-                                <Badge colorScheme="blue" minW="72px" textAlign="center">TOTAL: {v.stock ?? 0}</Badge>
+                               
                                 <Badge colorScheme="green" minW="72px" textAlign="center">NUEVOS: {v.stockNuevos ?? 0}</Badge>
                                 <Badge colorScheme="yellow" minW="72px" textAlign="center">USADOS: {v.stockUsados ?? 0}</Badge>
+                                 <Badge colorScheme="blue" minW="72px" textAlign="center">TOTAL: {v.stock ?? 0}</Badge>
 
                                 <Tooltip label="Agregar unidad">
                                   <IconButton

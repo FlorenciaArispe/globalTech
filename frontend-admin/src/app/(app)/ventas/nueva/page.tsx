@@ -25,24 +25,21 @@ type InventarioRowDTO = {
   precioBase?: number | null;
   precioOverride?: number | null;
   precioEfectivo?: number | null;
-  stockAcumulado?: number | null; // para no-trackeados
+  stockAcumulado?: number | null;
   trackeaUnidad: boolean;
 };
 
 type VentaItemCreate = {
-  unidadId?: Id | null;              // para trackeados
-  varianteId?: Id | null;            // para no-trackeados (si el back lo soporta)
-  cantidad?: number | null;          // para no-trackeados
+  unidadId?: Id | null;     
+  varianteId?: Id | null;           
+  cantidad?: number | null;  
   precioUnitario: number;
-  descuentoItem?: number | null;
-  observaciones?: string | null;
 };
 
 type VentaCreateDTO = {
   clienteId?: Id | null;
   observaciones?: string | null;
   descuentoTotal?: number | null;
-  impuestos?: number | null;
   items: VentaItemCreate[];
 };
 
@@ -56,11 +53,10 @@ export default function NuevaVentaPage() {
 
   const [loading, setLoading] = useState(true);
   const [inventario, setInventario] = useState<InventarioRowDTO[]>([]);
-  const [clientes, setClientes] = useState<{id: Id; nombre: string}[]>([]);
+  const [clientes, setClientes] = useState<{ id: Id; nombre: string }[]>([]);
   const [clienteId, setClienteId] = useState<Id | ''>('');
   const [observaciones, setObservaciones] = useState('');
   const [descuentoTotal, setDescuentoTotal] = useState<string>('');
-  const [impuestos, setImpuestos] = useState<string>('');
   const [items, setItems] = useState<VentaItemCreate[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -70,10 +66,9 @@ export default function NuevaVentaPage() {
       try {
         const [inv, cls] = await Promise.all([
           api.get<InventarioRowDTO[]>('/api/inventario'),
-          api.get<{id: Id; nombre: string}[]>('/api/clientes'), // <-- si no existe, podés omitir y dejar "Mostrador"
+          api.get<{ id: Id; nombre: string }[]>('/api/clientes'), 
         ]);
         if (!alive) return;
-        // filtrar solo vendibles
         const vendibles = (inv.data ?? []).filter(r => {
           if (r.trackeaUnidad) return r.estadoStock === 'EN_STOCK';
           return (r.stockAcumulado ?? 0) > 0;
@@ -102,15 +97,13 @@ export default function NuevaVentaPage() {
     const row = opcionesTrackeados.find(r => String(r.unidadId) === String(unidadId));
     if (!row) return;
     const precio = row.precioEfectivo ?? row.precioBase ?? 0;
-    // evitar duplicar la misma unidad
     if (items.some(it => String(it.unidadId) === String(unidadId))) {
       toast({ status: 'warning', title: 'La unidad ya está en la venta' });
       return;
     }
     setItems(prev => [...prev, {
       unidadId,
-      precioUnitario: precio,
-      descuentoItem: 0,
+      precioUnitario: precio
     }]);
   };
 
@@ -118,7 +111,6 @@ export default function NuevaVentaPage() {
     const row = opcionesNoTrack.find(r => String(r.varianteId) === String(varianteId));
     if (!row) return;
     const precio = row.precioBase ?? 0;
-    // podés permitir múltiples renglones misma variante (diferentes precios/descuentos) o consolidar. Acá dejamos 1:
     if (items.some(it => String(it.varianteId) === String(varianteId))) {
       toast({ status: 'warning', title: 'La variante ya está en la venta' });
       return;
@@ -126,8 +118,7 @@ export default function NuevaVentaPage() {
     setItems(prev => [...prev, {
       varianteId,
       cantidad: 1,
-      precioUnitario: precio,
-      descuentoItem: 0,
+      precioUnitario: precio
     }]);
   };
 
@@ -136,16 +127,15 @@ export default function NuevaVentaPage() {
 
   const parseNum = (v: string) => {
     if (!v) return 0;
-    const n = Number(v.replace(/\./g,'').replace(',','.'));
+    const n = Number(v.replace(/\./g, '').replace(',', '.'));
     return Number.isFinite(n) ? n : 0;
   };
 
   const subtotal = useMemo(() => {
     return items.reduce((acc, it) => {
       const precio = it.precioUnitario ?? 0;
-      const desc   = it.descuentoItem ?? 0;
-      const cant   = (it.cantidad ?? 1);
-      return acc + (precio - desc) * cant;
+      const cant = (it.cantidad ?? 1);
+      return acc + precio * cant;
     }, 0);
   }, [items]);
 
@@ -155,20 +145,15 @@ export default function NuevaVentaPage() {
       return;
     }
 
-    // BACKEND: si hoy solo acepta unidadId, rechazará los ítems sin unidad.
-    // Si implementás la variante con cantidad, esto funciona para ambos.
     const payload: VentaCreateDTO = {
       clienteId: clienteId ? Number(clienteId) : null,
       observaciones: observaciones || null,
       descuentoTotal: parseNum(descuentoTotal) || null,
-      impuestos: parseNum(impuestos) || null,
       items: items.map(it => ({
         unidadId: it.unidadId ? Number(it.unidadId) : null,
         varianteId: it.varianteId ? Number(it.varianteId) : null,
         cantidad: it.cantidad ?? (it.unidadId ? 1 : null),
-        precioUnitario: it.precioUnitario,
-        descuentoItem: it.descuentoItem ?? 0,
-        observaciones: it.observaciones ?? null,
+        precioUnitario: it.precioUnitario
       })),
     };
 
@@ -199,16 +184,10 @@ export default function NuevaVentaPage() {
   return (
     <Box bg="#f6f6f6" minH="100dvh">
       <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
-
-        <HStack justify="space-between" mb={4}>
-          <HStack>
-            <IconButton aria-label="Volver" icon={<ArrowLeft size={18}/>} variant="ghost" onClick={() => router.back()} />
+<HStack mb={4}>
+            <IconButton aria-label="Volver" icon={<ArrowLeft size={18} />} variant="ghost" onClick={() => router.back()} />
             <Text fontSize="30px" fontWeight={600}>Nueva venta</Text>
           </HStack>
-          <HStack>
-            <Badge colorScheme="purple">Subtotal: {money(subtotal)}</Badge>
-          </HStack>
-        </HStack>
 
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} bg="white" p={4} borderRadius="md" borderWidth="1px">
           <FormControl>
@@ -230,19 +209,12 @@ export default function NuevaVentaPage() {
             </NumberInput>
           </FormControl>
 
-          <FormControl>
-            <FormLabel>Impuestos</FormLabel>
-            <NumberInput value={impuestos} onChange={v => setImpuestos(v)}>
-              <NumberInputField placeholder="0" />
-            </NumberInput>
-          </FormControl>
         </SimpleGrid>
 
         <Box mt={4} bg="white" borderRadius="md" borderWidth="1px" p={4}>
           <Text fontWeight={600} mb={3}>Agregar ítems</Text>
 
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3} mb={4}>
-            {/* Trackeados por IMEI */}
             <FormControl>
               <FormLabel>Unidad (IMEI)</FormLabel>
               <HStack>
@@ -263,8 +235,6 @@ export default function NuevaVentaPage() {
                 />
               </HStack>
             </FormControl>
-
-            {/* No trackeados (por variante + cantidad) */}
             <FormControl>
               <FormLabel>Variante (sin IMEI)</FormLabel>
               <HStack>
@@ -293,8 +263,6 @@ export default function NuevaVentaPage() {
                 <Th>Ítem</Th>
                 <Th>Cant.</Th>
                 <Th isNumeric>Precio</Th>
-                <Th isNumeric>Desc.</Th>
-                <Th isNumeric>Subtotal</Th>
                 <Th></Th>
               </Tr>
             </Thead>
@@ -307,9 +275,6 @@ export default function NuevaVentaPage() {
                 const titulo = row
                   ? `${row.modeloNombre}${row.colorNombre ? ' - ' + row.colorNombre : ''}${row.capacidadEtiqueta ? ' - ' + row.capacidadEtiqueta : ''}${row.imei ? ' · IMEI ' + row.imei : ''}`
                   : (it.unidadId ? `Unidad ${it.unidadId}` : `Variante ${it.varianteId}`);
-
-                const cant = it.unidadId ? 1 : (it.cantidad ?? 1);
-                const linea = (it.precioUnitario - (it.descuentoItem ?? 0)) * cant;
 
                 return (
                   <Tr key={idx}>
@@ -328,23 +293,15 @@ export default function NuevaVentaPage() {
                     </Td>
                     <Td isNumeric width="140px">
                       <NumberInput value={String(it.precioUnitario)} onChange={v => {
-                        const n = Number(v.replace(/\./g,'').replace(',','.'));
+                        const n = Number(v.replace(/\./g, '').replace(',', '.'));
                         setItems(prev => prev.map((x, i) => i === idx ? { ...x, precioUnitario: Number.isFinite(n) ? n : 0 } : x));
                       }}>
                         <NumberInputField />
                       </NumberInput>
                     </Td>
-                    <Td isNumeric width="140px">
-                      <NumberInput value={String(it.descuentoItem ?? 0)} onChange={v => {
-                        const n = Number(v.replace(/\./g,'').replace(',','.'));
-                        setItems(prev => prev.map((x, i) => i === idx ? { ...x, descuentoItem: Number.isFinite(n) ? n : 0 } : x));
-                      }}>
-                        <NumberInputField />
-                      </NumberInput>
-                    </Td>
-                    <Td isNumeric>{money(linea)}</Td>
+
                     <Td>
-                      <IconButton aria-label="Quitar" icon={<Trash2 size={16}/>} variant="ghost" onClick={() => removeItemAt(idx)} />
+                      <IconButton aria-label="Quitar" icon={<Trash2 size={16} />} variant="ghost" onClick={() => removeItemAt(idx)} />
                     </Td>
                   </Tr>
                 );
@@ -352,11 +309,21 @@ export default function NuevaVentaPage() {
             </Tbody>
           </Table>
 
-          <HStack justify="flex-end" mt={4}>
+          <HStack justify={"space-between"} mt={10}>
+                    <HStack >
+            <Badge colorScheme="purple">Subtotal: {money(subtotal)}</Badge>
+          </HStack>
+              <HStack>
             <Button variant="ghost" onClick={() => router.back()}>Cancelar</Button>
             <Button colorScheme="blue" onClick={onSubmit} isLoading={saving}>Confirmar venta</Button>
           </HStack>
+
+
+          </HStack>
+
+        
         </Box>
+           
       </Container>
     </Box>
   );

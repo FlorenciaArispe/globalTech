@@ -8,5 +8,6 @@ public record VentaItemDTO(
     Long varianteId,
     BigDecimal precioUnitario,
     BigDecimal descuentoItem,
-    String observaciones
+    String modeloNombre,
+    Integer cantidad
 ) {}

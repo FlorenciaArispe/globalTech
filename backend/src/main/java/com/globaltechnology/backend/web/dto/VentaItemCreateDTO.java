@@ -1,11 +1,11 @@
 package com.globaltechnology.backend.web.dto;
 
-import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record VentaItemCreateDTO(
-    @NotNull Long unidadId,
-    @NotNull BigDecimal precioUnitario,
-    BigDecimal descuentoItem,
-    String observaciones
+    Long unidadId,      // null si no-trackeado
+    Long varianteId,    // requerido si no-trackeado
+    Integer cantidad,   // requerido si no-trackeado (>=1). Para trackeado ignorar (usar 1)
+    BigDecimal precioUnitario,
+    BigDecimal descuentoItem
 ) {}

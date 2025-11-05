@@ -3,9 +3,19 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Container, Text, Table, Thead, Tr, Th, Tbody, Td,
-  HStack, Tag, Spinner, Flex, IconButton, Tooltip, Badge, Button
+  HStack, Tag, Spinner, Flex, IconButton, Tooltip, Badge, Button,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverArrow,
+  PopoverCloseButton,
+  PopoverHeader,
+  PopoverBody,
+  Portal,
+  Wrap,
+  WrapItem
 } from '@chakra-ui/react';
-import { Plus } from 'lucide-react';
+import { Eye, Plus } from 'lucide-react';
 import NextLink from 'next/link';
 import { api } from '@/lib/axios';
 
@@ -18,11 +28,12 @@ type VentaItemDTO = {
   precioUnitario: number;
   descuentoItem: number | null;
   observaciones?: string | null;
+  modeloNombre: string;
 };
 
 type VentaDTO = {
   id: Id;
-  fecha: string; // ISO
+  fecha: string;
   clienteId: Id | null;
   clienteNombre: string | null;
   subtotal: number;
@@ -45,7 +56,8 @@ export default function VentasPage() {
     let alive = true;
     (async () => {
       try {
-        const { data } = await api.get<VentaDTO[]>('/api/ventas'); // <-- necesita GET en backend
+        const { data } = await api.get<VentaDTO[]>('/api/ventas');
+        console.log("VENTAS", data)
         if (!alive) return;
         setRows(Array.isArray(data) ? data : []);
       } finally {
@@ -54,6 +66,7 @@ export default function VentasPage() {
     })();
     return () => { alive = false; };
   }, []);
+
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
@@ -91,24 +104,56 @@ export default function VentasPage() {
                 <Tr>
                   <Th width="150px">Fecha</Th>
                   <Th>Cliente</Th>
-                  <Th isNumeric>Subtotal</Th>
                   <Th isNumeric>Desc.</Th>
-                  <Th isNumeric>Impuestos</Th>
-                  <Th isNumeric>Total</Th>
+                
                   <Th>Ítems</Th>
+                    <Th isNumeric>Total</Th>
+                  <Th textAlign="center">Observación</Th>
                 </Tr>
               </Thead>
               <Tbody>
                 {rows.map(v => (
                   <Tr key={String(v.id)}>
-                    <Td>{new Date(v.fecha).toLocaleString()}</Td>
-                    <Td>{v.clienteNombre ?? <Tag size="sm">Mostrador</Tag>}</Td>
-                    <Td isNumeric>{money(v.subtotal)}</Td>
-                    <Td isNumeric>{money(v.descuentoTotal)}</Td>
-                    <Td isNumeric>{money(v.impuestos)}</Td>
-                    <Td isNumeric><Badge colorScheme="blue">{money(v.total)}</Badge></Td>
+
                     <Td>
-                      {v.items.length} {v.items.length === 1 ? 'ítem' : 'ítems'}
+                      {new Date(v.fecha).toLocaleDateString('es-AR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric'
+                      })}
+                    </Td>
+                    <Td>{v.clienteNombre ?? <Tag size="sm">Mostrador</Tag>}</Td>
+                    <Td >{money(v.descuentoTotal)}</Td>
+                 
+                    <Td>
+                      <Box maxH="96px" overflowY="auto" pr={2}>
+                        {v.items.map((it, idx) => {
+                          const cant = (it as any).cantidad ?? 1;
+                          return (
+                            <Text key={String(it.id ?? idx)} fontSize="sm">
+                              {cant > 1 ? `${cant}× ` : ''}{it.modeloNombre} - ${it.precioUnitario}
+                            </Text>
+                          );
+                        })}
+                      </Box>
+                    </Td>
+                       <Td isNumeric><Badge colorScheme="blue">{money(v.total)}</Badge></Td>
+                    <Td textAlign="center">
+                      <Tooltip
+                        label={v.observaciones ? v.observaciones : "Sin observación"}
+                        bg="gray.700"
+                        color="white"
+                        borderRadius="md"
+                        p={2}
+                        hasArrow
+                        placement="left"
+                      >
+                        <IconButton
+                          aria-label="Ver observación"
+                          icon={<Eye size={16} />}
+                          variant="ghost"
+                          colorScheme="gray"
+                          size="sm"
+                        />
+                      </Tooltip>
                     </Td>
                   </Tr>
                 ))}

@@ -59,7 +59,9 @@ public class InventarioService {
       var trackedIds = tracked.stream().map(Variante::getId).toList();
       var unidades = unidadRepo.findAllByVariante_IdIn(trackedIds);
 
-      for (var u : unidades) {
+   for (var u : unidades) {
+  if (u.getEstadoStock() != EstadoStock.EN_STOCK)
+    continue;
         var v = u.getVariante();
         var m = v.getModelo();
 
@@ -100,24 +102,28 @@ public class InventarioService {
         stockMap.put(varianteId, stock == null ? 0L : stock.longValue());
       }
 
-      for (var v : untracked) {
-        var m = v.getModelo();
-        out.add(new InventarioRowDTO(
-            m.getId(), m.getNombre(),
-            v.getId(),
-            v.getColor()!=null ? v.getColor().getNombre() : null,
-            v.getCapacidad()!=null ? v.getCapacidad().getEtiqueta() : null,
-            null,                // unidadId
-            null, null, null, null,  // imei/bateria/estadoProducto/estadoStock
-            v.getPrecioBase(),
-            null,                // precioOverride (no hay)
-            v.getPrecioBase(),   // precioEfectivo = base
-            stockMap.getOrDefault(v.getId(), 0L), // stock acumulado
-            false,               // trackeaUnidad
-            v.getCreatedAt(),
-            v.getUpdatedAt()
-        ));
-      }
+     for (var v : untracked) {
+  var m = v.getModelo();
+  Long stock = stockMap.getOrDefault(v.getId(), 0L);
+  if (stock <= 0) continue; // 🔥 sin stock, no mostrar
+
+  out.add(new InventarioRowDTO(
+      m.getId(), m.getNombre(),
+      v.getId(),
+      v.getColor()!=null ? v.getColor().getNombre() : null,
+      v.getCapacidad()!=null ? v.getCapacidad().getEtiqueta() : null,
+      null,                // unidadId
+      null, null, null, null,  // imei/bateria/estadoProducto/estadoStock
+      v.getPrecioBase(),
+      null,
+      v.getPrecioBase(),
+      stock,               // stock acumulado
+      false,
+      v.getCreatedAt(),
+      v.getUpdatedAt()
+  ));
+}
+
     }
 
     // 5) orden sugerido: modelo, variante, unidad/stock

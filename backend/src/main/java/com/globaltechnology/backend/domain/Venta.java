@@ -20,14 +20,8 @@ public class Venta extends Auditable {
   @ManyToOne @JoinColumn(name = "cliente_id")
   private Cliente cliente; 
 
-  @Column(name = "subtotal", precision = 14, scale = 2)
-  private BigDecimal subtotal;
-
   @Column(name = "descuento_total", precision = 14, scale = 2)
   private BigDecimal descuentoTotal;
-
-  @Column(name = "impuestos", precision = 14, scale = 2)
-  private BigDecimal impuestos;
 
   @Column(name = "total", precision = 14, scale = 2)
   private BigDecimal total;

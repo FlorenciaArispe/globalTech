@@ -25,37 +25,47 @@ public class VentaService {
   private final UnidadRepository unidadRepo;
   private final MovimientoInventarioRepository movRepo;
   private final ClienteRepository clienteRepo;
+   private final VarianteRepository varianteRepo;
 
   public VentaService(VentaRepository ventaRepo, VentaItemRepository itemRepo,
       UnidadRepository unidadRepo, MovimientoInventarioRepository movRepo,
-      ClienteRepository clienteRepo) {
+      ClienteRepository clienteRepo,  VarianteRepository varianteRepo) {
     this.ventaRepo = ventaRepo;
     this.itemRepo = itemRepo;
     this.unidadRepo = unidadRepo;
     this.movRepo = movRepo;
     this.clienteRepo = clienteRepo;
+      this.varianteRepo = varianteRepo;
   }
 
   private static BigDecimal nz(BigDecimal v) {
     return v == null ? BigDecimal.ZERO : v;
   }
 
-  private VentaDTO toDTO(Venta v, List<VentaItem> items) {
-    var itemsDTO = items.stream().map(it -> new VentaItemDTO(
-        it.getId(), it.getUnidad().getId(), it.getVariante().getId(),
-        it.getPrecioUnitario(), it.getDescuentoItem(), it.getObservaciones())).toList();
-    return new VentaDTO(
-        v.getId(), v.getFecha(),
-        v.getCliente() != null ? v.getCliente().getId() : null,
-        v.getCliente() != null ? v.getCliente().getNombre() : null,
-        v.getSubtotal(), v.getDescuentoTotal(), v.getImpuestos(), v.getTotal(),
-        v.getObservaciones(), itemsDTO);
-  }
+private VentaDTO toDTO(Venta v, List<VentaItem> items) {
+  var itemsDTO = items.stream().map(it -> new VentaItemDTO(
+  it.getId(),
+  it.getUnidad() != null ? it.getUnidad().getId() : null,
+  it.getVariante().getId(),
+  it.getPrecioUnitario(),
+  it.getDescuentoItem(),
+  it.getVariante().getModelo().getNombre(),
+  it.getCantidad()
+)).toList();
 
-  @Transactional
-  public VentaDTO crearYConfirmar(VentaCreateDTO dto) {
-    try {
-       Cliente cliente = null;
+  return new VentaDTO(
+      v.getId(), v.getFecha(),
+      v.getCliente() != null ? v.getCliente().getId() : null,
+      v.getCliente() != null ? v.getCliente().getNombre() : null,
+      v.getDescuentoTotal(), v.getTotal(),
+      v.getObservaciones(), itemsDTO
+  );
+}
+
+ @Transactional
+public VentaDTO crearYConfirmar(VentaCreateDTO dto) {
+  try {
+    Cliente cliente = null;
     if (dto.clienteId() != null) {
       cliente = clienteRepo.findById(dto.clienteId())
           .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cliente inválido"));
@@ -74,63 +84,104 @@ public class VentaService {
     BigDecimal subtotal = BigDecimal.ZERO;
     List<VentaItem> items = new ArrayList<>();
 
-    // por cada item: validar unidad disponible, crear item, marcar unidad vendida,
-    // escribir movimiento
     for (var i : dto.items()) {
-      var unidad = unidadRepo.findById(i.unidadId())
-          .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unidad inválida"));
-      if (unidad.getEstadoStock() != EstadoStock.EN_STOCK)
-        throw new ResponseStatusException(HttpStatus.CONFLICT, "La unidad no está disponible");
+      final BigDecimal precio = i.precioUnitario();
+      final BigDecimal desc   = nz(i.descuentoItem());
+      final BigDecimal neto   = precio.subtract(desc);
 
-      var variante = unidad.getVariante();
-      var precio = i.precioUnitario();
-      var desc = nz(i.descuentoItem());
+      if (i.unidadId() != null) {
+        // ====== TRACKEADO ======
+        var unidad = unidadRepo.findById(i.unidadId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unidad inválida"));
+        if (unidad.getEstadoStock() != EstadoStock.EN_STOCK)
+          throw new ResponseStatusException(HttpStatus.CONFLICT, "La unidad no está disponible");
 
-      var item = VentaItem.builder()
-          .venta(v).variante(variante).unidad(unidad)
-          .precioUnitario(precio).descuentoItem(desc)
-          .observaciones(i.observaciones())
-          .build();
-      
-log.debug("Guardando item de venta: unidadId={}, precio={}", i.unidadId(), precio);
-      itemRepo.save(item);
-      items.add(item);
-      unidad.setEstadoStock(EstadoStock.VENDIDO);
-      unidadRepo.save(unidad);
+        var variante = unidad.getVariante();
 
-      // movimiento inventario
-  var mov = MovimientoInventario.builder()
-    .fecha(Instant.now())
-    .tipo(TipoMovimiento.VENTA)
-    .variante(variante)
-    .unidad(unidad)            // porque es una unidad específica
-    .cantidad(1)               // <— Integer
-    .refTipo("venta")
-    .refId(v.getId())
-    .build();
-      log.debug("Guardando movimiento inventario: unidadId={}, tipo={}", unidad.getId(), TipoMovimiento.VENTA);
-      movRepo.save(mov);
+        var item = VentaItem.builder()
+            .venta(v)
+            .variante(variante)
+            .unidad(unidad)        // presente
+            .cantidad(1)           // fijo 1
+            .precioUnitario(precio)
+            .descuentoItem(desc)
+            .build();
 
-      subtotal = subtotal.add(precio.subtract(desc));
+        itemRepo.save(item);
+        items.add(item);
+
+        // actualizar stock unidad
+        unidad.setEstadoStock(EstadoStock.VENDIDO);
+        unidadRepo.save(unidad);
+
+        // movimiento inventario
+        var mov = MovimientoInventario.builder()
+            .fecha(Instant.now())
+            .tipo(TipoMovimiento.VENTA)
+            .variante(variante)
+            .unidad(unidad)
+            .cantidad(1)
+            .refTipo("venta")
+            .refId(v.getId())
+            .build();
+        movRepo.save(mov);
+
+        subtotal = subtotal.add(neto);
+
+      } else {
+        // ====== NO-TRACKEADO POR VARIANTE ======
+        if (i.varianteId() == null || i.cantidad() == null || i.cantidad() <= 0) {
+          throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ítem no-trackeado inválido");
+        }
+
+        var variante = varianteRepo.findById(i.varianteId())  // <-- asegurate de tener varianteRepo
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Variante inválida"));
+
+        // TODO: validar stock disponible a nivel variante si lo llevás (p.ej. variante.stockAcumulado >= i.cantidad())
+
+        var item = VentaItem.builder()
+            .venta(v)
+            .variante(variante)
+            .unidad(null)              // <- no hay unidad
+            .cantidad(i.cantidad())
+            .precioUnitario(precio)
+            .descuentoItem(desc)
+            .build();
+
+        itemRepo.save(item);
+        items.add(item);
+
+        // movimiento inventario (cantidad N)
+        var mov = MovimientoInventario.builder()
+            .fecha(Instant.now())
+            .tipo(TipoMovimiento.VENTA)
+            .variante(variante)
+            .unidad(null)
+            .cantidad(i.cantidad())    // 👈 importante
+            .refTipo("venta")
+            .refId(v.getId())
+            .build();
+        movRepo.save(mov);
+
+        subtotal = subtotal.add(neto.multiply(BigDecimal.valueOf(i.cantidad())));
+      }
     }
 
     var descuentoTotal = nz(dto.descuentoTotal());
-    var impuestos = nz(dto.impuestos());
-    var total = subtotal.subtract(descuentoTotal).add(impuestos);
+    var total = subtotal.subtract(descuentoTotal);
 
-    v.setSubtotal(subtotal);
     v.setDescuentoTotal(descuentoTotal);
-    v.setImpuestos(impuestos);
     v.setTotal(total);
-    log.debug("Guardando venta...");
     v = ventaRepo.save(v);
 
     return toDTO(v, items);
-    } catch (Exception e) {
-      log.error("Error al crear/confirmar venta. DTO: {}", dto, e);
-      throw e; // deja que Spring devuelva 500, pero con stack claro
-    }
+
+  } catch (Exception e) {
+    log.error("Error al crear/confirmar venta. DTO: {}", dto, e);
+    throw e;
   }
+}
+
 
   @Transactional(readOnly = true)
 public List<VentaDTO> listar() {

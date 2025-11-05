@@ -5,9 +5,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record VentaCreateDTO(
-    Long clienteId,                        // null = mostrador
+    Long clienteId,                  
     @NotEmpty List<VentaItemCreateDTO> items,
-    BigDecimal descuentoTotal,             // opcional
-    BigDecimal impuestos,                  // opcional
+    BigDecimal descuentoTotal,    
     String observaciones
 ) {}
