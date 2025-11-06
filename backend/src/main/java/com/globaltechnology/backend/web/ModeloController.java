@@ -3,8 +3,9 @@ package com.globaltechnology.backend.web;
 import com.globaltechnology.backend.service.ModeloService;
 import com.globaltechnology.backend.web.dto.ModeloCreateDTO;
 import com.globaltechnology.backend.web.dto.ModeloDTO;
+import com.globaltechnology.backend.web.dto.ModeloRenameDTO;
 import com.globaltechnology.backend.web.dto.ModeloTablaDTO;
-import com.globaltechnology.backend.web.dto.ModeloUpdateDTO;
+
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -34,8 +35,12 @@ public class ModeloController {
   @PostMapping @ResponseStatus(HttpStatus.CREATED)
   public ModeloDTO create(@Valid @RequestBody ModeloCreateDTO dto){ return service.create(dto); }
 
-  @PutMapping("/{id}")
-  public ModeloDTO update(@PathVariable Long id, @Valid @RequestBody ModeloUpdateDTO dto){ return service.update(id, dto); }
+   // ✅ editar solo el nombre
+  @PatchMapping("/{id}/nombre")
+  public ModeloDTO rename(@PathVariable Long id, @Valid @RequestBody ModeloRenameDTO dto) {
+    return service.rename(id, dto);
+  }
+
 
   @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@PathVariable Long id){ service.delete(id); }

@@ -83,6 +83,10 @@ export default function Productos() {
   const [movCantidad, setMovCantidad] = useState<string>(''); 
   const [savingMov, setSavingMov] = useState(false);
   const [movTipo, setMovTipo] = useState<'ENTRADA' | 'SALIDA'>('ENTRADA');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+const [editId, setEditId] = useState<Id | null>(null);
+const [editNombre, setEditNombre] = useState('');
+const [savingEdit, setSavingEdit] = useState(false);
   
 
   useEffect(() => {
@@ -276,31 +280,56 @@ export default function Productos() {
     }
   };
 
-  const closeAddUnidad = () => setIsAddOpen(false);
+  const openEditModel = (modelo: ModeloTablaDTO) => {
+  setEditId(modelo.id);
+  setEditNombre(modelo.nombre);
+  setIsEditOpen(true);
+};
 
-  const onDelete = async () => {
-    if (!deletingId) return;
-    try {
+const closeEditModel = () => {
+  setIsEditOpen(false);
+  setEditId(null);
+  setEditNombre('');
+};
 
-      await api.delete(`/modelos/${deletingId}`);
+const saveEditModel = async () => {
+  if (!editId || !editNombre.trim()) return;
+  setSavingEdit(true);
+  try {
+    const { data: updated } = await api.patch(`/api/modelos/${editId}/nombre`, {
+      nombre: editNombre.trim(),
+    });
+    setRows(prev =>
+      prev.map(m => String(m.id) === String(updated.id) ? { ...m, nombre: updated.nombre } : m)
+    );
+    toast({ status: 'success', title: 'Modelo actualizado' });
+  } catch (e:any) {
+    toast({ status: 'error', title: 'No se pudo editar', description: e?.response?.data?.message ?? e?.message });
+  } finally {
+    setSavingEdit(false);
+    closeEditModel();
+  }
+};
 
-      setRows(prev => prev.filter(r => String(r.id) !== String(deletingId)));
-      toast({ status: 'success', title: 'Modelo eliminado' });
-    } catch (e: any) {
-      const status = e?.response?.status;
-      if (status === 409) {
-        toast({ status: 'error', title: 'No se puede eliminar', description: 'El modelo tiene variantes asociadas.' });
-      } else {
-        toast({
-          status: 'error',
-          title: 'No se pudo eliminar',
-          description: e?.response?.data?.message ?? e?.message,
-        });
-      }
-    } finally {
-      setDeletingId(null);
+const onDelete = async () => {
+  if (!deletingId) return;
+  try {
+    await api.delete(`/api/modelos/${deletingId}`);
+    setRows(prev => prev.filter(r => String(r.id) !== String(deletingId)));
+    toast({ status: 'success', title: 'Modelo eliminado' });
+  } catch (e:any) {
+    const status = e?.response?.status;
+    if (status === 409) {
+      toast({ status: 'error', title: 'No se puede eliminar', description: 'El modelo tiene variantes o stock asociado.' });
+    } else {
+      toast({ status: 'error', title: 'No se pudo eliminar', description: e?.response?.data?.message ?? e?.message });
     }
-  };
+  } finally {
+    setDeletingId(null);
+  }
+};
+
+  const closeAddUnidad = () => setIsAddOpen(false);
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
@@ -353,21 +382,34 @@ export default function Productos() {
                   return (
                     <Tr key={String(modelo.id)} bg={rowBg}>
                       <Td>
-                        <HStack spacing={3}>
-                          <Image
-                            src={PLACEHOLDER_DATAURI}
-                            alt={modelo.nombre}
-                            boxSize="48px"
-                            borderRadius="md"
-                            objectFit="cover"
-                            border="1px solid"
-                            borderColor="gray.200"
-                          />
-                          <Box>
-                            <Text fontWeight={600}>{modelo.nombre}</Text>
-                            <Text fontSize="sm" color="gray.500">{modelo.categoriaNombre}</Text>
-                          </Box>
-                        </HStack>
+                      <HStack spacing={3} align="start">
+  <Image
+    src={PLACEHOLDER_DATAURI}
+    alt={modelo.nombre}
+    boxSize="48px"
+    borderRadius="md"
+    objectFit="cover"
+    border="1px solid"
+    borderColor="gray.200"
+  />
+  <Box>
+    <HStack>
+      <Text fontWeight={600}>{modelo.nombre}</Text>
+      <Tooltip label="Editar modelo">
+        <IconButton
+          aria-label="Editar modelo"
+          icon={<Pencil size={16} />}
+          size="xs"
+          variant="ghost"
+          onClick={() => openEditModel(modelo)}
+        />
+      </Tooltip>
+    
+    </HStack>
+    <Text fontSize="sm" color="gray.500">{modelo.categoriaNombre}</Text>
+  </Box>
+</HStack>
+
                       </Td>
 
                       <Td>
@@ -395,6 +437,15 @@ export default function Productos() {
                                     onClick={() => openAddUnidad(v.id)}
                                   />
                                 </Tooltip>
+                                  <Tooltip label="Eliminar modelo">
+        <IconButton
+          aria-label="Eliminar modelo"
+          icon={<Trash2 size={16} />}
+          size="xs"
+          variant="ghost"
+          onClick={() => setDeletingId(modelo.id)}
+        />
+      </Tooltip>
                               </HStack>
                             ) : (
                               <HStack gap={10}>
@@ -411,6 +462,15 @@ export default function Productos() {
                                     onClick={() => openAddMovimiento(v.id, 'ENTRADA')}
                                   />
                                 </Tooltip>
+                                  <Tooltip label="Eliminar modelo">
+        <IconButton
+          aria-label="Eliminar modelo"
+          icon={<Trash2 size={16} />}
+          size="xs"
+          variant="ghost"
+          onClick={() => setDeletingId(modelo.id)}
+        />
+      </Tooltip>
 
                               </HStack>
 
@@ -533,6 +593,35 @@ export default function Productos() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog
+  isOpen={isEditOpen}
+  leastDestructiveRef={cancelRef}
+  onClose={closeEditModel}
+  isCentered
+>
+  <AlertDialogOverlay />
+  <AlertDialogContent>
+    <AlertDialogHeader>Editar modelo</AlertDialogHeader>
+    <AlertDialogBody>
+      <FormControl isRequired>
+        <FormLabel>Nombre</FormLabel>
+        <Input
+          value={editNombre}
+          onChange={(e) => setEditNombre(e.target.value)}
+          placeholder="Nuevo nombre del modelo"
+        />
+      </FormControl>
+    </AlertDialogBody>
+    <AlertDialogFooter>
+      <Button ref={cancelRef} onClick={closeEditModel}>Cancelar</Button>
+      <Button colorScheme="blue" ml={3} onClick={saveEditModel} isLoading={savingEdit}>
+        Guardar
+      </Button>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+
 
     </Box>
   );

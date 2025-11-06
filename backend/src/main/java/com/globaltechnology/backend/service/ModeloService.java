@@ -89,28 +89,25 @@ public class ModeloService {
     return toDTO(repo.save(m));
   }
 
-  public ModeloDTO update(Long id, ModeloUpdateDTO dto) {
-    var m = repo.findById(id)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Modelo no encontrado"));
-    var cat = catRepo.findById(dto.categoriaId())
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Categoría inválida"));
-    var marca = marcaRepo.findById(dto.marcaId())
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Marca inválida"));
+ // com/globaltechnology/backend/service/ModeloService.java
+public ModeloDTO rename(Long id, ModeloRenameDTO dto) {
+  var m = repo.findById(id)
+      .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Modelo no encontrado"));
 
-    var nombre = dto.nombre().trim();
-    if (repo.existsByMarca_IdAndNombreIgnoreCaseAndIdNot(marca.getId(), nombre, id)) {
-      throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un modelo con ese nombre en la misma marca");
-    }
-
-    m.setCategoria(cat);
-    m.setMarca(marca);
-    m.setNombre(nombre);
-    m.setTrackeaUnidad(dto.trackeaUnidad());
-    m.setRequiereColor(dto.requiereColor());
-    m.setRequiereCapacidad(dto.requiereCapacidad());
-
-    return toDTO(repo.save(m));
+  var nuevoNombre = dto.nombre().trim();
+  if (nuevoNombre.isEmpty()) {
+    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nombre inválido");
   }
+
+  // evitar duplicado dentro de la misma marca
+  if (repo.existsByMarca_IdAndNombreIgnoreCaseAndIdNot(m.getMarca().getId(), nuevoNombre, id)) {
+    throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un modelo con ese nombre en la misma marca");
+  }
+
+  m.setNombre(nuevoNombre);
+  return toDTO(repo.save(m));
+}
+
 
   public void delete(Long id) {
     if (!repo.existsById(id))
