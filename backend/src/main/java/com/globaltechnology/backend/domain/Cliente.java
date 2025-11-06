@@ -14,12 +14,7 @@ public class Cliente {
   @Column(name = "nombre", nullable = false, length = 120)
   private String nombre;
 
-  @Column(name = "documento", length = 50)
-  private String documento;
-
   @Column(name = "telefono", length = 50)
   private String telefono;
 
-  @Column(name = "email", length = 120)
-  private String email;
 }

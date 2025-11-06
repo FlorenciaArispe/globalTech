@@ -15,7 +15,7 @@ public class ClienteService {
   public ClienteService(ClienteRepository repo){ this.repo = repo; }
 
   private static ClienteDTO toDTO(Cliente c){
-    return new ClienteDTO(c.getId(), c.getNombre(), c.getDocumento(), c.getTelefono(), c.getEmail());
+    return new ClienteDTO(c.getId(), c.getNombre(), c.getTelefono() );
   }
 
   public List<ClienteDTO> list(){ return repo.findAll().stream().map(ClienteService::toDTO).toList(); }
@@ -26,18 +26,14 @@ public class ClienteService {
   public ClienteDTO create(ClienteCreateDTO dto){
     var c = Cliente.builder()
       .nombre(dto.nombre().trim())
-      .documento(dto.documento())
       .telefono(dto.telefono())
-      .email(dto.email())
       .build();
     return toDTO(repo.save(c));
   }
   public ClienteDTO update(Long id, ClienteCreateDTO dto){
     var c = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Cliente no encontrado"));
     c.setNombre(dto.nombre().trim());
-    c.setDocumento(dto.documento());
     c.setTelefono(dto.telefono());
-    c.setEmail(dto.email());
     return toDTO(repo.save(c));
   }
   public void delete(Long id){

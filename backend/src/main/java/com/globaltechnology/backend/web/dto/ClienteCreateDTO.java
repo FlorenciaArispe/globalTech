@@ -4,7 +4,5 @@ import jakarta.validation.constraints.NotBlank;
 
 public record ClienteCreateDTO(
     @NotBlank String nombre,
-    String documento,
-    String telefono,
-    String email
+    String telefono
 ) {}

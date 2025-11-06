@@ -90,12 +90,12 @@ public class SecurityConfig {
 
             // MOVIMIENTOS (no trackeados por unidad)
             .requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyRole("ADMIN", "OPERADOR") // si exponés GET
-          .requestMatchers(HttpMethod.POST, "/api/movimientos/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.POST, "/api/movimientos/**").hasRole("ADMIN")
 
-           // VENTAS
-    .requestMatchers(HttpMethod.GET,  "/api/ventas/**").hasAnyRole("ADMIN","OPERADOR")
-    .requestMatchers(HttpMethod.POST, "/api/ventas/**").hasAnyRole("ADMIN","OPERADOR")
-    
+            // VENTAS
+            .requestMatchers(HttpMethod.GET, "/api/ventas/**").hasAnyRole("ADMIN", "OPERADOR")
+            .requestMatchers(HttpMethod.POST, "/api/ventas/**").hasAnyRole("ADMIN", "OPERADOR")
+
             // catch-all (si algo no matcheó arriba)
             .requestMatchers("/api/**").hasRole("ADMIN")
 

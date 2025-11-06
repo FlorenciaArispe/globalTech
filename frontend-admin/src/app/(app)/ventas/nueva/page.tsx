@@ -4,7 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Box, Container, Text, SimpleGrid, FormControl, FormLabel, Select, Input,
   NumberInput, NumberInputField, Button, HStack, Table, Thead, Tr, Th, Tbody, Td,
-  IconButton, useToast, Tag, Badge, Flex, Spinner
+  IconButton, useToast, Tag, Badge, Flex, Spinner,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter
 } from '@chakra-ui/react';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -30,9 +36,9 @@ type InventarioRowDTO = {
 };
 
 type VentaItemCreate = {
-  unidadId?: Id | null;     
-  varianteId?: Id | null;           
-  cantidad?: number | null;  
+  unidadId?: Id | null;
+  varianteId?: Id | null;
+  cantidad?: number | null;
   precioUnitario: number;
 };
 
@@ -59,6 +65,11 @@ export default function NuevaVentaPage() {
   const [descuentoTotal, setDescuentoTotal] = useState<string>('');
   const [items, setItems] = useState<VentaItemCreate[]>([]);
   const [saving, setSaving] = useState(false);
+  const [isClienteOpen, setIsClienteOpen] = useState(false);
+  const [nuevoClienteNombre, setNuevoClienteNombre] = useState('');
+  const [nuevoClienteTelefono, setNuevoClienteTelefono] = useState('');
+  const [creatingCliente, setCreatingCliente] = useState(false);
+
 
   useEffect(() => {
     let alive = true;
@@ -66,7 +77,7 @@ export default function NuevaVentaPage() {
       try {
         const [inv, cls] = await Promise.all([
           api.get<InventarioRowDTO[]>('/api/inventario'),
-          api.get<{ id: Id; nombre: string }[]>('/api/clientes'), 
+          api.get<{ id: Id; nombre: string }[]>('/api/clientes'),
         ]);
         if (!alive) return;
         const vendibles = (inv.data ?? []).filter(r => {
@@ -181,19 +192,57 @@ export default function NuevaVentaPage() {
     );
   }
 
+  const handleCrearCliente = async () => {
+    if (!nuevoClienteNombre.trim()) {
+      toast({ status: 'warning', title: 'Ingresá un nombre para el cliente' });
+      return;
+    }
+    setCreatingCliente(true);
+    try {
+      const payload = { nombre: nuevoClienteNombre.trim(), telefono: nuevoClienteTelefono || null };
+      const { data } = await api.post<{ id: Id; nombre: string }>('/api/clientes', payload);
+
+      setClientes(prev => [...prev, data]);
+      setClienteId(String(data.id));
+
+      toast({ status: 'success', title: 'Cliente creado' });
+      setIsClienteOpen(false);
+    } catch (e: any) {
+      toast({ status: 'error', title: 'No se pudo crear el cliente', description: e?.response?.data?.message ?? e?.message });
+    } finally {
+      setCreatingCliente(false);
+    }
+  };
+
   return (
     <Box bg="#f6f6f6" minH="100dvh">
       <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
-<HStack mb={4}>
-            <IconButton aria-label="Volver" icon={<ArrowLeft size={18} />} variant="ghost" onClick={() => router.back()} />
-            <Text fontSize="30px" fontWeight={600}>Nueva venta</Text>
-          </HStack>
+        <HStack mb={4}>
+          <IconButton aria-label="Volver" icon={<ArrowLeft size={18} />} variant="ghost" onClick={() => router.back()} />
+          <Text fontSize="30px" fontWeight={600}>Nueva venta</Text>
+        </HStack>
 
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} bg="white" p={4} borderRadius="md" borderWidth="1px">
           <FormControl>
             <FormLabel>Cliente</FormLabel>
-            <Select placeholder="Mostrador" value={String(clienteId)} onChange={(e) => setClienteId(e.target.value)}>
-              {clientes.map(c => <option key={c.id} value={String(c.id)}>{c.nombre}</option>)}
+            <Select
+              placeholder="Mostrador"
+              value={String(clienteId)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'new-cliente') {
+                  setNuevoClienteNombre('');
+                  setNuevoClienteTelefono('');
+                  setIsClienteOpen(true);
+                  return;
+                }
+                setClienteId(v);
+              }}
+            >
+              {clientes.map(c => (
+                <option key={c.id} value={String(c.id)}>{c.nombre}</option>
+              ))}
+              <option value="new-cliente">➕ Crear nuevo cliente…</option>
             </Select>
           </FormControl>
 
@@ -310,20 +359,47 @@ export default function NuevaVentaPage() {
           </Table>
 
           <HStack justify={"space-between"} mt={10}>
-                    <HStack >
-            <Badge colorScheme="purple">Subtotal: {money(subtotal)}</Badge>
+            <HStack >
+              <Badge colorScheme="purple">Subtotal: {money(subtotal)}</Badge>
+            </HStack>
+            <HStack>
+              <Button variant="ghost" onClick={() => router.back()}>Cancelar</Button>
+              <Button colorScheme="blue" onClick={onSubmit} isLoading={saving}>Confirmar venta</Button>
+            </HStack>
           </HStack>
-              <HStack>
-            <Button variant="ghost" onClick={() => router.back()}>Cancelar</Button>
-            <Button colorScheme="blue" onClick={onSubmit} isLoading={saving}>Confirmar venta</Button>
-          </HStack>
-
-
-          </HStack>
-
-        
         </Box>
-           
+
+        <Modal isOpen={isClienteOpen} onClose={() => setIsClienteOpen(false)} isCentered>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Nuevo cliente</ModalHeader>
+            <ModalBody>
+              <FormControl isRequired mb={3}>
+                <FormLabel>Nombre</FormLabel>
+                <Input
+                  value={nuevoClienteNombre}
+                  onChange={(e) => setNuevoClienteNombre(e.target.value)}
+                  placeholder="Ej: Juan Pérez"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Teléfono (opcional)</FormLabel>
+                <Input
+                  value={nuevoClienteTelefono}
+                  onChange={(e) => setNuevoClienteTelefono(e.target.value)}
+                  placeholder="Ej: 291-..."
+                />
+              </FormControl>
+            </ModalBody>
+            <ModalFooter>
+              <Button mr={3} onClick={() => setIsClienteOpen(false)}>Cancelar</Button>
+              <Button colorScheme="blue" onClick={handleCrearCliente} isLoading={creatingCliente}>
+                Crear cliente
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
       </Container>
     </Box>
   );
