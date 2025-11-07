@@ -25,6 +25,17 @@ type Id = number | string;
 type EstadoComercial = 'NUEVO' | 'USADO';
 type EstadoStock = 'EN_STOCK' | 'RESERVADO' | 'VENDIDO';
 
+
+type ImagenSet = 'SELLADO' | 'USADO' | 'CATALOGO';
+type VarianteImagenDTO = {
+  id: Id;
+  set: ImagenSet;
+  url: string;
+  altText?: string | null;
+  orden: number;
+  principal: boolean;
+};
+
 type InventarioRowDTO = {
   modeloId: Id;
   modeloNombre: string;
@@ -34,8 +45,8 @@ type InventarioRowDTO = {
   unidadId?: Id | null;
   imei?: string | null;
   bateriaCondicionPct?: number | null;
-  estadoProducto?: EstadoComercial | null;
-  estadoStock?: EstadoStock | null;
+  estadoProducto?: 'NUEVO' | 'USADO' | null;
+  estadoStock?: 'EN_STOCK' | 'RESERVADO' | 'VENDIDO' | null;
   precioBase?: number | null;
   precioOverride?: number | null;
   precioEfectivo?: number | null;
@@ -43,7 +54,9 @@ type InventarioRowDTO = {
   trackeaUnidad: boolean;
   createdAt: string;
   updatedAt: string;
+  imagenes?: VarianteImagenDTO[]; // 👈 NUEVO
 };
+
 
 const PLACEHOLDER_DATAURI =
   'data:image/svg+xml;utf8,' +
@@ -97,6 +110,10 @@ export default function InventarioPage() {
   const [isEditVarianteOpen, setIsEditVarianteOpen] = useState(false);
   const [editVarianteId, setEditVarianteId] = useState<Id | null>(null);
   const [editVarPrecioBase, setEditVarPrecioBase] = useState<string>('');
+  const [viewerOpen, setViewerOpen] = useState(false);
+const [viewerImgs, setViewerImgs] = useState<VarianteImagenDTO[]>([]);
+const [viewerIdx, setViewerIdx] = useState(0);
+const [viewerTitle, setViewerTitle] = useState('');
 
   const openEdit = (r: InventarioRowDTO) => {
     setEditRow(r);
@@ -199,6 +216,25 @@ export default function InventarioPage() {
       setSavingUnidad(false);
     }
   };
+
+  const openViewer = (imgs: VarianteImagenDTO[], title: string, start: number = 0) => {
+  if (!imgs || imgs.length === 0) return;
+  setViewerImgs(imgs);
+  setViewerIdx(Math.max(0, Math.min(start, imgs.length - 1)));
+  setViewerTitle(title);
+  setViewerOpen(true);
+};
+const closeViewer = () => setViewerOpen(false);
+
+const prevImg = () => {
+  if (viewerImgs.length === 0) return;
+  setViewerIdx((i) => (i - 1 + viewerImgs.length) % viewerImgs.length);
+};
+const nextImg = () => {
+  if (viewerImgs.length === 0) return;
+  setViewerIdx((i) => (i + 1) % viewerImgs.length);
+};
+
 
   const openEditVariante = (r: InventarioRowDTO) => {
     setEditVarianteId(r.varianteId);
@@ -490,101 +526,74 @@ export default function InventarioPage() {
                     <Td colSpan={3} columnGap={6} p={0} >
                       <Box py={2} px={1}>
                         {g.items.map((r, idx) => (
-                          <Flex key={`${r.varianteId}-${r.unidadId ?? 'v'}`} align="center" py={2} px={3} borderTopWidth={idx === 0 ? '0' : '1px'}>
-                            <Box flex="1" >
-                              {!r.trackeaUnidad ? (
-                                <HStack mt={1} spacing={2}>
-                                  <Tag size="sm"> {(r.stockAcumulado ?? 0) > 0 ? `${r.stockAcumulado} UNIDADES` : 'Sin stock'}</Tag>
-                                </HStack>
-                              ) : (
-                                <HStack mt={1} spacing={2}>
-                                   <Text fontSize="sm">
-                                    <b>{r.colorNombre}</b>
-                                  </Text>
-                                  {r.estadoProducto && (
-                                    <Badge colorScheme={r.estadoProducto === 'NUEVO' ? 'green' : 'yellow'}>
-                                      {r.estadoProducto}
-                                    </Badge>
-                                  )}
-                                 
-                                  {r.estadoStock && <Tag size="sm">{r.estadoStock}</Tag>}
-                                </HStack>
-                              )}
-                            </Box>
+                      <Flex key={`${r.varianteId}-${r.unidadId ?? 'v'}`} align="center" py={2} px={3} gap={3} borderTopWidth={idx === 0 ? '0' : '1px'}>
+  {/* Thumbnail */}
+  <Box flexShrink={0}>
+    {(() => {
+      const imgs = r.imagenes ?? [];
+      const thumbUrl = imgs[0]?.url ?? PLACEHOLDER_DATAURI;
+      const canOpen = imgs.length > 0;
+      return (
+        <Image
+          src={thumbUrl}
+          alt={imgs[0]?.altText || g.modeloNombre}
+          boxSize="56px"
+          borderRadius="md"
+          objectFit="cover"
+          border="1px solid"
+          borderColor="gray.200"
+          cursor={canOpen ? 'pointer' : 'default'}
+          onClick={() => canOpen && openViewer(imgs, `${g.modeloNombre} ${r.colorNombre ?? ''} ${r.capacidadEtiqueta ?? ''}`.trim())}
+        />
+      );
+    })()}
+  </Box>
 
-                            <Box flex="2" >
-                              {r.trackeaUnidad ? (
-                                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={2}>
-                                  <Text fontSize="sm"><b>IMEI:</b> {r.imei ?? '-'}</Text>
-                                   
-                                  {r.bateriaCondicionPct != null ?
-                                    <Text fontSize="sm"><b>Batería:</b> {`${r.bateriaCondicionPct}%`}</Text>
-                                    : <Text fontSize="sm"><b>Sellado</b></Text>
-                                  }
+  {/* Columna 1: info corta */}
+  <Box flex="1">
+    {!r.trackeaUnidad ? (
+      <HStack mt={1} spacing={2}>
+        <Tag size="sm">{(r.stockAcumulado ?? 0) > 0 ? `${r.stockAcumulado} UNIDADES` : 'Sin stock'}</Tag>
+      </HStack>
+    ) : (
+      <HStack mt={1} spacing={2}>
+        <Text fontSize="sm">
+          <b>{r.colorNombre}</b>
+        </Text>
+        {r.estadoProducto && (
+          <Badge colorScheme={r.estadoProducto === 'NUEVO' ? 'green' : 'yellow'}>
+            {r.estadoProducto}
+          </Badge>
+        )}
+        {r.estadoStock && <Tag size="sm">{r.estadoStock}</Tag>}
+      </HStack>
+    )}
+  </Box>
 
-                                  <Text fontSize="sm">
-                                    <b>Precio:</b> {money(r.precioEfectivo)}
-                                  </Text>
-                                </SimpleGrid>
-                              ) : (
-                                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
-                                  <Text fontSize="sm"><b>Precio:</b> {money(r.precioBase)}</Text>
-                                </SimpleGrid>
-                              )}
-                            </Box>
+  {/* Columna 2: datos */}
+  <Box flex="2">
+    {r.trackeaUnidad ? (
+      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={2}>
+        <Text fontSize="sm"><b>IMEI:</b> {r.imei ?? '-'}</Text>
+        {r.bateriaCondicionPct != null
+          ? <Text fontSize="sm"><b>Batería:</b> {`${r.bateriaCondicionPct}%`}</Text>
+          : <Text fontSize="sm"><b>Sellado</b></Text>
+        }
+        <Text fontSize="sm"><b>Precio:</b> {money(r.precioEfectivo)}</Text>
+      </SimpleGrid>
+    ) : (
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+        <Text fontSize="sm"><b>Precio:</b> {money(r.precioBase)}</Text>
+      </SimpleGrid>
+    )}
+  </Box>
 
-                            <HStack justify="flex-end" spacing={2} >
-                              <Tooltip label="Agregar unidad">
-                                <IconButton
-                                  aria-label="Agregar unidad"
-                                  icon={<Plus size={16} />}
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={r.trackeaUnidad ? () => openAddUnidad(r.varianteId) : () => openMovimiento(r.varianteId, 'ENTRADA')}
-                                />
-                              </Tooltip>
+  {/* Acciones */}
+  <HStack justify="flex-end" spacing={2}>
+    {/* ... tus botones existentes ... */}
+  </HStack>
+</Flex>
 
-                              {!r.trackeaUnidad && (
-                                <Tooltip label="Quitar stock (movimiento SALIDA)">
-                                  <IconButton
-                                    aria-label="Quitar stock"
-                                    icon={<Minus size={16} />}
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openMovimiento(r.varianteId, 'SALIDA')}
-                                  />
-                                </Tooltip>
-                              )}
-
-                              <Menu>
-                                <MenuButton
-                                  as={IconButton}
-                                  aria-label="Acciones"
-                                  icon={<MoreVertical size={16} />}
-                                  size="sm"
-                                  variant="outline"
-                                />
-                                <MenuList>
-                                  <MenuItem
-                                    icon={<Pencil size={14} />}
-                                    onClick={r.trackeaUnidad ? () => openEdit(r) : () => openEditVariante(r)}
-                                  >
-                                    Editar
-                                  </MenuItem>
-
-                                  <MenuItem
-                                    icon={<Trash2 size={14} />}
-                                    color="red.500"
-                                    onClick={r.trackeaUnidad ? () => (r.unidadId && openDeleteUnidad(r.unidadId)) : () => deleteVariante(r.varianteId)}
-                                  >
-                                    Eliminar
-                                  </MenuItem>
-
-                                </MenuList>
-                              </Menu>
-
-                            </HStack>
-                          </Flex>
                         ))}
                       </Box>
                     </Td>
@@ -833,6 +842,51 @@ export default function InventarioPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      <Modal isOpen={viewerOpen} onClose={closeViewer} size="xl" isCentered>
+  <ModalOverlay />
+  <ModalContent>
+    <ModalHeader>{viewerTitle}</ModalHeader>
+    <ModalBody>
+      <Flex align="center" justify="center" gap={2}>
+        <IconButton
+          aria-label="Anterior"
+          icon={<Minus style={{ transform: 'rotate(90deg)' }} />} // usa un ícono si preferís ArrowLeft de lucide
+          variant="outline"
+          onClick={prevImg}
+          isDisabled={(viewerImgs?.length ?? 0) <= 1}
+        />
+        <Image
+          src={viewerImgs[viewerIdx]?.url ?? PLACEHOLDER_DATAURI}
+          alt={viewerImgs[viewerIdx]?.altText ?? 'Imagen de variante'}
+          maxH="60vh"
+          maxW="100%"
+          objectFit="contain"
+          borderRadius="md"
+          border="1px solid"
+          borderColor="gray.200"
+          flex="1"
+        />
+        <IconButton
+          aria-label="Siguiente"
+          icon={<Plus style={{ transform: 'rotate(90deg)' }} />} // usa ArrowRight si querés
+          variant="outline"
+          onClick={nextImg}
+          isDisabled={(viewerImgs?.length ?? 0) <= 1}
+        />
+      </Flex>
+      <Flex mt={3} align="center" justify="center" gap={2}>
+        <Text fontSize="sm" color="gray.600">
+          {(viewerIdx + 1)} / {viewerImgs?.length ?? 0}
+        </Text>
+      </Flex>
+    </ModalBody>
+    <ModalFooter>
+      <Button onClick={closeViewer}>Cerrar</Button>
+    </ModalFooter>
+  </ModalContent>
+</Modal>
+
 
     </Box>
   );

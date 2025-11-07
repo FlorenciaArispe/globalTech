@@ -2,8 +2,13 @@
 import axios from 'axios';
 import { getToken, clearToken, clearUser } from './auth';
 
+
+const isServer = typeof window === 'undefined';
+const BASE =
+  (isServer ? process.env.INTERNAL_API_BASE : process.env.NEXT_PUBLIC_API_BASE) ?? '';
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE, // http://localhost:8085
+  baseURL: BASE, // con rewrites puede ser '', y usás '/auth', '/api'
   headers: { 'Content-Type': 'application/json' },
 });
 // NO seteamos Authorization por default acá. Siempre via interceptor.

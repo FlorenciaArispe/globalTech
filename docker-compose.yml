@@ -35,10 +35,15 @@ services:
       APP_JWT_SECRET: ${APP_JWT_SECRET}
       APP_JWT_EXP_MIN: 120
       APP_JWT_ISSUER: globaltechnology
+      UPLOADS_DIR: /app/uploads
+      UPLOADS_PUBLIC_BASE: http://localhost:8086/uploads
     ports:
       - "8085:8080"
+    volumes:
+      - uploads:/app/uploads
 
   frontend:
+    profiles: ["prod"]
     build:
       context: ./frontend-admin
     #  dockerfile: Dockerfile
@@ -52,6 +57,7 @@ services:
       - backend
 
   frontend-dev:
+    profiles: ["dev"]
     build:
       context: ./frontend-admin
       dockerfile: Dockerfile.dev
@@ -72,6 +78,7 @@ services:
 
   # === NUEVO: catálogo producción (Nginx en 3001) ===
   catalog:
+    profiles: ["catalog"]
     build:
       context: ./catalogo
       dockerfile: Dockerfile
@@ -88,6 +95,7 @@ services:
 
   # === NUEVO: catálogo desarrollo (Vite dev server en 5173) ===
   catalog-dev:
+    profiles: ["catalog"]
     build:
       context: ./catalogo
       dockerfile: Dockerfile.dev
@@ -114,5 +122,17 @@ services:
     depends_on:
       - db
 
+  static:
+    image: nginx:1.27-alpine
+    container_name: gt_static
+    volumes:
+      - uploads:/usr/share/nginx/html/uploads:ro
+      - ./nginx/uploads.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8086:80"
+    depends_on:
+      - backend
+
 volumes:
   db_data:
+  uploads:

@@ -1,0 +1,114 @@
+package com.globaltechnology.backend.service;
+
+import com.globaltechnology.backend.domain.*;
+import com.globaltechnology.backend.repository.*;
+import com.globaltechnology.backend.web.dto.*;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.*;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class VarianteImagenService {
+
+  private final VarianteRepository varianteRepo;
+  private final VarianteImagenRepository imagenRepo;
+
+  @Value("${app.uploads.dir:/app/uploads}")
+  private String uploadsDir;
+
+  @Value("${app.uploads.public-base:http://localhost:8086/uploads}")
+  private String publicBase;
+
+  @Value("${app.uploads.max-files-per-set:3}")
+  private int maxPerSet;
+
+  @Value("${app.uploads.max-file-size-bytes:5242880}")
+  private long maxSizeBytes;
+
+  private static final Set<String> ALLOWED = Set.of("image/jpeg","image/png","image/webp","image/avif");
+
+  public VarianteImagenService(VarianteRepository varianteRepo, VarianteImagenRepository imagenRepo) {
+    this.varianteRepo = varianteRepo;
+    this.imagenRepo = imagenRepo;
+  }
+
+  public VarianteImagenListDTO list(Long varianteId) {
+    var all = imagenRepo.findAllByVariante_IdOrderBySetTipoAscOrdenAsc(varianteId)
+      .stream().map(VarianteImagenDTO::from).collect(Collectors.toList());
+
+    Map<ImagenSet, List<VarianteImagenDTO>> bySet = Arrays.stream(ImagenSet.values())
+      .collect(Collectors.toMap(s -> s, s -> new ArrayList<>()));
+
+    for (var dto : all) bySet.get(dto.set()).add(dto);
+    return new VarianteImagenListDTO(varianteId, bySet);
+  }
+
+  @Transactional
+  public List<VarianteImagenDTO> replaceSet(Long varianteId, ImagenSet set, List<MultipartFile> files, List<String> altTexts) throws IOException {
+    if (files == null) files = List.of();
+    if (files.size() > maxPerSet) throw new IllegalArgumentException("Máximo " + maxPerSet + " imágenes por set");
+
+    Variante variante = varianteRepo.findById(varianteId)
+      .orElseThrow(() -> new NoSuchElementException("Variante no encontrada"));
+
+    // 1) borrar registros anteriores del set
+    var prev = imagenRepo.findAllByVariante_IdAndSetTipoOrderByOrdenAsc(varianteId, set);
+    imagenRepo.deleteAll(prev);
+
+    // 2) preparar carpeta
+    Path base = Path.of(uploadsDir, "variantes", String.valueOf(varianteId), set.name().toLowerCase());
+    Files.createDirectories(base);
+
+    // 3) guardar archivos + crear entidades
+    List<VarianteImagen> nuevas = new ArrayList<>();
+    for (int i = 0; i < files.size(); i++) {
+      MultipartFile f = files.get(i);
+      if (f.isEmpty()) continue;
+      if (f.getSize() > maxSizeBytes) throw new IllegalArgumentException("Archivo supera el límite de tamaño");
+      String ctype = Optional.ofNullable(f.getContentType()).orElse("");
+      if (!ALLOWED.contains(ctype)) throw new IllegalArgumentException("Tipo no permitido: " + ctype);
+
+      String ext = switch (ctype) {
+        case "image/jpeg" -> "jpg";
+        case "image/png"  -> "png";
+        case "image/webp" -> "webp";
+        case "image/avif" -> "avif";
+        default -> "bin";
+      };
+      String name = i + "-" + UUID.randomUUID() + "." + ext;
+
+      Path target = base.resolve(name);
+      Files.copy(f.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+
+      String url = String.join("/",
+        publicBase.replaceAll("/$", ""),
+        "variantes", String.valueOf(varianteId), set.name().toLowerCase(), name
+      );
+
+      String alt = (altTexts != null && i < altTexts.size()) ? altTexts.get(i) : null;
+
+      nuevas.add(VarianteImagen.builder()
+        .variante(variante)
+        .setTipo(set)
+        .orden(i)
+        .principal(i == 0)
+        .url(url)
+        .altText(alt)
+        .build());
+    }
+
+    imagenRepo.saveAll(nuevas);
+    return nuevas.stream().map(VarianteImagenDTO::from).toList();
+  }
+
+  @Transactional
+  public void deleteImage(Long imagenId) {
+    imagenRepo.deleteById(imagenId);
+  }
+}
