@@ -48,4 +48,16 @@ public List<VarianteImagenDTO> replaceSet(
     // varianteId no se usa en el método, pero lo dejamos por convención REST
     service.deleteImage(imagenId);
   }
+
+  // VarianteImagenController.java
+@PostMapping(path = "/{set}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+public List<VarianteImagenDTO> appendSet(
+    @PathVariable("varianteId") Long varianteId,
+    @PathVariable("set") ImagenSet set,
+    @RequestParam("files") List<MultipartFile> files,
+    @RequestParam(value = "alts", required = false) List<String> alts
+) throws IOException {
+  return service.appendToSet(varianteId, set, files, alts);
+}
+
 }

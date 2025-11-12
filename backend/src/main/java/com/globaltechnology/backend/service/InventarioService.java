@@ -24,10 +24,10 @@ public class InventarioService {
   private final VarianteImagenRepository varianteImagenRepo;
 
   public InventarioService(ModeloRepository modeloRepo,
-                           VarianteRepository varianteRepo,
-                           UnidadRepository unidadRepo,
-                           MovimientoInventarioRepository movRepo,
-                           VarianteImagenRepository varianteImagenRepo) {
+      VarianteRepository varianteRepo,
+      UnidadRepository unidadRepo,
+      MovimientoInventarioRepository movRepo,
+      VarianteImagenRepository varianteImagenRepo) {
     this.modeloRepo = modeloRepo;
     this.varianteRepo = varianteRepo;
     this.unidadRepo = unidadRepo;
@@ -39,28 +39,27 @@ public class InventarioService {
   public List<InventarioRowDTO> listarInventario(Long categoriaId, Long marcaId) {
 
     // 1) Modelos filtrados
-    List<Modelo> modelos = // ... (igual que tu código actual)
-        (categoriaId != null && marcaId != null) ? modeloRepo.findAllByCategoria_IdAndMarca_Id(categoriaId, marcaId) :
-        (categoriaId != null) ? modeloRepo.findAllByCategoria_Id(categoriaId) :
-        (marcaId != null) ? modeloRepo.findAllByMarca_Id(marcaId) :
-        modeloRepo.findAll();
+    List<Modelo> modelos = 
+        (categoriaId != null && marcaId != null) ? modeloRepo.findAllByCategoria_IdAndMarca_Id(categoriaId, marcaId)
+            : (categoriaId != null) ? modeloRepo.findAllByCategoria_Id(categoriaId)
+                : (marcaId != null) ? modeloRepo.findAllByMarca_Id(marcaId) : modeloRepo.findAll();
 
-    if (modelos.isEmpty()) return List.of();
+    if (modelos.isEmpty())
+      return List.of();
 
     var modeloIds = modelos.stream().map(Modelo::getId).toList();
 
     // 2) Variantes de esos modelos
     var variantes = varianteRepo.findAllByModelo_IdIn(modeloIds);
-    if (variantes.isEmpty()) return List.of();
+    if (variantes.isEmpty())
+      return List.of();
 
     // 🔎 Pre-carga de imágenes de TODAS las variantes para evitar N+1
     var varianteIds = variantes.stream().map(Variante::getId).toList();
     var todasImgs = varianteImagenRepo.findAllByVariante_IdIn(varianteIds);
 
     // Agrupar por varianteId y set
-    // Agrupar por varianteId y set
-Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet =
-    todasImgs.stream()
+    Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet = todasImgs.stream()
         .collect(Collectors.groupingBy(
             vi -> vi.getVariante().getId(),
             Collectors.groupingBy(
@@ -68,17 +67,11 @@ Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet =
                 Collectors.collectingAndThen(
                     Collectors.toList(),
                     list -> list.stream()
-                                .sorted(Comparator.comparingInt(VarianteImagen::getOrden))
-                                // 👇 usa tu método actual
-                                .map(VarianteImagenDTO::from)
-                                .toList()
-                )
-            )
-        ));
+                        .sorted(Comparator.comparingInt(VarianteImagen::getOrden))
+                        .map(VarianteImagenDTO::from)
+                        .toList()))));
 
-
-    // separar variantes tracked/untracked
-    var tracked   = variantes.stream().filter(v -> v.getModelo().isTrackeaUnidad()).toList();
+    var tracked = variantes.stream().filter(v -> v.getModelo().isTrackeaUnidad()).toList();
     var untracked = variantes.stream().filter(v -> !v.getModelo().isTrackeaUnidad()).toList();
 
     var out = new ArrayList<InventarioRowDTO>(variantes.size() * 2);
@@ -89,24 +82,24 @@ Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet =
       var unidades = unidadRepo.findAllByVariante_IdIn(trackedIds);
 
       for (var u : unidades) {
-        if (u.getEstadoStock() != EstadoStock.EN_STOCK) continue;
+        if (u.getEstadoStock() != EstadoStock.EN_STOCK)
+          continue;
 
         var v = u.getVariante();
         var m = v.getModelo();
 
         BigDecimal precioBase = v.getPrecioBase();
-        BigDecimal override   = u.getPrecioOverride();
-        BigDecimal efectivo   = (override != null ? override : precioBase);
+        BigDecimal override = u.getPrecioOverride();
+        BigDecimal efectivo = (override != null ? override : precioBase);
 
-        // 👉 set de imágenes según estado del producto (USADO vs SELLADO)
         ImagenSet set = (u.getEstadoProducto() == EstadoComercial.USADO)
             ? ImagenSet.USADO
             : ImagenSet.SELLADO;
 
         List<VarianteImagenDTO> imagenes = Optional
-    .ofNullable(imgsByVarAndSet.get(v.getId()))
-    .map(map -> map.getOrDefault(set, Collections.emptyList()))
-    .orElse(Collections.emptyList());
+            .ofNullable(imgsByVarAndSet.get(v.getId()))
+            .map(map -> map.getOrDefault(set, Collections.emptyList()))
+            .orElse(Collections.emptyList());
 
         out.add(new InventarioRowDTO(
             m.getId(), m.getNombre(),
@@ -125,7 +118,7 @@ Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet =
             true,
             u.getCreatedAt(),
             u.getUpdatedAt(),
-            imagenes // 👈 NUEVO
+            imagenes 
         ));
       }
     }
@@ -137,39 +130,38 @@ Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet =
       Map<Long, Long> stockMap = new HashMap<>();
       for (var row : movRepo.stockNoTrackeadoPorVariante(untrackedIds)) {
         Long varianteId = row.getVarianteId();
-        Integer stock   = row.getStock();
+        Integer stock = row.getStock();
         stockMap.put(varianteId, stock == null ? 0L : stock.longValue());
       }
 
       for (var v : untracked) {
         var m = v.getModelo();
         Long stock = stockMap.getOrDefault(v.getId(), 0L);
-        if (stock <= 0) continue;
+        if (stock <= 0)
+          continue;
 
-        // 👉 imágenes del set CATALOGO
-       List<VarianteImagenDTO> imagenes = Optional
-    .ofNullable(imgsByVarAndSet.get(v.getId()))
-    .map(map -> map.getOrDefault(ImagenSet.CATALOGO, Collections.emptyList()))
-    .orElse(Collections.emptyList());
+        List<VarianteImagenDTO> imagenes = Optional
+            .ofNullable(imgsByVarAndSet.get(v.getId()))
+            .map(map -> map.getOrDefault(ImagenSet.CATALOGO, Collections.emptyList()))
+            .orElse(Collections.emptyList());
         out.add(new InventarioRowDTO(
-    m.getId(), m.getNombre(),
-    v.getId(),
-    v.getColor()!=null ? v.getColor().getNombre() : null,
-    v.getCapacidad()!=null ? v.getCapacidad().getEtiqueta() : null,
-    null,           // unidadId
-    null,           // imei
-    null,           // bateriaCondicionPct
-    null,           // estadoProducto
-    null,           // estadoStock  <-- FALTABA ESTE
-    v.getPrecioBase(),
-    null,
-    v.getPrecioBase(),
-    stock,
-    false,
-    v.getCreatedAt(),
-    v.getUpdatedAt(),
-    imagenes
-));
+            m.getId(), m.getNombre(),
+            v.getId(),
+            v.getColor() != null ? v.getColor().getNombre() : null,
+            v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null,
+            null,
+            null,
+            null, 
+            null,
+            null,
+            v.getPrecioBase(),
+            null,
+            v.getPrecioBase(),
+            stock,
+            false,
+            v.getCreatedAt(),
+            v.getUpdatedAt(),
+            imagenes));
 
       }
     }
@@ -179,8 +171,7 @@ Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet =
         .comparing(InventarioRowDTO::modeloNombre, String.CASE_INSENSITIVE_ORDER)
         .thenComparing(r -> Optional.ofNullable(r.colorNombre()).orElse(""), String.CASE_INSENSITIVE_ORDER)
         .thenComparing(r -> Optional.ofNullable(r.capacidadEtiqueta()).orElse(""), String.CASE_INSENSITIVE_ORDER)
-        .thenComparing(r -> Optional.ofNullable(r.unidadId()).orElse(0L))
-    );
+        .thenComparing(r -> Optional.ofNullable(r.unidadId()).orElse(0L)));
 
     return out;
   }

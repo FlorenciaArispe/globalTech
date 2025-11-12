@@ -1,11 +1,14 @@
-// VarianteTablaDTO.java
+// src/main/java/com/globaltechnology/backend/web/dto/VarianteTablaDTO.java
 package com.globaltechnology.backend.web.dto;
+
+import java.util.List;
 
 public record VarianteTablaDTO(
     Long id,
     String colorNombre,
     String capacidadEtiqueta,
-    long stock,           // total (suma de ambos si trackeaUnidad, o el stock por movimientos)
-    Long stockNuevos,     // null si no trackeaUnidad
-    Long stockUsados      // null si no trackeaUnidad
+    long stock,
+    Long stockNuevos,
+    Long stockUsados,
+    List<VarianteImagenDTO> imagenes   // 👈 plano, igual que Inventario
 ) {}

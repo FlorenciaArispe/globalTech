@@ -12,23 +12,35 @@ import {
   Input,
   Select,
   NumberInput,
-  NumberInputField
+  NumberInputField,
+  AlertDialogCloseButton
 } from '@chakra-ui/react';
-import { Plus, Pencil, Trash2, Minus } from 'lucide-react';
+import { Plus, Pencil, Trash2, Minus, ArrowLeft, ArrowRight, Images } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/axios';
+import EditarImagenesModal from '@/components/EditarImagenesModal';
 
 type Id = number | string;
+
+type VarianteImagenDTO = {
+  id: number;
+  set: 'CATALOGO' | 'SELLADO' | 'USADO';
+  url: string;
+  altText?: string | null;
+  orden: number;
+  principal: boolean;
+};
 
 type VarianteResumenDTO = {
   id: Id;
   colorNombre?: string | null;
   capacidadEtiqueta?: string | null;
-  stock: number;   
-  stockNuevos?: number | null;  
+  stock: number;
+  stockNuevos?: number | null;
   stockUsados?: number | null;
   precio?: number | null;
   precioPromo?: number | null;
+  imagenes?: VarianteImagenDTO[];   // 👈 lista plana
 };
 
 
@@ -37,7 +49,7 @@ type ModeloTablaDTO = {
   nombre: string;
   categoriaId: Id;
   categoriaNombre: string;
-  trackeaUnidad: boolean;  
+  trackeaUnidad: boolean;
   marcaId?: Id;
   marcaNombre?: string;
   variantes: VarianteResumenDTO[];
@@ -76,18 +88,46 @@ export default function Productos() {
   const [formImei, setFormImei] = useState('');
   const [formEstado, setFormEstado] = useState<EstadoComercial>('NUEVO');
   const [formBateria, setFormBateria] = useState<string>(''); // %
-  const [formPrecioOverride, setFormPrecioOverride] = useState<string>(''); 
+  const [formPrecioOverride, setFormPrecioOverride] = useState<string>('');
   const [savingUnidad, setSavingUnidad] = useState(false);
   const [isAddMovOpen, setIsAddMovOpen] = useState(false);
   const [movVarianteId, setMovVarianteId] = useState<Id | null>(null);
-  const [movCantidad, setMovCantidad] = useState<string>(''); 
+  const [movCantidad, setMovCantidad] = useState<string>('');
   const [savingMov, setSavingMov] = useState(false);
   const [movTipo, setMovTipo] = useState<'ENTRADA' | 'SALIDA'>('ENTRADA');
   const [isEditOpen, setIsEditOpen] = useState(false);
-const [editId, setEditId] = useState<Id | null>(null);
-const [editNombre, setEditNombre] = useState('');
-const [savingEdit, setSavingEdit] = useState(false);
-  
+  const [editId, setEditId] = useState<Id | null>(null);
+  const [editNombre, setEditNombre] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  // ⬇️ en el componente, junto a otros useState
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [galleryTitle, setGalleryTitle] = useState('');
+  const [galleryImgs, setGalleryImgs] = useState<VarianteImagenDTO[]>([]);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+
+  const [editImgsOpen, setEditImgsOpen] = useState(false);
+const [editImgsVarId, setEditImgsVarId] = useState<number | null>(null);
+const [editImgsTrackea, setEditImgsTrackea] = useState(false);
+
+const openEditImgs = (varianteId: number, trackea: boolean) => {
+  setEditImgsVarId(varianteId);
+  setEditImgsTrackea(trackea);
+  setEditImgsOpen(true);
+};
+
+  const openGallery = (title: string, imgs: VarianteImagenDTO[], start = 0) => {
+    if (!imgs || imgs.length === 0) return;
+    setGalleryTitle(title);
+    setGalleryImgs(imgs);
+    setGalleryIndex(Math.max(0, Math.min(start, imgs.length - 1)));
+    setIsGalleryOpen(true);
+  };
+  const closeGallery = () => setIsGalleryOpen(false);
+
+  const goPrev = () => setGalleryIndex(i => (galleryImgs.length ? (i - 1 + galleryImgs.length) % galleryImgs.length : 0));
+  const goNext = () => setGalleryIndex(i => (galleryImgs.length ? (i + 1) % galleryImgs.length : 0));
+
+
 
   useEffect(() => {
     let alive = true;
@@ -97,7 +137,7 @@ const [savingEdit, setSavingEdit] = useState(false);
 
         console.log("TABLA", data)
 
-        const dataVARIANTES  = await api.get<[]>('api/variantes');
+        const dataVARIANTES = await api.get<[]>('api/variantes');
         console.log("ACA DATA DE VARIANTES", dataVARIANTES)
 
         if (!alive) return;
@@ -136,6 +176,19 @@ const [savingEdit, setSavingEdit] = useState(false);
     setMovTipo(tipo);
     setIsAddMovOpen(true);
   };
+
+  const refreshProductos = async () => {
+  try {
+    const { data } = await api.get<ModeloTablaDTO[]>('api/modelos/tabla', {
+      // evito cache agresivo si tenés algún proxy
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    setRows(Array.isArray(data) ? data : []);
+  } catch (e:any) {
+    toast({ status: 'error', title: 'No se pudo actualizar la tabla', description: e?.message });
+  }
+};
+
 
   const closeAddMovimiento = () => setIsAddMovOpen(false);
 
@@ -204,6 +257,8 @@ const [savingEdit, setSavingEdit] = useState(false);
       setSavingMov(false);
     }
   };
+
+  
 
   const saveUnidad = async () => {
     if (!targetVarianteId) return;
@@ -280,56 +335,73 @@ const [savingEdit, setSavingEdit] = useState(false);
     }
   };
 
+  const firstImgUrlOfVar = (v?: VarianteResumenDTO) =>
+    (v?.imagenes && v.imagenes.length > 0) ? v.imagenes[0].url : PLACEHOLDER_DATAURI;
+
+  const coverUrlOfModelo = (modelo: ModeloTablaDTO) =>
+    (modelo.variantes?.find(v => (v.imagenes?.length ?? 0) > 0)?.imagenes?.[0]?.url)
+    ?? PLACEHOLDER_DATAURI;
+
+  // para la galería:
+  const allImagesOfVar = (_modelo: ModeloTablaDTO, v: VarianteResumenDTO) =>
+    v.imagenes ?? [];
+
   const openEditModel = (modelo: ModeloTablaDTO) => {
-  setEditId(modelo.id);
-  setEditNombre(modelo.nombre);
-  setIsEditOpen(true);
-};
+    setEditId(modelo.id);
+    setEditNombre(modelo.nombre);
+    setIsEditOpen(true);
+  };
 
-const closeEditModel = () => {
-  setIsEditOpen(false);
-  setEditId(null);
-  setEditNombre('');
-};
+  const closeEditModel = () => {
+    setIsEditOpen(false);
+    setEditId(null);
+    setEditNombre('');
+  };
 
-const saveEditModel = async () => {
-  if (!editId || !editNombre.trim()) return;
-  setSavingEdit(true);
-  try {
-    const { data: updated } = await api.patch(`/api/modelos/${editId}/nombre`, {
-      nombre: editNombre.trim(),
-    });
-    setRows(prev =>
-      prev.map(m => String(m.id) === String(updated.id) ? { ...m, nombre: updated.nombre } : m)
-    );
-    toast({ status: 'success', title: 'Modelo actualizado' });
-  } catch (e:any) {
-    toast({ status: 'error', title: 'No se pudo editar', description: e?.response?.data?.message ?? e?.message });
-  } finally {
-    setSavingEdit(false);
-    closeEditModel();
-  }
-};
-
-const onDelete = async () => {
-  if (!deletingId) return;
-  try {
-    await api.delete(`/api/modelos/${deletingId}`);
-    setRows(prev => prev.filter(r => String(r.id) !== String(deletingId)));
-    toast({ status: 'success', title: 'Modelo eliminado' });
-  } catch (e:any) {
-    const status = e?.response?.status;
-    if (status === 409) {
-      toast({ status: 'error', title: 'No se puede eliminar', description: 'El modelo tiene variantes o stock asociado.' });
-    } else {
-      toast({ status: 'error', title: 'No se pudo eliminar', description: e?.response?.data?.message ?? e?.message });
+  const saveEditModel = async () => {
+    if (!editId || !editNombre.trim()) return;
+    setSavingEdit(true);
+    try {
+      const { data: updated } = await api.patch(`/api/modelos/${editId}/nombre`, {
+        nombre: editNombre.trim(),
+      });
+      setRows(prev =>
+        prev.map(m => String(m.id) === String(updated.id) ? { ...m, nombre: updated.nombre } : m)
+      );
+      toast({ status: 'success', title: 'Modelo actualizado' });
+    } catch (e: any) {
+      toast({ status: 'error', title: 'No se pudo editar', description: e?.response?.data?.message ?? e?.message });
+    } finally {
+      setSavingEdit(false);
+      closeEditModel();
     }
-  } finally {
-    setDeletingId(null);
-  }
-};
+  };
+
+  const onDelete = async () => {
+    if (!deletingId) return;
+    try {
+      await api.delete(`/api/modelos/${deletingId}`);
+      setRows(prev => prev.filter(r => String(r.id) !== String(deletingId)));
+      toast({ status: 'success', title: 'Modelo eliminado' });
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 409) {
+        toast({ status: 'error', title: 'No se puede eliminar', description: 'El modelo tiene variantes o stock asociado.' });
+      } else {
+        toast({ status: 'error', title: 'No se pudo eliminar', description: e?.response?.data?.message ?? e?.message });
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const closeAddUnidad = () => setIsAddOpen(false);
+
+  const badgePropsForSet = (set: VarianteImagenDTO['set']) => {
+    if (set === 'SELLADO') return { label: 'SELLADO', colorScheme: 'green' as const };
+    if (set === 'USADO') return { label: 'USADO', colorScheme: 'yellow' as const };
+    return null;
+  };
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
@@ -382,33 +454,24 @@ const onDelete = async () => {
                   return (
                     <Tr key={String(modelo.id)} bg={rowBg}>
                       <Td>
-                      <HStack spacing={3} align="start">
-  <Image
-    src={PLACEHOLDER_DATAURI}
-    alt={modelo.nombre}
-    boxSize="48px"
-    borderRadius="md"
-    objectFit="cover"
-    border="1px solid"
-    borderColor="gray.200"
-  />
-  <Box>
-    <HStack>
-      <Text fontWeight={600}>{modelo.nombre}</Text>
-      <Tooltip label="Editar modelo">
-        <IconButton
-          aria-label="Editar modelo"
-          icon={<Pencil size={16} />}
-          size="xs"
-          variant="ghost"
-          onClick={() => openEditModel(modelo)}
-        />
-      </Tooltip>
-    
-    </HStack>
-    <Text fontSize="sm" color="gray.500">{modelo.categoriaNombre}</Text>
-  </Box>
-</HStack>
+
+
+                        <Box>
+                          <HStack>
+                            <Text fontWeight={600}>{modelo.nombre}</Text>
+                            <Tooltip label="Editar modelo">
+                              <IconButton
+                                aria-label="Editar modelo"
+                                icon={<Pencil size={16} />}
+                                size="xs"
+                                variant="ghost"
+                                onClick={() => openEditModel(modelo)}
+                              />
+                            </Tooltip>
+
+                          </HStack>
+                          <Text fontSize="sm" color="gray.500">{modelo.categoriaNombre}</Text>
+                        </Box>
 
                       </Td>
 
@@ -419,14 +482,32 @@ const onDelete = async () => {
 
                         {(modelo.variantes ?? []).map((v) => (
                           <HStack key={String(v.id)} spacing={3} mb={2} align="center">
+
+
+                            <Image
+                              src={firstImgUrlOfVar(v)}
+                              alt={nombreVariante(v)}
+                              boxSize="40px"
+                              borderRadius="md"
+                              objectFit="cover"
+                              border="1px solid"
+                              borderColor="gray.200"
+                              cursor={(allImagesOfVar(modelo, v).length > 0) ? 'pointer' : 'default'}
+                              onClick={() => {
+                                const imgs = allImagesOfVar(modelo, v);
+                                if (imgs.length) openGallery(`${modelo.nombre} ${nombreVariante(v)}`, imgs);
+                              }}
+                            />
+
+
                             <Text flex="1">{nombreVariante(v)}</Text>
 
                             {modelo.trackeaUnidad ? (
                               <HStack gap={10}>
-                               
+
                                 <Badge colorScheme="green" minW="72px" textAlign="center">NUEVOS: {v.stockNuevos ?? 0}</Badge>
                                 <Badge colorScheme="yellow" minW="72px" textAlign="center">USADOS: {v.stockUsados ?? 0}</Badge>
-                                 <Badge colorScheme="blue" minW="72px" textAlign="center">TOTAL: {v.stock ?? 0}</Badge>
+                                <Badge colorScheme="blue" minW="72px" textAlign="center">TOTAL: {v.stock ?? 0}</Badge>
 
                                 <Tooltip label="Agregar unidad">
                                   <IconButton
@@ -437,15 +518,15 @@ const onDelete = async () => {
                                     onClick={() => openAddUnidad(v.id)}
                                   />
                                 </Tooltip>
-                                  <Tooltip label="Eliminar modelo">
-        <IconButton
-          aria-label="Eliminar modelo"
-          icon={<Trash2 size={16} />}
-          size="xs"
-          variant="ghost"
-          onClick={() => setDeletingId(modelo.id)}
-        />
-      </Tooltip>
+                                <Tooltip label="Eliminar modelo">
+                                  <IconButton
+                                    aria-label="Eliminar modelo"
+                                    icon={<Trash2 size={16} />}
+                                    size="xs"
+                                    variant="ghost"
+                                    onClick={() => setDeletingId(modelo.id)}
+                                  />
+                                </Tooltip>
                               </HStack>
                             ) : (
                               <HStack gap={10}>
@@ -462,19 +543,28 @@ const onDelete = async () => {
                                     onClick={() => openAddMovimiento(v.id, 'ENTRADA')}
                                   />
                                 </Tooltip>
-                                  <Tooltip label="Eliminar modelo">
-        <IconButton
-          aria-label="Eliminar modelo"
-          icon={<Trash2 size={16} />}
-          size="xs"
-          variant="ghost"
-          onClick={() => setDeletingId(modelo.id)}
-        />
-      </Tooltip>
+                                <Tooltip label="Eliminar modelo">
+                                  <IconButton
+                                    aria-label="Eliminar modelo"
+                                    icon={<Trash2 size={16} />}
+                                    size="xs"
+                                    variant="ghost"
+                                    onClick={() => setDeletingId(modelo.id)}
+                                  />
+                                </Tooltip>
 
                               </HStack>
 
                             )}
+                            <Tooltip label="Editar fotos">
+  <IconButton
+    aria-label="Editar fotos"
+    icon={<Images size={16} />}
+    size="sm"
+    variant="outline"
+    onClick={() => openEditImgs(Number(v.id), modelo.trackeaUnidad)}
+  />
+</Tooltip>
 
                           </HStack>
                         ))}
@@ -485,11 +575,20 @@ const onDelete = async () => {
                 })}
               </Tbody>
 
-
             </Table>
           </Box>
         )}
       </Container>
+
+      {editImgsVarId != null && (
+  <EditarImagenesModal
+    isOpen={editImgsOpen}
+    onClose={() => setEditImgsOpen(false)}
+    varianteId={editImgsVarId}
+    trackeaUnidad={editImgsTrackea}
+    onChanged={refreshProductos}
+  />
+)}
 
       <AlertDialog
         isOpen={!!deletingId}
@@ -595,33 +694,116 @@ const onDelete = async () => {
       </AlertDialog>
 
       <AlertDialog
-  isOpen={isEditOpen}
-  leastDestructiveRef={cancelRef}
-  onClose={closeEditModel}
-  isCentered
->
-  <AlertDialogOverlay />
-  <AlertDialogContent>
-    <AlertDialogHeader>Editar modelo</AlertDialogHeader>
-    <AlertDialogBody>
-      <FormControl isRequired>
-        <FormLabel>Nombre</FormLabel>
-        <Input
-          value={editNombre}
-          onChange={(e) => setEditNombre(e.target.value)}
-          placeholder="Nuevo nombre del modelo"
-        />
-      </FormControl>
-    </AlertDialogBody>
-    <AlertDialogFooter>
-      <Button ref={cancelRef} onClick={closeEditModel}>Cancelar</Button>
-      <Button colorScheme="blue" ml={3} onClick={saveEditModel} isLoading={savingEdit}>
-        Guardar
-      </Button>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
+        isOpen={isEditOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={closeEditModel}
+        isCentered
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Editar modelo</AlertDialogHeader>
+          <AlertDialogBody>
+            <FormControl isRequired>
+              <FormLabel>Nombre</FormLabel>
+              <Input
+                value={editNombre}
+                onChange={(e) => setEditNombre(e.target.value)}
+                placeholder="Nuevo nombre del modelo"
+              />
+            </FormControl>
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={cancelRef} onClick={closeEditModel}>Cancelar</Button>
+            <Button colorScheme="blue" ml={3} onClick={saveEditModel} isLoading={savingEdit}>
+              Guardar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
+      <AlertDialog
+        isOpen={isGalleryOpen}
+        onClose={closeGallery}
+        isCentered
+        leastDestructiveRef={cancelRef}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent maxW="xl">
+          <AlertDialogHeader>{galleryTitle}</AlertDialogHeader>
+          <AlertDialogCloseButton color="black" />
+
+          <AlertDialogBody>
+            {galleryImgs.length > 0 ? (
+              <Box
+                position="relative"
+                h="65vh"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                borderRadius="md"
+              >
+                <Image
+                  src={galleryImgs[galleryIndex].url}
+                  alt={galleryImgs[galleryIndex].altText ?? ''}
+                  maxH="100%"
+                  maxW="100%"
+                  objectFit="contain"
+                  borderRadius="md"
+                />
+
+                <IconButton
+                  aria-label="Anterior"
+                  icon={<ArrowLeft size={18} />}
+                  position="absolute"
+                  left="2"
+                  top="50%"
+                  transform="translateY(-50%)"
+                  borderRadius="full"
+                  variant="solid"
+                  colorScheme="blackAlpha"
+                  onClick={goPrev}
+                />
+
+                <IconButton
+                  aria-label="Siguiente"
+                  icon={<ArrowRight size={18} />}
+                  position="absolute"
+                  right="2"
+                  top="50%"
+                  transform="translateY(-50%)"
+                  borderRadius="full"
+                  variant="solid"
+                  colorScheme="blackAlpha"
+                  onClick={goNext}
+                />
+
+                <HStack
+                  position="absolute"
+                  bottom="3"
+                  left="0"
+                  right="0"
+                  justify="center"
+                  spacing={3}
+                >
+                  {(() => {
+                    const meta = badgePropsForSet(galleryImgs[galleryIndex].set);
+                    return meta ? (
+                      <Badge colorScheme={meta.colorScheme} variant="solid">
+                        {meta.label}
+                      </Badge>
+                    ) : null;
+                  })()}
+                  <Text fontSize="sm" color="gray.600">
+                    {galleryImgs[galleryIndex].altText ?? 'Imagen'} · {galleryIndex + 1}/{galleryImgs.length}
+                  </Text>
+                </HStack>
+              </Box>
+            ) : (
+              <Text color="gray.500">Sin imágenes</Text>
+            )}
+          </AlertDialogBody>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </Box>
   );

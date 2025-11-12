@@ -25,7 +25,7 @@ public class VarianteImagen {
 
   @Enumerated(EnumType.STRING)
   @Column(name = "set_tipo", nullable = false, length = 16)
-  private ImagenSet setTipo; // SELLADO, USADO, CATALOGO
+  private ImagenSet setTipo; 
 
   @Column(name = "url", nullable = false, length = 500)
   private String url;

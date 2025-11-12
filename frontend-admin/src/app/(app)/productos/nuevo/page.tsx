@@ -57,8 +57,8 @@ export default function NuevoProductoPage() {
   const [nuevaMarcaNombre, setNuevaMarcaNombre] = useState('');
   const [creatingMarca, setCreatingMarca] = useState(false);
   const [selladoFiles, setSelladoFiles] = useState<PickedFile[]>([]);
-const [usadoFiles, setUsadoFiles] = useState<PickedFile[]>([]);
-const [catalogoFiles, setCatalogoFiles] = useState<PickedFile[]>([]);
+  const [usadoFiles, setUsadoFiles] = useState<PickedFile[]>([]);
+  const [catalogoFiles, setCatalogoFiles] = useState<PickedFile[]>([]);
 
 
   const isNewModelo = modeloId === 'new' || !modeloId;
@@ -179,7 +179,7 @@ const [catalogoFiles, setCatalogoFiles] = useState<PickedFile[]>([]);
         categoriaId: Number(categoriaId),
         marcaId: Number(marcaId),
         nombre: nuevoModeloNombre.trim(),
-        trackeaUnidad: Boolean(nuevoModeloTrackeaUnidad), 
+        trackeaUnidad: Boolean(nuevoModeloTrackeaUnidad),
         requiereColor: Boolean(nuevoModeloReqColor),
         requiereCapacidad: Boolean(nuevoModeloReqCap),
       };
@@ -340,38 +340,35 @@ const [catalogoFiles, setCatalogoFiles] = useState<PickedFile[]>([]);
 
     setSubmitting(true);
     try {
-    const { data: creada } = await api.post('/api/variantes', {
-      modeloId: Number(modeloId),
-      colorId: requiereColor ? Number(colorId) : null,
-      capacidadId: requiereCapacidad ? Number(capacidadId) : null,
-      precioBase: Number(precio),
-    });
+      const { data: creada } = await api.post('/api/variantes', {
+        modeloId: Number(modeloId),
+        colorId: requiereColor ? Number(colorId) : null,
+        capacidadId: requiereCapacidad ? Number(capacidadId) : null,
+        precioBase: Number(precio),
+      });
 
-    const varianteId = creada.id ?? creada?.varianteId ?? creada; // según tu DTO
+      const varianteId = creada.id ?? creada?.varianteId ?? creada;
+      const trackea = isNewModelo ? nuevoModeloTrackeaUnidad : !!selectedModelo?.trackeaUnidad;
 
-    // Subida de imágenes según el tipo de modelo
-    const trackea = isNewModelo ? nuevoModeloTrackeaUnidad : !!selectedModelo?.trackeaUnidad;
+      if (trackea) {
+        if (selladoFiles.length) await uploadVarianteImages(varianteId, 'SELLADO', selladoFiles);
+        if (usadoFiles.length) await uploadVarianteImages(varianteId, 'USADO', usadoFiles);
+      } else {
+        if (catalogoFiles.length) await uploadVarianteImages(varianteId, 'CATALOGO', catalogoFiles);
+      }
 
-    if (trackea) {
-      if (selladoFiles.length) await uploadVarianteImages(varianteId, 'SELLADO', selladoFiles);
-      if (usadoFiles.length)   await uploadVarianteImages(varianteId, 'USADO',   usadoFiles);
-    } else {
-      if (catalogoFiles.length) await uploadVarianteImages(varianteId, 'CATALOGO', catalogoFiles);
+      toast({ status: 'success', title: 'Variante creada' });
+      router.replace('/productos'); 
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 409) {
+        toast({ status: 'error', title: 'Duplicado', description: 'Ya existe una variante con esa combinación.' });
+      } else {
+        toast({ status: 'error', title: 'No se pudo crear la variante', description: e?.response?.data?.message ?? e?.message });
+      }
+    } finally {
+      setSubmitting(false);
     }
-
-    toast({ status: 'success', title: 'Variante creada' });
-    router.replace('/productos'); // o a la vista de edición si querés ver previews
-  } catch (e: any) {
-    const status = e?.response?.status;
-    if (status === 409) {
-      toast({ status: 'error', title: 'Duplicado', description: 'Ya existe una variante con esa combinación.' });
-    } else {
-      // Si backend valida “máximo 3” o tipo no permitido, va a venir como 400 -> mostralo:
-      toast({ status: 'error', title: 'No se pudo crear la variante', description: e?.response?.data?.message ?? e?.message });
-    }
-  } finally {
-    setSubmitting(false);
-  }
   };
 
   if (loadingBase) {
@@ -578,13 +575,13 @@ const [catalogoFiles, setCatalogoFiles] = useState<PickedFile[]>([]);
           </FormControl>
 
           {(isNewModelo ? nuevoModeloTrackeaUnidad : !!selectedModelo?.trackeaUnidad) ? (
-  <>
-    <ImagePicker label="Imágenes SELLADO" files={selladoFiles} setFiles={setSelladoFiles} max={3} />
-    <ImagePicker label="Imágenes USADO"   files={usadoFiles}   setFiles={setUsadoFiles}   max={3} />
-  </>
-) : (
-  <ImagePicker label="Imágenes CATALOGO" files={catalogoFiles} setFiles={setCatalogoFiles} max={3} />
-)}
+            <>
+              <ImagePicker label="Imágenes SELLADO" files={selladoFiles} setFiles={setSelladoFiles} max={3} />
+              <ImagePicker label="Imágenes USADO" files={usadoFiles} setFiles={setUsadoFiles} max={3} />
+            </>
+          ) : (
+            <ImagePicker label="Imágenes CATALOGO" files={catalogoFiles} setFiles={setCatalogoFiles} max={3} />
+          )}
 
 
         </SimpleGrid>

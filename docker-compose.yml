@@ -76,7 +76,6 @@ services:
     depends_on:
       - backend
 
-  # === NUEVO: catálogo producción (Nginx en 3001) ===
   catalog:
     profiles: ["catalog"]
     build:
@@ -93,7 +92,6 @@ services:
     depends_on:
       - backend
 
-  # === NUEVO: catálogo desarrollo (Vite dev server en 5173) ===
   catalog-dev:
     profiles: ["catalog"]
     build:
