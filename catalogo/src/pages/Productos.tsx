@@ -21,6 +21,7 @@ import ProductCard from '../components/ProductCard';
 
 import { FaWhatsapp } from 'react-icons/fa';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { fetchProductosCatalogo } from '../lib/productos';
 
 const Productos = () => {
    const location = useLocation(); 
@@ -30,29 +31,24 @@ const Productos = () => {
   const [productos, setProductos] = useState<any[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
 
-  // useEffect(() => {
-  //   (async () => {
-  //     try {
-  //       const data = await getCategorias();
-  //       setCategorias(data);
-  //       console.log(data)
-  //     } catch (error) {
-  //       console.error("Error al obtener categorías:", error);
-  //     }
-  //   })();
-  // }, []);
 
-  // useEffect(() => {
-  //   (async () => {
-  //     try {
-  //       const data = await getProductos();
-  //       setProductos(data);
-  //       setFilteredProducts(data);
-  //     } catch (error) {
-  //       console.error("Error al obtener productos:", error);
-  //     }
-  //   })();
-  // }, []);
+  //ACA EMPIEZA LO NUEVO PARA TRAER LO DE BACKEND
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await fetchProductosCatalogo();
+        setItems(data);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+  //ACA TERMINA
+
+
 
   useEffect(() => {
   const params = new URLSearchParams(location.search);

@@ -195,4 +195,6 @@ public List<VarianteImagenDTO> appendToSet(
       .stream().map(VarianteImagenDTO::from).toList();
 }
 
+
+
 }

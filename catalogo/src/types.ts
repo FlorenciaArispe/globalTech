@@ -17,3 +17,17 @@ export interface Producto {
   color?: string;
   modelo?: string;
 }
+
+export type ProductoCatalogoDTO = {
+  id: number;
+  nombre: string;
+  categoria: string;
+  marca: string;
+  variantes: {
+    id: number;
+    color?: string | null;
+    capacidad?: string | null;
+    precio: number;
+    imagenes: string[];
+  }[];
+};
