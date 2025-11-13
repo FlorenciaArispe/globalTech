@@ -16,7 +16,7 @@ export default function NavLink({
       px={3} py={2} rounded="lg" transition="background 0.2s"
       bg={active ? 'gray.100' : 'transparent'}
       _dark={{ bg: active ? 'gray.700' : 'transparent' }}
-      _hover={{ bg: active ? 'gray.200' : 'gray.100', _dark: { bg: active ? 'gray.600' : 'gray.700' }}}>
+      _hover={{ bg: active ? 'gray.200' : 'gray.100', _dark: { bg: active ? 'gray.600' : 'gray.700' } }}>
       <Icon as={IconCmp} boxSize={4} />
       <Text fontWeight={active ? 'bold' : 'normal'}>{label}</Text>
     </HStack>

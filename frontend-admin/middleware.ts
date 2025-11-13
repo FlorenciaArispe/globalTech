@@ -10,7 +10,6 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // lee token desde cookie si luego migras a httpOnly; por ahora desde header opcional
   const token = req.cookies.get('auth_token')?.value;
   if (!token && pathname.startsWith('/')) {
     const url = req.nextUrl.clone();

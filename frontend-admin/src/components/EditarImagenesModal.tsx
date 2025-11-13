@@ -1,22 +1,20 @@
-// /components/EditarImagenesModal.tsx
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter,
+  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody,
   Tabs, TabList, Tab, TabPanels, TabPanel,
   Box, HStack, VStack, Image, Text, IconButton, Button, Input, SimpleGrid, useToast, Spinner,
-  ModalCloseButton
+  ModalCloseButton,
+  Flex
 } from '@chakra-ui/react';
 import { Trash2, Upload } from 'lucide-react';
 import {
-  uploadVarianteImages,
   getVarianteImagenes,
   deleteVarianteImage,
   type ImagenSet,
   type VarianteImagenListDTO,
   addVarianteImages,
 } from '@/lib/uploadImages';
-
 
 const SETS_TRACKED: ImagenSet[] = ['SELLADO', 'USADO'];
 const SETS_UNTRACKED: ImagenSet[] = ['CATALOGO'];
@@ -26,21 +24,19 @@ type Props = {
   onClose: () => void;
   varianteId: number;
   trackeaUnidad: boolean;
-  onChanged?: () => void;      
+  onChanged?: () => void;
 };
 
-export default function EditarImagenesModal({...props}: Props) {
+export default function EditarImagenesModal({ ...props }: Props) {
   const { isOpen, onClose, varianteId, trackeaUnidad, onChanged } = props;
-
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<VarianteImagenListDTO | null>(null);
-
-  // ✅ buffers de subida (coinciden con el helper: { file, alt? })
   type Pick = { file: File; alt?: string };
   const [pending, setPending] = useState<Record<ImagenSet, Pick[]>>({
     SELLADO: [], USADO: [], CATALOGO: []
   });
+  const [tabIndex, setTabIndex] = useState(0);
 
   const sets = useMemo(
     () => (trackeaUnidad ? SETS_TRACKED : SETS_UNTRACKED),
@@ -61,10 +57,10 @@ export default function EditarImagenesModal({...props}: Props) {
 
   useEffect(() => {
     if (isOpen) {
+      setTabIndex(0);
       setPending({ SELLADO: [], USADO: [], CATALOGO: [] });
       refresh();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, varianteId]);
 
   const handlePickFiles = (set: ImagenSet, files: FileList | null) => {
@@ -73,47 +69,25 @@ export default function EditarImagenesModal({...props}: Props) {
     setPending(prev => ({ ...prev, [set]: arr.map(f => ({ file: f })) }));
   };
 
-  const handleAltChange = (set: ImagenSet, idx: number, alt: string) => {
-    setPending(prev => {
-      const next = [...prev[set]];
-      if (next[idx]) next[idx] = { ...next[idx], alt };
-      return { ...prev, [set]: next };
-    });
-  };
-
-   const handleReplaceSet = async (set: ImagenSet) => {
-    const picks = pending[set] ?? [];
-    try {
-      await uploadVarianteImages(varianteId, set, picks);
-      toast({ status: 'success', title: `Set ${set} reemplazado` });
-      await refresh();
-      setPending(prev => ({ ...prev, [set]: [] }));
-      onChanged?.();                  // 👈 avisa al padre
-    } catch (e:any) { /* ... */ }
-  };
-
-   const handleDelete = async (imagenId: number) => {
+  const handleDelete = async (imagenId: number) => {
     try {
       await deleteVarianteImage(varianteId, imagenId);
       toast({ status: 'success', title: 'Imagen eliminada' });
       await refresh();
-      onChanged?.();                  // 👈 avisa al padre
-    } catch (e:any) { /* ... */ }
+      onChanged?.();
+    } catch (e: any) { }
   };
 
-    const handleAppendToSet = async (set: ImagenSet) => {
+  const handleAppendToSet = async (set: ImagenSet) => {
     const picks = pending[set] ?? [];
     try {
       await addVarianteImages(varianteId, set, picks);
       toast({ status: 'success', title: `Agregadas a ${set}` });
       await refresh();
       setPending(prev => ({ ...prev, [set]: [] }));
-      onChanged?.();                  // 👈 avisa al padre
-    } catch (e:any) { /* ... */ }
+      onChanged?.();
+    } catch (e: any) { }
   };
-
-
-
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="4xl" isCentered>
@@ -125,7 +99,11 @@ export default function EditarImagenesModal({...props}: Props) {
           {loading || !data ? (
             <Box py={12} textAlign="center"><Spinner /></Box>
           ) : (
-            <Tabs variant="enclosed">
+            <Tabs
+              variant="enclosed"
+              index={tabIndex}
+              onChange={(i) => setTabIndex(i)}
+            >
               <TabList>
                 {sets.map(s => <Tab key={s}>{s}</Tab>)}
               </TabList>
@@ -163,30 +141,28 @@ export default function EditarImagenesModal({...props}: Props) {
                       )}
 
                       <Text fontWeight="semibold" mb={4}>Subir nueva imágen</Text>
-                      <Box borderWidth="1px" borderRadius="md" p={3}>
-                        <HStack spacing={2}>
-                          <Input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp,image/avif"
-                            multiple
-                            onChange={e => handlePickFiles(s, e.target.files)}
-                          />
+                      <Flex direction={"row"} alignItems={"center"} gap={3} borderWidth="1px" borderRadius="md" p={3}>
+                        <Input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/avif"
+                          multiple
+                          onChange={e => handlePickFiles(s, e.target.files)}
+                        />
 
-                          <Button
-                            onClick={() => handleAppendToSet(s)}
-                            leftIcon={<Upload size={16} />}
-                            size="sm"
-                            isDisabled={(pending[s] ?? []).length === 0}
-                          >
-                            Agregar
-                          </Button>
-                        </HStack>
-                        <Text fontSize="xs" color="gray.500">
-                          Máximo 3 imágenes
-                        </Text>
+                        <Button
+                          onClick={() => handleAppendToSet(s)}
+                          leftIcon={<Upload size={16} />}
+                          size="sm"
+                          colorScheme="blue"
+                          isDisabled={(pending[s] ?? []).length === 0}
+                        >
+                          Agregar
+                        </Button>
 
-
-                      </Box>
+                      </Flex>
+                      <Text fontSize="xs" color="gray.500">
+                        Máximo 3 imágenes
+                      </Text>
                     </TabPanel>
                   );
                 })}

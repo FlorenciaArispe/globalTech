@@ -21,15 +21,11 @@ type Categoria = {
 
 export default function CategoriasPage() {
   const toast = useToast();
-
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // modal + form
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [nombre, setNombre] = useState('');
-
   const router = useRouter();
 
   useEffect(() => {
@@ -38,13 +34,13 @@ export default function CategoriasPage() {
     const token = getToken();
     console.log("TOKEN CATEGORIAS", token)
     if (!token) {
-      router.replace('/login'); // sin token, a login
+      router.replace('/login'); 
       return;
     }
 
     (async () => {
       try {
-        const { data } = await api.get<Categoria[]>('/api/categorias'); // 👈 path correcto
+        const { data } = await api.get<Categoria[]>('/api/categorias'); 
         if (alive) setCategorias(data);
       } catch (e: any) {
         console.log('status', e?.response?.status, 'data', e?.response?.data);
@@ -90,7 +86,6 @@ export default function CategoriasPage() {
       return;
     }
     try {
-      // en handleSave de CategoriasPage
       if (editingId) {
         const { data: updated } = await api.put<Categoria>(`/api/categorias/${editingId}`, { nombre: nombre.trim() });
         setCategorias(prev => prev.map(c => (c.id === updated.id ? updated : c)));
@@ -104,6 +99,15 @@ export default function CategoriasPage() {
       onClose();
     } catch (e: any) {
       toast({ status: 'error', title: 'No se pudo guardar', description: e?.message });
+    }
+  };
+
+  const handleDelete = async (id: number | string) => {
+    try {
+      await api.delete(`/api/categorias/${id}`);
+      setCategorias(prev => prev.filter(m => m.id !== id));
+    } catch (e: any) {
+      toast({ status: 'error', title: 'Error al eliminar, la categoría tiene productos referenciando' });
     }
   };
 
@@ -143,9 +147,7 @@ export default function CategoriasPage() {
                         />
                         <MenuList>
                           <MenuItem onClick={() => openEdit(cat)}>Editar</MenuItem>
-                          {/* Si luego querés eliminar:
                           <MenuItem color="red.500" onClick={() => handleDelete(cat.id)}>Eliminar</MenuItem>
-                          */}
                         </MenuList>
                       </Menu>
                     </Td>
@@ -164,7 +166,6 @@ export default function CategoriasPage() {
         )}
       </Container>
 
-      {/* Modal Crear/Editar */}
       <Modal isOpen={isOpen} onClose={onClose} isCentered>
         <ModalOverlay />
         <ModalContent>

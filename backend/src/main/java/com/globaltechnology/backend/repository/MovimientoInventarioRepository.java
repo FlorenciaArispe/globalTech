@@ -21,7 +21,7 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
     group by m.variante.id
   """)
   List<StockMovByVarianteRow> stockNoTrackeadoPorVariante(Collection<Long> varianteIds);
-
+  void deleteByVariante_Id(Long varianteId);
   interface StockMovByVarianteRow {
     Long getVarianteId();
     Integer getStock();

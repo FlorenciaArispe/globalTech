@@ -19,16 +19,12 @@ type Marca = {
 
 export default function MarcasPage() {
   const toast = useToast();
-
   const [marcas, setMarcas] = useState<Marca[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // modal + form
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [nombre, setNombre] = useState('');
 
-  // Cargar marcas
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -93,15 +89,14 @@ export default function MarcasPage() {
     }
   };
 
-  // Si luego querés eliminar:
-  // const handleDelete = async (id: number | string) => {
-  //   try {
-  //     await api.delete(`/api/marcas/${id}`);
-  //     setMarcas(prev => prev.filter(m => m.id !== id));
-  //   } catch (e: any) {
-  //     toast({ status: 'error', title: 'No se pudo eliminar', description: e?.message });
-  //   }
-  // };
+  const handleDelete = async (id: number | string) => {
+    try {
+      await api.delete(`/api/marcas/${id}`);
+      setMarcas(prev => prev.filter(m => m.id !== id));
+    } catch (e: any) {
+      toast({ status: 'error', title: 'Error al eliminar, la marca tiene productos referenciando' });
+    }
+  };
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
@@ -139,7 +134,7 @@ export default function MarcasPage() {
                         />
                         <MenuList>
                           <MenuItem onClick={() => openEdit(m)}>Editar</MenuItem>
-                          {/* <MenuItem color="red.500" onClick={() => handleDelete(m.id)}>Eliminar</MenuItem> */}
+                          <MenuItem color="red.500" onClick={() => handleDelete(m.id)}>Eliminar</MenuItem>
                         </MenuList>
                       </Menu>
                     </Td>
@@ -158,7 +153,6 @@ export default function MarcasPage() {
         )}
       </Container>
 
-      {/* Modal Crear/Editar */}
       <Modal isOpen={isOpen} onClose={onClose} isCentered>
         <ModalOverlay />
         <ModalContent>

@@ -19,13 +19,13 @@ export default function AppShell({
   disclosure: UseDisclosureReturn;
   children: ReactNode;
 }) {
-      const dispatch = useDispatch();
+  const dispatch = useDispatch();
   const router = useRouter();
   const { isOpen, onOpen, onClose } = disclosure;
 
-   const handleLogout = () => {
-    dispatch(logout());  
-    logoutAll(); 
+  const handleLogout = () => {
+    dispatch(logout());
+    logoutAll();
     router.replace('/login');
   };
 

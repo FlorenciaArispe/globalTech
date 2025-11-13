@@ -2,6 +2,8 @@ package com.globaltechnology.backend.web;
 
 import com.globaltechnology.backend.domain.Marca;
 import com.globaltechnology.backend.service.MarcaService;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,4 +27,10 @@ public class MarcaController {
     public Marca crear(@RequestBody Marca req) {
         return marcaService.crear(req.getNombre());
     }
+
+     @DeleteMapping("/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable Long id) {
+    marcaService.eliminar(id);
+  }
 }

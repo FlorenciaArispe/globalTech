@@ -11,7 +11,6 @@ import {
 import { Plus, MoreVertical } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { useRouter } from 'next/navigation';
-// import { getToken } from '@/lib/auth'; // si validás sesión, descomentalo
 
 type Id = string | number;
 
@@ -26,27 +25,19 @@ type Cliente = {
 export default function ClientesPage() {
   const toast = useToast();
   const router = useRouter();
-
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // modal crear/editar
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<Id | null>(null);
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [saving, setSaving] = useState(false);
-
-  // alert eliminar
   const [deleteId, setDeleteId] = useState<Id | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let alive = true;
-
-    // const token = getToken();
-    // if (!token) { router.replace('/login'); return; }
 
     (async () => {
       try {
@@ -202,7 +193,6 @@ export default function ClientesPage() {
         )}
       </Container>
 
-      {/* Modal Crear/Editar */}
       <Modal isOpen={isOpen} onClose={onClose} isCentered>
         <ModalOverlay />
         <ModalContent>
@@ -234,7 +224,6 @@ export default function ClientesPage() {
         </ModalContent>
       </Modal>
 
-      {/* Confirmar eliminación */}
       <AlertDialog
         isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}

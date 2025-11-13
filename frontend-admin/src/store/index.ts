@@ -3,7 +3,6 @@ import authReducer from './slices/authSlice';
 import { persistReducer, persistStore } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 
-// evita persistir todo el estado: solo auth
 const rootReducer = combineReducers({
   auth: authReducer,
 });
@@ -11,7 +10,7 @@ const rootReducer = combineReducers({
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth'],  // solo persistir auth
+  whitelist: ['auth'], 
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

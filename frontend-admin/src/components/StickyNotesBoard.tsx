@@ -10,36 +10,29 @@ import {
 import { Plus, Trash2, Edit3, Check } from 'lucide-react';
 import { api } from '@/lib/axios';
 
-
 type Note = {
   id: string;
   text: string;
   color: string;
   tilt: number;
-  createdAt: string; 
+  createdAt: string;
   updatedAt: string;
 };
 
-const STORAGE_KEY = 'sticky_notes_v1';
-
 const PASTELS = [
-  '#FFF4A3', // pastel yellow
-  '#FFD1DC', // pastel pink
-  '#BDE0FE', // pastel blue
-  '#C6F6D5', // pastel green
-  '#E9D8FD', // pastel purple
-  '#FBD38D', // pastel orange
-  '#FEEBC8', // peach
-  '#BEE3F8', // sky
+  '#FFF4A3',
+  '#FFD1DC',
+  '#BDE0FE',
+  '#C6F6D5',
+  '#E9D8FD',
+  '#FBD38D',
+  '#FEEBC8',
+  '#BEE3F8',
 ];
-
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
 
 export default function StickyNotesBoard() {
   const [notes, setNotes] = useState<Note[]>([]);
-    const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [draftText, setDraftText] = useState('');
   const [draftColor, setDraftColor] = useState(PASTELS[0]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -51,8 +44,6 @@ export default function StickyNotesBoard() {
     let alive = true;
     (async () => {
       try {
-        // Con tu .env: NEXT_PUBLIC_API_BASE=http://localhost:8085
-        // 👉 usá path con /api
         const { data } = await api.get<Note[]>('/api/notes');
         if (alive) setNotes(data);
       } catch (e: any) {
@@ -64,11 +55,10 @@ export default function StickyNotesBoard() {
     return () => { alive = false; };
   }, [toast]);
 
-    const sorted = useMemo(
+  const sorted = useMemo(
     () => [...notes].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [notes]
   );
-
 
   const openCreate = () => {
     setEditingId(null);
@@ -77,13 +67,12 @@ export default function StickyNotesBoard() {
     createModal.onOpen();
   };
 
-   const startEdit = (note: Note) => {
+  const startEdit = (note: Note) => {
     setEditingId(note.id);
     setDraftText(note.text);
     setDraftColor(note.color);
     createModal.onOpen();
   };
-
 
   const handleAdd = async () => {
     if (!draftText.trim()) {
@@ -91,7 +80,7 @@ export default function StickyNotesBoard() {
       return;
     }
     try {
-      const tilt = (Math.random() * 2 - 1.0) * 1.5; // -1.5° a 1.5°
+      const tilt = (Math.random() * 2 - 1.0) * 1.5;
       const { data: created } = await api.post<Note>('/api/notes', {
         text: draftText.trim(),
         color: draftColor,
@@ -105,7 +94,7 @@ export default function StickyNotesBoard() {
     }
   };
 
- const handleSaveEdit = async () => {
+  const handleSaveEdit = async () => {
     if (!editingId) return;
     if (!draftText.trim()) {
       toast({ status: 'warning', title: 'La nota no puede estar vacía' });
@@ -125,8 +114,7 @@ export default function StickyNotesBoard() {
     }
   };
 
-
- const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string) => {
     try {
       await api.delete(`/api/notes/${id}`);
       setNotes(prev => prev.filter(n => n.id !== id));
@@ -136,7 +124,7 @@ export default function StickyNotesBoard() {
   };
 
   return (
- <Box
+    <Box
 
       p={{ base: 3, md: 4 }}
       position="relative"
@@ -171,7 +159,6 @@ export default function StickyNotesBoard() {
         </SimpleGrid>
       )}
 
-      {/* Modal crear/editar */}
       <Modal
         isOpen={createModal.isOpen}
         onClose={() => { setEditingId(null); createModal.onClose(); }}
@@ -240,26 +227,26 @@ function StickyNoteCard({
 
       <HStack spacing={1} position="absolute" top="6px" right="6px" zIndex={1}>
         <IconButton
-  aria-label="Editar nota"
-  icon={<Edit3 size={14} />}
-  size="xs"
-  variant="ghost"
-  onClick={onEdit}
-  _hover={{ bg: 'transparent', color: 'inherit' }}
-  _active={{ bg: 'transparent' }}
-  _focusVisible={{ boxShadow: 'none' }}
-/>
+          aria-label="Editar nota"
+          icon={<Edit3 size={14} />}
+          size="xs"
+          variant="ghost"
+          onClick={onEdit}
+          _hover={{ bg: 'transparent', color: 'inherit' }}
+          _active={{ bg: 'transparent' }}
+          _focusVisible={{ boxShadow: 'none' }}
+        />
 
-<IconButton
-  aria-label="Eliminar nota"
-  icon={<Trash2 size={14} />}
-  size="xs"
-  variant="ghost"
-  onClick={onDelete}
-  _hover={{ bg: 'transparent', color: 'inherit' }}
-  _active={{ bg: 'transparent' }}
-  _focusVisible={{ boxShadow: 'none' }}
-/>
+        <IconButton
+          aria-label="Eliminar nota"
+          icon={<Trash2 size={14} />}
+          size="xs"
+          variant="ghost"
+          onClick={onDelete}
+          _hover={{ bg: 'transparent', color: 'inherit' }}
+          _active={{ bg: 'transparent' }}
+          _focusVisible={{ boxShadow: 'none' }}
+        />
       </HStack>
 
       <Text mt={6} whiteSpace="pre-wrap">
@@ -269,7 +256,6 @@ function StickyNoteCard({
   );
 }
 
-/* Paleta de colores */
 function ColorSwatches({
   colors,
   value,

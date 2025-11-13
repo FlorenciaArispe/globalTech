@@ -1,17 +1,14 @@
-// /lib/axios.ts
 import axios from 'axios';
 import { getToken, clearToken, clearUser } from './auth';
-
 
 const isServer = typeof window === 'undefined';
 const BASE =
   (isServer ? process.env.INTERNAL_API_BASE : process.env.NEXT_PUBLIC_API_BASE) ?? '';
 
 export const api = axios.create({
-  baseURL: BASE, // con rewrites puede ser '', y usás '/auth', '/api'
+  baseURL: BASE, 
   headers: { 'Content-Type': 'application/json' },
 });
-// NO seteamos Authorization por default acá. Siempre via interceptor.
 
 api.interceptors.request.use((config) => {
   const token = getToken?.();
@@ -23,7 +20,6 @@ api.interceptors.request.use((config) => {
     delete (config.headers as any).Authorization;
   }
 
-  // log claro de lo que REALMENTE va a salir
   const shown = String((config.headers as any).Authorization ?? 'NO_TOKEN');
   console.log(
     `[api] ${config.method?.toUpperCase()} ${api.defaults.baseURL}${config.url} Authorization=`,

@@ -19,7 +19,6 @@ function RouteGroup({
   const pathname = usePathname();
   const isGroup = !!route.children?.length;
 
-  // ¿Algún hijo activo?
   const hasActiveChild = useMemo(
     () => route.children?.some((c) => pathname.startsWith(c.href)) ?? false,
     [pathname, route.children]
@@ -29,7 +28,6 @@ function RouteGroup({
   useEffect(() => { if (hasActiveChild) setOpen(true); }, [hasActiveChild]);
 
   if (!isGroup) {
-    // Item simple
     return (
       <NavLink
         href={route.href!}
@@ -40,7 +38,6 @@ function RouteGroup({
     );
   }
 
-  // Grupo con hijos
   const Icon = route.icon;
   return (
     <Box>
@@ -67,24 +64,24 @@ function RouteGroup({
 
       <Collapse in={open} animateOpacity>
         <VStack align="stretch" spacing={0} mt={1} pl={2}>
-        {route.children!.map((child) => {
-  const Icon = child.icon;
-  return (
-    <HStack
-      key={child.href}
-      as={NextLink}
-      href={child.href}
-      onClick={onNavigate}
-      px={3}
-      py={2}
-      rounded="md"
-      _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}
-    >
-      {Icon && <Icon size={16} />}
-      <Text fontSize="sm">{child.label}</Text>
-    </HStack>
-  );
-})}
+          {route.children!.map((child) => {
+            const Icon = child.icon;
+            return (
+              <HStack
+                key={child.href}
+                as={NextLink}
+                href={child.href}
+                onClick={onNavigate}
+                px={3}
+                py={2}
+                rounded="md"
+                _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}
+              >
+                {Icon && <Icon size={16} />}
+                <Text fontSize="sm">{child.label}</Text>
+              </HStack>
+            );
+          })}
         </VStack>
       </Collapse>
     </Box>

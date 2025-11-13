@@ -18,7 +18,6 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
       bg="white" borderBottomWidth="1px"
       _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
     >
-      {/* Hamburguesa (izquierda, solo mobile) */}
       <IconButton
         aria-label="Abrir menú"
         icon={<MenuIcon size={18} />}
@@ -27,7 +26,6 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         variant="ghost"
       />
 
-      {/* Logo + texto (solo desktop, alineado izq) */}
       <HStack
         as={NextLink}
         href="/home"
@@ -40,21 +38,19 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         <Text fontSize="14px" fontWeight="semibold">GLOBAL TECHNOLOGY</Text>
       </HStack>
 
-      {/* Logo centrado (solo mobile) */}
       <Box
         display={{ base: 'block', lg: 'none' }}
         position="absolute"
         left="50%"
         top="50%"
         transform="translate(-50%, -50%)"
-        pointerEvents="none"        // no bloquea los clics de otros elementos
+        pointerEvents="none"
       >
         <Box as={NextLink} href="/home" pointerEvents="auto">
           <Image src="/solo-logo.png" alt="YAMORE" h="40px" w="auto" objectFit="contain" draggable={false} />
         </Box>
       </Box>
 
-      {/* Buscador (oculto en mobile) */}
       <Box flex="1" maxW="720px" mx="auto" display={{ base: 'none', sm: 'block' }}>
         <InputGroup>
           <InputLeftElement pointerEvents="none">
@@ -64,7 +60,6 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         </InputGroup>
       </Box>
 
-      {/* Usuario (empujado a la derecha) */}
       <Box ml="auto">
         <Menu>
           <MenuButton>

@@ -3,6 +3,9 @@ package com.globaltechnology.backend.service;
 import com.globaltechnology.backend.domain.*;
 import com.globaltechnology.backend.repository.*;
 import com.globaltechnology.backend.web.dto.*;
+
+import jakarta.transaction.Transactional;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -18,19 +21,22 @@ public class VarianteService {
   private final CapacidadRepository capRepo;
   private final UnidadRepository unidadRepo;
   private final MovimientoInventarioRepository movRepo;
+    private final VarianteImagenRepository varianteImagenRepo;
 
   private static final List<EstadoStock> DISPONIBLES = List.of(EstadoStock.EN_STOCK);
 
   public VarianteService(VarianteRepository repo, ModeloRepository modeloRepo,
       ColorRepository colorRepo, CapacidadRepository capRepo,
       UnidadRepository unidadRepo,
-      MovimientoInventarioRepository movRepo) {
+      MovimientoInventarioRepository movRepo,
+        VarianteImagenRepository varianteImagenRepo) {
     this.repo = repo;
     this.modeloRepo = modeloRepo;
     this.colorRepo = colorRepo;
     this.capRepo = capRepo;
     this.unidadRepo = unidadRepo;
     this.movRepo = movRepo; 
+     this.varianteImagenRepo = varianteImagenRepo;
   }
 
   private long stockDeVariante(Variante v) {
@@ -212,13 +218,27 @@ public class VarianteService {
     return toDTO(v, stock);
   }
 
+@Transactional
   public void delete(Long id) {
-    if (!repo.existsById(id))
+    if (!repo.existsById(id)) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Variante no encontrada");
-    if (unidadRepo.existsByVariante_Id(id)) {
-      throw new ResponseStatusException(HttpStatus.CONFLICT,
-          "No se puede eliminar: la variante tiene unidades asociadas");
     }
+
+    // ❌ si tiene unidades, seguimos bloqueando
+    if (unidadRepo.existsByVariante_Id(id)) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT,
+          "No se puede eliminar: la variante tiene unidades asociadas"
+      );
+    }
+
+    // 1️⃣ borrar movimientos
+    movRepo.deleteByVariante_Id(id);
+
+    // 2️⃣ borrar imágenes
+    varianteImagenRepo.deleteByVariante_Id(id);
+
+    // 3️⃣ borrar variante
     repo.deleteById(id);
   }
 

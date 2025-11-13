@@ -1,4 +1,3 @@
-// src/lib/routes.ts
 import { type LucideIcon, Home, Package , DollarSign, Boxes, ListChecks, Tags, Stamp, User } from 'lucide-react';
 
 export type AppRoute = {

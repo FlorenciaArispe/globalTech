@@ -15,8 +15,8 @@ import {
   NumberInputField,
   AlertDialogCloseButton
 } from '@chakra-ui/react';
-import { Plus, Pencil, Trash2, Minus, ArrowLeft, ArrowRight, Images } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Plus, Pencil, Trash2, ArrowLeft, ArrowRight, Images } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/axios';
 import EditarImagenesModal from '@/components/EditarImagenesModal';
 
@@ -40,9 +40,8 @@ type VarianteResumenDTO = {
   stockUsados?: number | null;
   precio?: number | null;
   precioPromo?: number | null;
-  imagenes?: VarianteImagenDTO[];   // 👈 lista plana
+  imagenes?: VarianteImagenDTO[];
 };
-
 
 type ModeloTablaDTO = {
   id: Id;
@@ -61,7 +60,6 @@ const nombreVariante = (v: VarianteResumenDTO) => {
   return partes.join(' - ');
 };
 
-
 const PLACEHOLDER_DATAURI =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
@@ -78,7 +76,6 @@ type EstadoComercial = 'NUEVO' | 'USADO';
 export default function Productos() {
   const toast = useToast();
   const router = useRouter();
-
   const [rows, setRows] = useState<ModeloTablaDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<Id | null>(null);
@@ -99,21 +96,26 @@ export default function Productos() {
   const [editId, setEditId] = useState<Id | null>(null);
   const [editNombre, setEditNombre] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
-  // ⬇️ en el componente, junto a otros useState
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [galleryTitle, setGalleryTitle] = useState('');
   const [galleryImgs, setGalleryImgs] = useState<VarianteImagenDTO[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
-
+  const searchParams = useSearchParams();
+  const openVarFromQuery = searchParams.get('openVariante');
+  const [openedFromQuery, setOpenedFromQuery] = useState(false);
   const [editImgsOpen, setEditImgsOpen] = useState(false);
-const [editImgsVarId, setEditImgsVarId] = useState<number | null>(null);
-const [editImgsTrackea, setEditImgsTrackea] = useState(false);
+  const [editImgsVarId, setEditImgsVarId] = useState<number | null>(null);
+  const [editImgsTrackea, setEditImgsTrackea] = useState(false);
+  const [isAddVarOpen, setIsAddVarOpen] = useState(false);
+  const [addVarModeloId, setAddVarModeloId] = useState<Id | null>(null);
+  const [addVarPrecio, setAddVarPrecio] = useState<string>('');
+  const [savingVariante, setSavingVariante] = useState(false);
 
-const openEditImgs = (varianteId: number, trackea: boolean) => {
-  setEditImgsVarId(varianteId);
-  setEditImgsTrackea(trackea);
-  setEditImgsOpen(true);
-};
+  const openEditImgs = (varianteId: number, trackea: boolean) => {
+    setEditImgsVarId(varianteId);
+    setEditImgsTrackea(trackea);
+    setEditImgsOpen(true);
+  };
 
   const openGallery = (title: string, imgs: VarianteImagenDTO[], start = 0) => {
     if (!imgs || imgs.length === 0) return;
@@ -123,11 +125,10 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
     setIsGalleryOpen(true);
   };
   const closeGallery = () => setIsGalleryOpen(false);
-
+  const closeAddMovimiento = () => setIsAddMovOpen(false);
+  const closeAddUnidad = () => setIsAddOpen(false);
   const goPrev = () => setGalleryIndex(i => (galleryImgs.length ? (i - 1 + galleryImgs.length) % galleryImgs.length : 0));
   const goNext = () => setGalleryIndex(i => (galleryImgs.length ? (i + 1) % galleryImgs.length : 0));
-
-
 
   useEffect(() => {
     let alive = true;
@@ -160,6 +161,25 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
     return () => { alive = false; };
   }, [router, toast]);
 
+  useEffect(() => {
+    if (!openVarFromQuery || openedFromQuery || loading) return;
+
+    let found: { varianteId: number; trackea: boolean } | null = null;
+
+    for (const modelo of rows) {
+      const v = modelo.variantes.find(v => String(v.id) === String(openVarFromQuery));
+      if (v) {
+        found = { varianteId: Number(v.id), trackea: modelo.trackeaUnidad };
+        break;
+      }
+    }
+
+    if (found) {
+      openEditImgs(found.varianteId, found.trackea);
+      setOpenedFromQuery(true);
+      router.replace('/productos');
+    }
+  }, [openVarFromQuery, openedFromQuery, rows, loading, router]);
 
   const openAddUnidad = (varianteId: Id) => {
     setTargetVarianteId(varianteId);
@@ -177,20 +197,28 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
     setIsAddMovOpen(true);
   };
 
+  const openAddVariante = (modelo: ModeloTablaDTO) => {
+    setAddVarModeloId(modelo.id);
+    setAddVarPrecio('');
+    setIsAddVarOpen(true);
+  };
+
+  const closeAddVariante = () => {
+    setIsAddVarOpen(false);
+    setAddVarModeloId(null);
+    setAddVarPrecio('');
+  };
+
   const refreshProductos = async () => {
-  try {
-    const { data } = await api.get<ModeloTablaDTO[]>('api/modelos/tabla', {
-      // evito cache agresivo si tenés algún proxy
-      headers: { 'Cache-Control': 'no-cache' }
-    });
-    setRows(Array.isArray(data) ? data : []);
-  } catch (e:any) {
-    toast({ status: 'error', title: 'No se pudo actualizar la tabla', description: e?.message });
-  }
-};
-
-
-  const closeAddMovimiento = () => setIsAddMovOpen(false);
+    try {
+      const { data } = await api.get<ModeloTablaDTO[]>('api/modelos/tabla', {
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      setRows(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      toast({ status: 'error', title: 'No se pudo actualizar la tabla', description: e?.message });
+    }
+  };
 
   function parsePrecio(v: string): number | null {
     if (!v) return null;
@@ -228,12 +256,11 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
     try {
       await api.post('/api/movimientos', {
         varianteId: Number(movVarianteId),
-        tipo: movTipo,       // 'ENTRADA' | 'SALIDA'
-        cantidad: n,         // el backend interpreta el signo por "tipo"
+        tipo: movTipo,
+        cantidad: n,
         notas: movTipo === 'ENTRADA' ? 'Alta desde Productos' : 'Baja desde Productos',
       });
 
-      // ✅ actualizar UI local
       setRows(prev => prev.map(m => ({
         ...m,
         variantes: m.variantes.map(v => {
@@ -257,8 +284,6 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
       setSavingMov(false);
     }
   };
-
-  
 
   const saveUnidad = async () => {
     if (!targetVarianteId) return;
@@ -295,8 +320,6 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
       });
 
       toast({ status: 'success', title: 'Unidad agregada' });
-
-      // dentro de saveUnidad(), luego del POST exitoso:
       setRows(prev => prev.map(m => ({
         ...m,
         variantes: m.variantes.map(v => {
@@ -318,8 +341,6 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
           }
         })
       })));
-
-
       setIsAddOpen(false);
     } catch (e: any) {
       const status = e?.response?.status;
@@ -338,11 +359,6 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
   const firstImgUrlOfVar = (v?: VarianteResumenDTO) =>
     (v?.imagenes && v.imagenes.length > 0) ? v.imagenes[0].url : PLACEHOLDER_DATAURI;
 
-  const coverUrlOfModelo = (modelo: ModeloTablaDTO) =>
-    (modelo.variantes?.find(v => (v.imagenes?.length ?? 0) > 0)?.imagenes?.[0]?.url)
-    ?? PLACEHOLDER_DATAURI;
-
-  // para la galería:
   const allImagesOfVar = (_modelo: ModeloTablaDTO, v: VarianteResumenDTO) =>
     v.imagenes ?? [];
 
@@ -380,27 +396,81 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
   const onDelete = async () => {
     if (!deletingId) return;
     try {
-      await api.delete(`/api/modelos/${deletingId}`);
-      setRows(prev => prev.filter(r => String(r.id) !== String(deletingId)));
-      toast({ status: 'success', title: 'Modelo eliminado' });
+      await api.delete(`/api/variantes/${deletingId}`);
+      await refreshProductos();
+
+      toast({ status: 'success', title: 'Variante eliminada' });
     } catch (e: any) {
       const status = e?.response?.status;
       if (status === 409) {
-        toast({ status: 'error', title: 'No se puede eliminar', description: 'El modelo tiene variantes o stock asociado.' });
+        toast({
+          status: 'error',
+          title: 'No se puede eliminar',
+          description: 'La variante tiene stock asociado.',
+        });
       } else {
-        toast({ status: 'error', title: 'No se pudo eliminar', description: e?.response?.data?.message ?? e?.message });
+        toast({
+          status: 'error',
+          title: 'No se pudo eliminar',
+          description: e?.response?.data?.message ?? e?.message,
+        });
       }
     } finally {
       setDeletingId(null);
     }
   };
 
-  const closeAddUnidad = () => setIsAddOpen(false);
-
   const badgePropsForSet = (set: VarianteImagenDTO['set']) => {
     if (set === 'SELLADO') return { label: 'SELLADO', colorScheme: 'green' as const };
     if (set === 'USADO') return { label: 'USADO', colorScheme: 'yellow' as const };
     return null;
+  };
+
+  const saveVarianteSinImei = async () => {
+    if (!addVarModeloId) return;
+
+    const precioNum = parsePrecio(addVarPrecio);
+    if (precioNum == null) {
+      toast({
+        status: 'warning',
+        title: 'Precio inválido',
+        description: 'Ingresá un precio válido (mayor o igual a 0).',
+      });
+      return;
+    }
+
+    setSavingVariante(true);
+    try {
+      const { data: creada } = await api.post<VarianteResumenDTO>('/api/variantes', {
+        modeloId: Number(addVarModeloId),
+
+        precioBase: precioNum,
+      });
+
+      setRows(prev =>
+        prev.map(m =>
+          String(m.id) === String(addVarModeloId)
+            ? { ...m, variantes: [...(m.variantes ?? []), creada] }
+            : m
+        )
+      );
+
+      toast({ status: 'success', title: 'Variante creada' });
+      closeAddVariante();
+
+      if (creada?.id != null) {
+        openEditImgs(Number(creada.id), false);
+      }
+    } catch (e: any) {
+      console.log('POST /api/variantes error', e?.response?.data);
+      toast({
+        status: 'error',
+        title: 'No se pudo crear la variante',
+        description: e?.response?.data?.message ?? e?.message,
+      });
+    } finally {
+      setSavingVariante(false);
+    }
   };
 
   return (
@@ -425,7 +495,6 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
           </Flex>
         )}
 
-
         {!loading && rows.length === 0 && (
           <Flex direction="column" gap={3} bg="white" borderRadius="md" borderWidth="1px" p={6} align="center">
             <Text color="gray.600">Aún no hay productos.</Text>
@@ -435,7 +504,6 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
           </Flex>
         )}
 
-
         {!loading && rows.length > 0 && (
           <Box bg="white" borderRadius="md" borderWidth="1px" overflowX="auto">
             <Table size="md" variant="unstyled">
@@ -443,9 +511,7 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
               <Thead bg="gray.50">
                 <Tr>
                   <Th>Producto</Th>
-                  {/* <Th>Stock</Th> */}
                   <Th>Variante</Th>
-                  {/* <Th textAlign="right">Acciones</Th> */}
                 </Tr>
               </Thead>
               <Tbody>
@@ -454,8 +520,6 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
                   return (
                     <Tr key={String(modelo.id)} bg={rowBg}>
                       <Td>
-
-
                         <Box>
                           <HStack>
                             <Text fontWeight={600}>{modelo.nombre}</Text>
@@ -468,22 +532,31 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
                                 onClick={() => openEditModel(modelo)}
                               />
                             </Tooltip>
-
                           </HStack>
                           <Text fontSize="sm" color="gray.500">{modelo.categoriaNombre}</Text>
                         </Box>
-
                       </Td>
 
                       <Td>
                         {(modelo.variantes?.length ?? 0) === 0 && (
-                          <Text color="gray.500">Sin variantes</Text>
+                          modelo.trackeaUnidad ? (
+                            <Text color="gray.500">Sin variantes</Text>
+                          ) : (
+                            <Flex justify={"flex-end"}>
+                              <Button
+                                size="sm"
+                                leftIcon={<Plus size={14} />}
+                                colorScheme="blue"
+                                onClick={() => openAddVariante(modelo)}
+                              >
+                                Crear variante
+                              </Button>
+                            </Flex>
+                          )
                         )}
 
                         {(modelo.variantes ?? []).map((v) => (
                           <HStack key={String(v.id)} spacing={3} mb={2} align="center">
-
-
                             <Image
                               src={firstImgUrlOfVar(v)}
                               alt={nombreVariante(v)}
@@ -499,16 +572,13 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
                               }}
                             />
 
-
                             <Text flex="1">{nombreVariante(v)}</Text>
 
                             {modelo.trackeaUnidad ? (
                               <HStack gap={10}>
-
                                 <Badge colorScheme="green" minW="72px" textAlign="center">NUEVOS: {v.stockNuevos ?? 0}</Badge>
                                 <Badge colorScheme="yellow" minW="72px" textAlign="center">USADOS: {v.stockUsados ?? 0}</Badge>
                                 <Badge colorScheme="blue" minW="72px" textAlign="center">TOTAL: {v.stock ?? 0}</Badge>
-
                                 <Tooltip label="Agregar unidad">
                                   <IconButton
                                     aria-label="Agregar unidad"
@@ -518,13 +588,13 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
                                     onClick={() => openAddUnidad(v.id)}
                                   />
                                 </Tooltip>
-                                <Tooltip label="Eliminar modelo">
+                                <Tooltip label="Eliminar variante">
                                   <IconButton
-                                    aria-label="Eliminar modelo"
+                                    aria-label="Eliminar variante"
                                     icon={<Trash2 size={16} />}
                                     size="xs"
                                     variant="ghost"
-                                    onClick={() => setDeletingId(modelo.id)}
+                                    onClick={() => setDeletingId(v.id)}
                                   />
                                 </Tooltip>
                               </HStack>
@@ -533,7 +603,6 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
                                 <Badge colorScheme="blue" minW="72px" textAlign="center">
                                   TOTAL: {v.stock > 0 ? v.stock : 0}
                                 </Badge>
-
                                 <Tooltip label="Agregar">
                                   <IconButton
                                     aria-label="Agregar stock"
@@ -543,28 +612,26 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
                                     onClick={() => openAddMovimiento(v.id, 'ENTRADA')}
                                   />
                                 </Tooltip>
-                                <Tooltip label="Eliminar modelo">
+                                <Tooltip label="Eliminar variante">
                                   <IconButton
-                                    aria-label="Eliminar modelo"
+                                    aria-label="Eliminar variante"
                                     icon={<Trash2 size={16} />}
                                     size="xs"
                                     variant="ghost"
-                                    onClick={() => setDeletingId(modelo.id)}
+                                    onClick={() => setDeletingId(v.id)}
                                   />
                                 </Tooltip>
-
                               </HStack>
-
                             )}
                             <Tooltip label="Editar fotos">
-  <IconButton
-    aria-label="Editar fotos"
-    icon={<Images size={16} />}
-    size="sm"
-    variant="outline"
-    onClick={() => openEditImgs(Number(v.id), modelo.trackeaUnidad)}
-  />
-</Tooltip>
+                              <IconButton
+                                aria-label="Editar fotos"
+                                icon={<Images size={16} />}
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openEditImgs(Number(v.id), modelo.trackeaUnidad)}
+                              />
+                            </Tooltip>
 
                           </HStack>
                         ))}
@@ -581,14 +648,14 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
       </Container>
 
       {editImgsVarId != null && (
-  <EditarImagenesModal
-    isOpen={editImgsOpen}
-    onClose={() => setEditImgsOpen(false)}
-    varianteId={editImgsVarId}
-    trackeaUnidad={editImgsTrackea}
-    onChanged={refreshProductos}
-  />
-)}
+        <EditarImagenesModal
+          isOpen={editImgsOpen}
+          onClose={() => setEditImgsOpen(false)}
+          varianteId={editImgsVarId}
+          trackeaUnidad={editImgsTrackea}
+          onChanged={refreshProductos}
+        />
+      )}
 
       <AlertDialog
         isOpen={!!deletingId}
@@ -598,9 +665,9 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
       >
         <AlertDialogOverlay />
         <AlertDialogContent>
-          <AlertDialogHeader>Eliminar modelo</AlertDialogHeader>
+          <AlertDialogHeader>Eliminar variante</AlertDialogHeader>
           <AlertDialogBody>
-            ¿Seguro que querés eliminar este modelo? {`(Si tiene variantes, puede fallar)`}.
+            ¿Seguro que querés eliminar esta variante? {`(Si tiene unidades, puede fallar)`}.
           </AlertDialogBody>
           <AlertDialogFooter>
             <Button ref={cancelRef} onClick={() => setDeletingId(null)}>Cancelar</Button>
@@ -802,6 +869,43 @@ const openEditImgs = (varianteId: number, trackea: boolean) => {
               <Text color="gray.500">Sin imágenes</Text>
             )}
           </AlertDialogBody>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        isOpen={isAddVarOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={closeAddVariante}
+        isCentered
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Crear variante</AlertDialogHeader>
+          <AlertDialogBody>
+            <FormControl isRequired mb={3}>
+              <FormLabel>Precio</FormLabel>
+              <Input
+                value={addVarPrecio}
+                onChange={e => setAddVarPrecio(e.target.value)}
+                placeholder="Ej: 499999.99"
+                inputMode="decimal"
+              />
+            </FormControl>
+
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={cancelRef} onClick={closeAddVariante}>
+              Cancelar
+            </Button>
+            <Button
+              colorScheme="blue"
+              ml={3}
+              onClick={saveVarianteSinImei}
+              isLoading={savingVariante}
+            >
+              Guardar
+            </Button>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 

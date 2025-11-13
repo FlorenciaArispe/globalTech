@@ -3,15 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Box, Container, Text, SimpleGrid, FormControl, FormLabel, Select, Button,
-  HStack, Input, Switch, useToast, IconButton, Modal, ModalOverlay, ModalContent,
-  ModalHeader, ModalBody, ModalFooter, Checkbox, Spinner,
-  AlertDialog
+  HStack, Input, useToast, IconButton, Modal, ModalOverlay, ModalContent,
+  ModalHeader, ModalBody, ModalFooter, Checkbox, Spinner
 } from '@chakra-ui/react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/axios';
-import ImagePicker, { PickedFile } from '@/components/ImagePicker';
-import { uploadVarianteImages } from '@/lib/uploadImages';
 
 type Id = number | string;
 type Categoria = { id: Id; nombre: string };
@@ -22,14 +19,13 @@ type Modelo = {
   nombre: string;
   categoriaId: Id;
   marcaId: Id;
-  trackeaUnidad: boolean;   // <— antes: trackeaImei
+  trackeaUnidad: boolean;
   requiereColor: boolean;
   requiereCapacidad: boolean;
 };
 
 type Color = { id: Id; nombre: string };
 type Capacidad = { id: Id; etiqueta: string };
-
 
 export default function NuevoProductoPage() {
   const toast = useToast();
@@ -51,16 +47,10 @@ export default function NuevoProductoPage() {
   const [categoriaId, setCategoriaId] = useState<Id>('');
   const [marcaId, setMarcaId] = useState<Id>('');
   const [modeloId, setModeloId] = useState<Id | 'new'>('');
-  const [precioBase, setPrecioBase] = useState<string>(''); // string para permitir coma/punto
-  // arriba, junto con otros useState
+  const [precioBase, setPrecioBase] = useState<string>('');
   const [isMarcaOpen, setIsMarcaOpen] = useState(false);
   const [nuevaMarcaNombre, setNuevaMarcaNombre] = useState('');
   const [creatingMarca, setCreatingMarca] = useState(false);
-  const [selladoFiles, setSelladoFiles] = useState<PickedFile[]>([]);
-  const [usadoFiles, setUsadoFiles] = useState<PickedFile[]>([]);
-  const [catalogoFiles, setCatalogoFiles] = useState<PickedFile[]>([]);
-
-
   const isNewModelo = modeloId === 'new' || !modeloId;
 
   const selectedModelo = useMemo(() => {
@@ -68,10 +58,14 @@ export default function NuevoProductoPage() {
     return modelos.find(m => String(m.id) === String(modeloId));
   }, [isNewModelo, modeloId, modelos]);
 
+  const esModeloSimple =
+    !!selectedModelo &&
+    !selectedModelo.trackeaUnidad &&
+    !selectedModelo.requiereColor &&
+    !selectedModelo.requiereCapacidad;
+
   const [colorId, setColorId] = useState<Id>('');
   const [capacidadId, setCapacidadId] = useState<Id>('');
-  const [sku, setSku] = useState('');
-  const [activo, setActivo] = useState(true);
 
   const [isModeloOpen, setIsModeloOpen] = useState(false);
   const [nuevoModeloNombre, setNuevoModeloNombre] = useState('');
@@ -147,8 +141,6 @@ export default function NuevoProductoPage() {
   useEffect(() => {
     setColorId('');
     setCapacidadId('');
-    setSku('');
-    setActivo(true);
   }, [modeloId]);
 
   const requiereColor = isNewModelo ? nuevoModeloReqColor : !!selectedModelo?.requiereColor;
@@ -167,7 +159,6 @@ export default function NuevoProductoPage() {
   };
 
   const handleCrearModelo = async () => {
-    console.log("entre")
     if (!categoriaId || !marcaId || !nuevoModeloNombre.trim()) {
       toast({ status: 'warning', title: 'Completá categoría, marca y nombre' });
       return;
@@ -309,11 +300,10 @@ export default function NuevoProductoPage() {
 
   function parsePrecio(v: string): number | null {
     if (!v) return null;
-    const normalized = v.replace(/\./g, '').replace(',', '.'); // “1.234,56” → “1234.56”
+    const normalized = v.replace(/\./g, '').replace(',', '.');
     const n = Number(normalized);
     return Number.isFinite(n) && n >= 0 ? n : null;
   }
-
 
   const handleCrearVariante = async () => {
     if (!categoriaId || !marcaId) {
@@ -324,6 +314,23 @@ export default function NuevoProductoPage() {
       toast({ status: 'warning', title: 'Seleccioná un modelo (o crealo)' });
       return;
     }
+
+    const modeloSeleccionado = modelos.find(m => String(m.id) === String(modeloId));
+    const esSimple =
+      modeloSeleccionado &&
+      !modeloSeleccionado.trackeaUnidad &&
+      !modeloSeleccionado.requiereColor &&
+      !modeloSeleccionado.requiereCapacidad;
+
+    if (esSimple) {
+      toast({
+        status: 'info',
+        title: 'Este modelo ya tiene su variante única',
+        description: 'Las variantes de este modelo se manejan desde la pantalla de Productos.',
+      });
+      return;
+    }
+
     if (requiereColor && !colorId) {
       toast({ status: 'warning', title: 'Seleccioná color' });
       return;
@@ -338,6 +345,7 @@ export default function NuevoProductoPage() {
       return;
     }
 
+
     setSubmitting(true);
     try {
       const { data: creada } = await api.post('/api/variantes', {
@@ -347,18 +355,12 @@ export default function NuevoProductoPage() {
         precioBase: Number(precio),
       });
 
-      const varianteId = creada.id ?? creada?.varianteId ?? creada;
-      const trackea = isNewModelo ? nuevoModeloTrackeaUnidad : !!selectedModelo?.trackeaUnidad;
-
-      if (trackea) {
-        if (selladoFiles.length) await uploadVarianteImages(varianteId, 'SELLADO', selladoFiles);
-        if (usadoFiles.length) await uploadVarianteImages(varianteId, 'USADO', usadoFiles);
-      } else {
-        if (catalogoFiles.length) await uploadVarianteImages(varianteId, 'CATALOGO', catalogoFiles);
-      }
-
       toast({ status: 'success', title: 'Variante creada' });
-      router.replace('/productos'); 
+      if (creada?.id) {
+      router.replace(`/productos?openVariante=${creada.id}`);
+    } else {
+      router.replace('/productos');
+    }
     } catch (e: any) {
       const status = e?.response?.status;
       if (status === 409) {
@@ -435,26 +437,17 @@ export default function NuevoProductoPage() {
   return (
     <Box bg="#f6f6f6" minH="100dvh">
       <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
-        <HStack justify="space-between" mb={4}>
-          <HStack>
-            <IconButton
-              aria-label="Volver"
-              icon={<ArrowLeft size={18} />}
-              variant="ghost"
-              onClick={() => router.back()}
-            />
-            <Text fontSize="30px" fontWeight={600}>Nuevo producto</Text>
-          </HStack>
-          <HStack>
-            <IconButton
-              aria-label="Crear modelo"
-              icon={<Plus size={18} />}
-              onClick={openCrearModelo}
-              variant="outline"
-              colorScheme="blue"
-              size="sm"
-            />
-          </HStack>
+        <HStack mb={4}>
+
+          <IconButton
+            aria-label="Volver"
+            icon={<ArrowLeft size={18} />}
+            variant="ghost"
+            onClick={() => router.back()}
+          />
+          <Text fontSize="30px" fontWeight={600}>Nuevo producto</Text>
+
+
         </HStack>
 
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} bg="white" p={4} borderRadius="md" borderWidth="1px">
@@ -474,7 +467,6 @@ export default function NuevoProductoPage() {
               onChange={(e) => {
                 const v = e.target.value;
                 if (v === 'new-marca') {
-                  // limpiar y abrir modal
                   setNuevaMarcaNombre('');
                   setIsMarcaOpen(true);
                   return;
@@ -574,22 +566,35 @@ export default function NuevoProductoPage() {
             />
           </FormControl>
 
-          {(isNewModelo ? nuevoModeloTrackeaUnidad : !!selectedModelo?.trackeaUnidad) ? (
-            <>
-              <ImagePicker label="Imágenes SELLADO" files={selladoFiles} setFiles={setSelladoFiles} max={3} />
-              <ImagePicker label="Imágenes USADO" files={usadoFiles} setFiles={setUsadoFiles} max={3} />
-            </>
-          ) : (
-            <ImagePicker label="Imágenes CATALOGO" files={catalogoFiles} setFiles={setCatalogoFiles} max={3} />
-          )}
 
 
         </SimpleGrid>
 
+        {esModeloSimple && (
+          <Text textAlign={"center"} mt={2} fontSize="sm" color="gray.600">
+            Este modelo no usa IMEI, color ni capacidad y tiene una sola variante. Las modificaciones de stock y precio se manejan desde la pantalla de <b>Productos</b>.
+          </Text>
+        )}
+
+
         <HStack justify="flex-end" mt={4}>
-          <Button variant="ghost" onClick={() => router.back()}>Cancelar</Button>
-          <Button colorScheme="blue" onClick={handleCrearVariante} isLoading={submitting}>Crear producto</Button>
+
+
+          <Button variant="ghost" borderWidth="1px" onClick={() => router.back()}>
+            Cancelar
+          </Button>
+          <Button
+            colorScheme="blue"
+            onClick={handleCrearVariante}
+            isLoading={submitting}
+            isDisabled={esModeloSimple}
+          >
+            {esModeloSimple ? 'No se pueden crear más variantes' : 'Crear producto'}
+          </Button>
+
+
         </HStack>
+
       </Container>
 
       <Modal isOpen={isModeloOpen} onClose={() => setIsModeloOpen(false)} isCentered>

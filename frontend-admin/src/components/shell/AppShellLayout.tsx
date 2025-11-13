@@ -1,4 +1,3 @@
-// src/components/shell/AppShellLayout.tsx
 'use client';
 import { ReactNode } from 'react';
 import { useDisclosure } from '@chakra-ui/react';
