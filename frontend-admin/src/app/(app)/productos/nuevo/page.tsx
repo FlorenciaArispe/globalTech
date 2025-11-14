@@ -376,7 +376,7 @@ export default function NuevoProductoPage() {
   if (loadingBase) {
     return (
       <Box bg="#f6f6f6" minH="100dvh">
-        <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
+       <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
           <Box py={16} textAlign="center"><Spinner /></Box>
         </Container>
       </Box>
@@ -436,7 +436,7 @@ export default function NuevoProductoPage() {
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
-      <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
+      <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
         <HStack mb={4}>
 
           <IconButton

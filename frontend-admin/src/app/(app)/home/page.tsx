@@ -37,7 +37,7 @@ export default function Home() {
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
-      <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
+    <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
         <Text fontSize="30px" fontWeight={600} mb={4}>Inicio</Text>
 
         <Tabs

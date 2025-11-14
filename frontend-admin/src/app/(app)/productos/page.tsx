@@ -1,7 +1,7 @@
 'use client';
 
 import NextLink from 'next/link';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import {
   Box, Container, Text, HStack, IconButton, Table, Thead, Th, Tr, Tbody, Td,
   Image, Badge, Spinner, Button, useToast, AlertDialog, AlertDialogOverlay,
@@ -15,7 +15,7 @@ import {
   NumberInputField,
   AlertDialogCloseButton
 } from '@chakra-ui/react';
-import { Plus, Pencil, Trash2, ArrowLeft, ArrowRight, Images } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, ArrowRight, Images, ArrowUpDown } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/axios';
 import EditarImagenesModal from '@/components/EditarImagenesModal';
@@ -53,6 +53,17 @@ type ModeloTablaDTO = {
   marcaNombre?: string;
   variantes: VarianteResumenDTO[];
 };
+
+type ColorDTO = {
+  id: Id;
+  nombre: string;
+};
+
+type CapacidadDTO = {
+  id: Id;
+  etiqueta: string;
+};
+
 
 const nombreVariante = (v: VarianteResumenDTO) => {
   const partes = [v.colorNombre, v.capacidadEtiqueta].filter(Boolean) as string[];
@@ -111,6 +122,16 @@ export default function Productos() {
   const [addVarPrecio, setAddVarPrecio] = useState<string>('');
   const [savingVariante, setSavingVariante] = useState(false);
 
+  const [colores, setColores] = useState<ColorDTO[]>([]);
+  const [capacidades, setCapacidades] = useState<CapacidadDTO[]>([]);
+
+  const [addVarTrackeaUnidad, setAddVarTrackeaUnidad] = useState(false);
+  const [addVarColorId, setAddVarColorId] = useState<Id | ''>('');
+  const [addVarCapacidadId, setAddVarCapacidadId] = useState<Id | ''>('');
+  const [search, setSearch] = useState('');
+const [sortNewestFirst, setSortNewestFirst] = useState(true);
+
+
   const openEditImgs = (varianteId: number, trackea: boolean) => {
     setEditImgsVarId(varianteId);
     setEditImgsTrackea(trackea);
@@ -134,15 +155,20 @@ export default function Productos() {
     let alive = true;
     (async () => {
       try {
-        const { data } = await api.get<ModeloTablaDTO[]>('api/modelos/tabla');
+        const [modelosResp, coloresResp, capacidadesResp] = await Promise.all([
+          api.get<ModeloTablaDTO[]>('api/modelos/tabla'),
+          api.get<ColorDTO[]>('/api/colores'),
+          api.get<CapacidadDTO[]>('/api/capacidades'),
+        ]);
 
-        console.log("TABLA", data)
-
-        const dataVARIANTES = await api.get<[]>('api/variantes');
-        console.log("ACA DATA DE VARIANTES", dataVARIANTES)
+        console.log('TABLA', modelosResp.data);
+        console.log('COLORES', coloresResp.data);
+        console.log('CAPACIDADES', capacidadesResp.data);
 
         if (!alive) return;
-        setRows(Array.isArray(data) ? data : []);
+        setRows(Array.isArray(modelosResp.data) ? modelosResp.data : []);
+        setColores(coloresResp.data ?? []);
+        setCapacidades(capacidadesResp.data ?? []);
       } catch (e: any) {
         const status = e?.response?.status;
         if (status === 401) {
@@ -160,6 +186,36 @@ export default function Productos() {
     })();
     return () => { alive = false; };
   }, [router, toast]);
+
+const processedRows = useMemo(() => {
+  let data = [...rows];
+
+  const q = search.trim().toLowerCase();
+  if (q) {
+    data = data.filter(m => {
+      const matchModelo = m.nombre.toLowerCase().includes(q);
+      const matchCategoria = m.categoriaNombre.toLowerCase().includes(q);
+
+      const matchVariante = (m.variantes ?? []).some(v => {
+        const nombreVar = nombreVariante(v).toLowerCase();
+        return nombreVar.includes(q);
+      });
+
+      return matchModelo || matchCategoria || matchVariante;
+    });
+  }
+
+  data.sort((a, b) => {
+    const ida = Number(a.id);
+    const idb = Number(b.id);
+    if (!Number.isFinite(ida) || !Number.isFinite(idb)) return 0;
+    return sortNewestFirst ? idb - ida : ida - idb;
+  });
+
+  return data;
+}, [rows, search, sortNewestFirst]);
+
+
 
   useEffect(() => {
     if (!openVarFromQuery || openedFromQuery || loading) return;
@@ -200,6 +256,9 @@ export default function Productos() {
   const openAddVariante = (modelo: ModeloTablaDTO) => {
     setAddVarModeloId(modelo.id);
     setAddVarPrecio('');
+    setAddVarTrackeaUnidad(modelo.trackeaUnidad);
+    setAddVarColorId('');
+    setAddVarCapacidadId('');
     setIsAddVarOpen(true);
   };
 
@@ -207,6 +266,9 @@ export default function Productos() {
     setIsAddVarOpen(false);
     setAddVarModeloId(null);
     setAddVarPrecio('');
+    setAddVarTrackeaUnidad(false);
+    setAddVarColorId('');
+    setAddVarCapacidadId('');
   };
 
   const refreshProductos = async () => {
@@ -429,6 +491,7 @@ export default function Productos() {
   const saveVarianteSinImei = async () => {
     if (!addVarModeloId) return;
 
+    // Validar precio
     const precioNum = parsePrecio(addVarPrecio);
     if (precioNum == null) {
       toast({
@@ -439,13 +502,31 @@ export default function Productos() {
       return;
     }
 
+    // Si el modelo trackea IMEI, pedimos color y capacidad
+    if (addVarTrackeaUnidad) {
+      if (!addVarColorId || !addVarCapacidadId) {
+        toast({
+          status: 'warning',
+          title: 'Faltan datos',
+          description: 'Seleccioná color y capacidad para la variante.',
+        });
+        return;
+      }
+    }
+
+    const payload: any = {
+      modeloId: Number(addVarModeloId),
+      precioBase: precioNum,
+    };
+
+    if (addVarTrackeaUnidad) {
+      payload.colorId = Number(addVarColorId);
+      payload.capacidadId = Number(addVarCapacidadId);
+    }
+
     setSavingVariante(true);
     try {
-      const { data: creada } = await api.post<VarianteResumenDTO>('/api/variantes', {
-        modeloId: Number(addVarModeloId),
-
-        precioBase: precioNum,
-      });
+      const { data: creada } = await api.post<VarianteResumenDTO>('/api/variantes', payload);
 
       setRows(prev =>
         prev.map(m =>
@@ -459,7 +540,8 @@ export default function Productos() {
       closeAddVariante();
 
       if (creada?.id != null) {
-        openEditImgs(Number(creada.id), false);
+        // Si no trackea unidad, abrimos editor de fotos igual que antes
+        openEditImgs(Number(creada.id), addVarTrackeaUnidad);
       }
     } catch (e: any) {
       console.log('POST /api/variantes error', e?.response?.data);
@@ -473,10 +555,13 @@ export default function Productos() {
     }
   };
 
+
+
   return (
     <Box bg="#f6f6f6" minH="100dvh">
-      <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
-        <HStack justify="space-between" align="center" mb={4}>
+      <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
+
+        <HStack justify="space-between" align="center" mb={2}>
           <Text fontSize="30px" fontWeight={600}>Productos</Text>
           <IconButton
             as={NextLink}
@@ -488,6 +573,32 @@ export default function Productos() {
             size="sm"
           />
         </HStack>
+
+        {rows.length > 0 && (
+  <>
+    <HStack spacing={3} align="center" mb={2}>
+      <Input
+  placeholder="Buscar por modelo, variante o categoría"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        bg="white"
+        size="md"
+      />
+      <Button
+        size="md"
+        variant="outline"
+        leftIcon={<ArrowUpDown size={16} />}
+        onClick={() => setSortNewestFirst(s => !s)}
+      >
+        {sortNewestFirst ? 'Más antiguo' : 'Más nuevo'}
+      </Button>
+    </HStack>
+
+    <Text fontSize="sm" color="gray.600" mb={3} ml={1}>
+      {processedRows.length} productos
+    </Text>
+  </>
+)}
 
         {loading && (
           <Flex bg="white" borderRadius="md" borderWidth="1px" py={20} align="center" justify="center">
@@ -515,7 +626,7 @@ export default function Productos() {
                 </Tr>
               </Thead>
               <Tbody>
-                {rows.map((modelo, idx) => {
+                {processedRows.map((modelo, idx) => {
                   const rowBg = idx % 2 === 0 ? 'white' : 'gray.50';
                   return (
                     <Tr key={String(modelo.id)} bg={rowBg}>
@@ -539,21 +650,18 @@ export default function Productos() {
 
                       <Td>
                         {(modelo.variantes?.length ?? 0) === 0 && (
-                          modelo.trackeaUnidad ? (
-                            <Text color="gray.500">Sin variantes</Text>
-                          ) : (
-                            <Flex justify={"flex-end"}>
-                              <Button
-                                size="sm"
-                                leftIcon={<Plus size={14} />}
-                                colorScheme="blue"
-                                onClick={() => openAddVariante(modelo)}
-                              >
-                                Crear variante
-                              </Button>
-                            </Flex>
-                          )
+                          <Flex justify="flex-end" align="center">
+                            <Button
+                              size="sm"
+                              leftIcon={<Plus size={14} />}
+                              colorScheme="blue"
+                              onClick={() => openAddVariante(modelo)}
+                            >
+                              Crear variante
+                            </Button>
+                          </Flex>
                         )}
+
 
                         {(modelo.variantes ?? []).map((v) => (
                           <HStack key={String(v.id)} spacing={3} mb={2} align="center">
@@ -882,6 +990,40 @@ export default function Productos() {
         <AlertDialogContent>
           <AlertDialogHeader>Crear variante</AlertDialogHeader>
           <AlertDialogBody>
+            {addVarTrackeaUnidad && (
+              <>
+                <FormControl isRequired mb={3}>
+                  <FormLabel>Color</FormLabel>
+                  <Select
+                    placeholder="Seleccioná un color"
+                    value={addVarColorId}
+                    onChange={e => setAddVarColorId(e.target.value as Id)}
+                  >
+                    {colores.map(c => (
+                      <option key={String(c.id)} value={String(c.id)}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl isRequired mb={3}>
+                  <FormLabel>Capacidad</FormLabel>
+                  <Select
+                    placeholder="Seleccioná una capacidad"
+                    value={addVarCapacidadId}
+                    onChange={e => setAddVarCapacidadId(e.target.value as Id)}
+                  >
+                    {capacidades.map(cap => (
+                      <option key={String(cap.id)} value={String(cap.id)}>
+                        {cap.etiqueta}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+              </>
+            )}
+
             <FormControl isRequired mb={3}>
               <FormLabel>Precio</FormLabel>
               <Input
@@ -891,8 +1033,8 @@ export default function Productos() {
                 inputMode="decimal"
               />
             </FormControl>
-
           </AlertDialogBody>
+
           <AlertDialogFooter>
             <Button ref={cancelRef} onClick={closeAddVariante}>
               Cancelar

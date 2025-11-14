@@ -34,13 +34,13 @@ export default function CategoriasPage() {
     const token = getToken();
     console.log("TOKEN CATEGORIAS", token)
     if (!token) {
-      router.replace('/login'); 
+      router.replace('/login');
       return;
     }
 
     (async () => {
       try {
-        const { data } = await api.get<Categoria[]>('/api/categorias'); 
+        const { data } = await api.get<Categoria[]>('/api/categorias');
         if (alive) setCategorias(data);
       } catch (e: any) {
         console.log('status', e?.response?.status, 'data', e?.response?.data);
@@ -113,7 +113,7 @@ export default function CategoriasPage() {
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
-      <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
+      <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
         <HStack justify="space-between" align="center" mb={4}>
           <Text fontSize="30px" fontWeight={600}>Categorías</Text>
           <IconButton

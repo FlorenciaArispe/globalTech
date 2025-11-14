@@ -16,9 +16,10 @@ import {
   ModalBody,
   ModalFooter,
   Modal,
-  ModalHeader
+  ModalHeader,
+  AlertDialogCloseButton
 } from '@chakra-ui/react';
-import { ArrowLeft, ArrowRight, Minus, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpDown, Minus, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/axios';
 
 type Id = number | string;
@@ -51,7 +52,13 @@ type InventarioRowDTO = {
   trackeaUnidad: boolean;
   createdAt: string;
   updatedAt: string;
-  imagenes?: VarianteImagenDTO[]; 
+  imagenes?: VarianteImagenDTO[];
+};
+
+const badgePropsForSet = (set: ImagenSet) => {
+  if (set === 'SELLADO') return { label: 'SELLADO', colorScheme: 'green' as const };
+  if (set === 'USADO') return { label: 'USADO', colorScheme: 'yellow' as const };
+  return null;
 };
 
 const PLACEHOLDER_DATAURI =
@@ -110,6 +117,8 @@ export default function InventarioPage() {
   const [viewerImgs, setViewerImgs] = useState<VarianteImagenDTO[]>([]);
   const [viewerIdx, setViewerIdx] = useState(0);
   const [viewerTitle, setViewerTitle] = useState('');
+  const [search, setSearch] = useState('');
+  const [sortNewestFirst, setSortNewestFirst] = useState(true); // true = más nuevo arrib
 
   const openEdit = (r: InventarioRowDTO) => {
     setEditRow(r);
@@ -152,7 +161,57 @@ export default function InventarioPage() {
     setFormPrecioOverride('');
     setIsAddUnidadOpen(true);
   };
- 
+
+const processedRows = useMemo(() => {
+  let data = [...rows];
+
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+
+    data = data.filter(r => {
+      const matchModelo   = r.modeloNombre.toLowerCase().includes(q);
+      const matchColor    = (r.colorNombre ?? '').toLowerCase().includes(q);
+      const matchCap      = (r.capacidadEtiqueta ?? '').toLowerCase().includes(q);
+      const matchImei     = (r.imei ?? '').toLowerCase().includes(q);
+      const matchEstado   = (r.estadoProducto ?? '').toLowerCase().includes(q);
+      // podés agregar más campos si querés
+
+      return (
+        matchModelo ||
+        matchColor ||
+        matchCap ||
+        matchImei ||
+        matchEstado
+      );
+    });
+  }
+
+  data.sort((a, b) => {
+    const da = new Date(a.createdAt).getTime();
+    const db = new Date(b.createdAt).getTime();
+    return sortNewestFirst ? db - da : da - db;
+  });
+
+  return data;
+}, [rows, search, sortNewestFirst]);
+
+
+
+  const grupos = useMemo(() => {
+    const map = new Map<string, InventarioRowDTO[]>();
+    for (const r of processedRows) {
+      const k = `${r.modeloId}:::${r.modeloNombre}`;
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(r);
+    }
+    return Array.from(map.entries()).map(([k, arr]) => {
+      const [, modeloNombre] = k.split(':::');
+      return { key: k, modeloNombre, items: arr };
+    });
+  }, [processedRows]);
+
+
+
   const parsePrecio = (v: string) => {
     if (!v) return null;
     const normalized = v.replace(/\./g, '').replace(',', '.');
@@ -218,7 +277,7 @@ export default function InventarioPage() {
     setViewerTitle(title);
     setViewerOpen(true);
   };
- 
+
   const prevImg = () => {
     if (viewerImgs.length === 0) return;
     setViewerIdx((i) => (i - 1 + viewerImgs.length) % viewerImgs.length);
@@ -452,25 +511,35 @@ export default function InventarioPage() {
     }
   };
 
-  const grupos = useMemo(() => {
-    const map = new Map<string, InventarioRowDTO[]>();
-    for (const r of rows) {
-      const k = `${r.modeloId}:::${r.modeloNombre}`;
-      if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(r);
-    }
-    return Array.from(map.entries()).map(([k, arr]) => {
-      const [, modeloNombre] = k.split(':::');
-      return { key: k, modeloNombre, items: arr };
-    });
-  }, [rows]);
-
   return (
     <Box bg="#f6f6f6" minH="100dvh">
-      <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
-        <HStack justify="space-between" align="center" mb={4}>
+      <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
+        <HStack justify="space-between" align="center" mb={2}>
           <Text fontSize="30px" fontWeight={600}>Inventario</Text>
         </HStack>
+        <Box mb={3}>
+          <HStack spacing={3} align="center">
+            <Input
+              placeholder="Buscar por nombre de modelo o variante"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              bg="white"
+              size="md"
+            />
+            <Button
+              size="md"
+              variant="outline"
+              leftIcon={<ArrowUpDown size={16} />}
+              onClick={() => setSortNewestFirst(s => !s)}
+            >
+              {sortNewestFirst ? 'Más antiguo' : 'Más nuevo'}
+            </Button>
+          </HStack>
+
+          <Text mt={2} fontSize="sm" color="gray.600" ml={1}>
+            {grupos.length} {grupos.length === 1 ? 'modelo' : 'modelos'}
+          </Text>
+        </Box>
 
         {loading ? (
           <Flex bg="white" borderRadius="md" borderWidth="1px" py={20} align="center" justify="center">
@@ -496,7 +565,7 @@ export default function InventarioPage() {
                   <Tr key={g.key} bg={gi % 2 === 0 ? 'white' : 'gray.50'}>
 
                     <Td verticalAlign="top" >
-                          <Text fontWeight={600}>{g.modeloNombre}</Text>
+                      <Text fontWeight={600}>{g.modeloNombre}</Text>
                     </Td>
 
                     <Td colSpan={3} columnGap={6} p={0} >
@@ -852,50 +921,93 @@ export default function InventarioPage() {
         </ModalContent>
       </Modal>
 
-      <Modal isOpen={viewerOpen} onClose={() => setViewerOpen(false)} size="xl" isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>{viewerTitle}</ModalHeader>
-          <ModalBody>
-            <Flex align="center" justify="center" gap={2}>
-              <IconButton
-                aria-label="Anterior"
-                icon={<ArrowLeft />}
-                variant="outline"
-                onClick={prevImg}
-                isDisabled={(viewerImgs?.length ?? 0) <= 1}
-              />
-              <Image
-                src={viewerImgs[viewerIdx]?.url ?? PLACEHOLDER_DATAURI}
-                alt={viewerImgs[viewerIdx]?.altText ?? 'Imagen de variante'}
-                maxH="60vh"
-                maxW="100%"
-                objectFit="contain"
-                borderRadius="md"
-                border="1px solid"
-                borderColor="gray.200"
-                flex="1"
-              />
-              <IconButton
-                aria-label="Siguiente"
-                icon={<ArrowRight />}
-                variant="outline"
-                onClick={nextImg}
-                isDisabled={(viewerImgs?.length ?? 0) <= 1}
-              />
-            </Flex>
-            <Flex mt={3} align="center" justify="center" gap={2}>
-              <Text fontSize="sm" color="gray.600">
-                {(viewerIdx + 1)} / {viewerImgs?.length ?? 0}
-              </Text>
-            </Flex>
-          </ModalBody>
-          <ModalFooter>
-            <Button onClick={() => setViewerOpen(false)}>Cerrar</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <AlertDialog
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        isCentered
+        leastDestructiveRef={cancelRefAdd}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent maxW="xl">
+          <AlertDialogHeader>{viewerTitle}</AlertDialogHeader>
+          <AlertDialogCloseButton color="black" />
 
+          <AlertDialogBody>
+            {viewerImgs.length > 0 ? (
+              <Box
+                position="relative"
+                h="65vh"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                borderRadius="md"
+              >
+                <Image
+                  src={viewerImgs[viewerIdx].url}
+                  alt={viewerImgs[viewerIdx].altText ?? ''}
+                  maxH="100%"
+                  maxW="100%"
+                  objectFit="contain"
+                  borderRadius="md"
+                />
+
+                <IconButton
+                  aria-label="Anterior"
+                  icon={<ArrowLeft size={18} />}
+                  position="absolute"
+                  left="2"
+                  top="50%"
+                  transform="translateY(-50%)"
+                  borderRadius="full"
+                  variant="solid"
+                  colorScheme="blackAlpha"
+                  onClick={prevImg}
+                  isDisabled={viewerImgs.length <= 1}
+                />
+
+                <IconButton
+                  aria-label="Siguiente"
+                  icon={<ArrowRight size={18} />}
+                  position="absolute"
+                  right="2"
+                  top="50%"
+                  transform="translateY(-50%)"
+                  borderRadius="full"
+                  variant="solid"
+                  colorScheme="blackAlpha"
+                  onClick={nextImg}
+                  isDisabled={viewerImgs.length <= 1}
+                />
+
+                <HStack
+                  position="absolute"
+                  bottom="3"
+                  left="0"
+                  right="0"
+                  justify="center"
+                  spacing={3}
+                >
+                  {(() => {
+                    const meta = viewerImgs[viewerIdx]
+                      ? badgePropsForSet(viewerImgs[viewerIdx].set)
+                      : null;
+                    return meta ? (
+                      <Badge colorScheme={meta.colorScheme} variant="solid">
+                        {meta.label}
+                      </Badge>
+                    ) : null;
+                  })()}
+                  <Text fontSize="sm" color="gray.600">
+                    {viewerImgs[viewerIdx]?.altText ?? 'Imagen'} · {viewerIdx + 1}/{viewerImgs.length}
+                  </Text>
+                </HStack>
+              </Box>
+            ) : (
+              <Text color="gray.500">Sin imágenes</Text>
+            )}
+          </AlertDialogBody>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </Box>
   );

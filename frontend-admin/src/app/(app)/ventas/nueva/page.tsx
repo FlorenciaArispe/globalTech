@@ -183,7 +183,7 @@ export default function NuevaVentaPage() {
   if (loading) {
     return (
       <Box bg="#f6f6f6" minH="100dvh">
-        <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
+        <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
           <Flex bg="white" borderRadius="md" borderWidth="1px" py={20} align="center" justify="center">
             <Spinner />
           </Flex>
@@ -216,7 +216,7 @@ export default function NuevaVentaPage() {
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
-      <Container maxW="container.lg" pt={10} px={{ base: 4, md: 6 }}>
+      <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
         <HStack mb={4}>
           <IconButton aria-label="Volver" icon={<ArrowLeft size={18} />} variant="ghost" onClick={() => router.back()} />
           <Text fontSize="30px" fontWeight={600}>Nueva venta</Text>
