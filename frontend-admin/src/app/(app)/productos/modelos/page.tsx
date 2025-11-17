@@ -278,8 +278,7 @@ export default function ModelosPage() {
         } catch (e: any) {
             toast({
                 status: 'error',
-                title: 'No se pudo eliminar',
-                description: e?.response?.data?.message ?? e?.message,
+                title: 'Este modelo tiene variantes cargadas, no se puede eliminar.'
             });
         } finally {
             setDeleting(false);

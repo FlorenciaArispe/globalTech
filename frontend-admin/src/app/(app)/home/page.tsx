@@ -1,14 +1,62 @@
-"use client"
+"use client";
 
 import StickyNotesBoard from '@/components/StickyNotesBoard';
 import { InfoOutlineIcon } from '@chakra-ui/icons';
-import { Box, Container, HStack, Icon, SimpleGrid, Stat, StatHelpText, StatLabel, StatNumber, Tab, TabList, Tabs, Text, Tooltip } from '@chakra-ui/react'
-import React, { useMemo, useState } from 'react'
+import {
+  Box,
+  Container,
+  HStack,
+  Icon,
+  SimpleGrid,
+  Stat,
+  StatHelpText,
+  StatLabel,
+  StatNumber,
+  Tab,
+  TabList,
+  Tabs,
+  Text,
+  Tooltip,
+  Spinner,
+  Table,
+  Thead,
+  Tr,
+  Th,
+  Tbody,
+  Td,
+} from '@chakra-ui/react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { api } from '@/lib/axios';
 
 type RangeKey = 'hoy' | 'ayer' | 'semana' | 'mes';
+type ProductosKey = 'sin_stock' | 'bajo_stock' | 'mas_vendido';
+
+type VentasStats = {
+  total: number;
+  iphones: number;
+  otros: number;
+};
+
+type ProductoStats = {
+  modelosSinStockCount: number;
+  modelosStockBajoCount: number;
+  modelosSinStock: { id: number; nombre: string; stockTotal: number }[];
+  modelosStockBajo: { id: number; nombre: string; stockTotal: number }[];
+  topModelosMasVendidos: { modeloId: number; nombre: string; unidadesVendidas: number }[];
+};
 
 export default function Home() {
   const [range, setRange] = useState<RangeKey>('hoy');
+  const [rangeProductos, setRangeProductos] = useState<ProductosKey>('sin_stock');
+
+  // --- Ventas ---
+  const [stats, setStats] = useState<VentasStats>({ total: 0, iphones: 0, otros: 0 });
+  const [loadingVentas, setLoadingVentas] = useState(false);
+
+  // --- Productos ---
+  const [productoStats, setProductoStats] = useState<ProductoStats | null>(null);
+  const [loadingProductos, setLoadingProductos] = useState(false);
+
   const tabs: { label: string; key: RangeKey }[] = [
     { label: 'Hoy', key: 'hoy' },
     { label: 'Ayer', key: 'ayer' },
@@ -16,15 +64,57 @@ export default function Home() {
     { label: 'Último mes', key: 'mes' },
   ];
 
-  const tabIndex = tabs.findIndex(t => t.key === range);
+  const tabsProductos: { label: string; key: ProductosKey }[] = [
+    { label: 'Modelos sin stock', key: 'sin_stock' },
+    { label: 'Modelos con stock bajo', key: 'bajo_stock' },
+    { label: 'Top 5 más vendidos', key: 'mas_vendido' },
+  ];
 
-  const stats = useMemo(() => {
-    return {
-      total: 0,
-      iphone: 0,
-      otros: 0,
+  const tabIndex = tabs.findIndex(t => t.key === range);
+  const tabProductosIndex = tabsProductos.findIndex(t => t.key === rangeProductos);
+
+  // 🔹 Stats de VENTAS
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoadingVentas(true);
+        const res = await api.get<VentasStats>('/api/ventas/stats', {
+          params: { range },
+        });
+
+        console.log('respuesta estadisticas ventas', res);
+        setStats(res.data);
+      } catch (e) {
+        console.error('Error cargando stats ventas', e);
+        setStats({ total: 0, iphones: 0, otros: 0 });
+      } finally {
+        setLoadingVentas(false);
+      }
     };
+
+    fetchStats();
   }, [range]);
+
+// 🔹 Stats de PRODUCTOS
+useEffect(() => {
+  const fetchProductoStats = async () => {
+    try {
+      setLoadingProductos(true);
+      const res = await api.get<ProductoStats>('/api/productos/stats');
+      console.log('respuesta estadisticas productos', res);
+      setProductoStats(res.data);
+    } catch (e) {
+      console.error('Error cargando stats productos', e);
+      setProductoStats(null);
+    } finally {
+      setLoadingProductos(false);
+    }
+  };
+
+  fetchProductoStats();
+// 👇 importante: sin [range]
+}, []);
+
 
   const rangeLabel = useMemo(() => {
     switch (range) {
@@ -37,16 +127,173 @@ export default function Home() {
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
-    <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
+      <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
         <Text fontSize="30px" fontWeight={600} mb={4}>Inicio</Text>
 
+           {/* ==================== PRODUCTOS ==================== */}
+        <Text fontSize="20px" fontWeight={600} mt={4}>Productos</Text>
+
+        <Tabs
+          index={tabProductosIndex}
+          onChange={(i) => setRangeProductos(tabsProductos[i].key)}
+          variant="line"
+          colorScheme="blue"
+        >
+          <TabList>
+            {tabsProductos.map(t => (
+              <Tab key={t.key} whiteSpace="nowrap">{t.label}</Tab>
+            ))}
+          </TabList>
+        </Tabs>
+
+        {/* ⭐ Contenido según el tab de productos */}
+        <Box mt={4}>
+          {rangeProductos === 'sin_stock' && (
+            <>
+              {/* <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
+                <MetricCard
+                  title="Modelos sin stock"
+                  value={productoStats?.modelosSinStockCount ?? 0}
+                  loading={loadingProductos}
+                  help="Cantidad de modelos que actualmente no tienen unidades en stock."
+                  suffix=" actualmente"
+                />
+              </SimpleGrid> */}
+
+              <Box bg="white" borderWidth="1px" borderRadius="md" p={4} overflowX="auto">
+                {/* <Text fontSize="16px" fontWeight={600} mb={2}>
+                  Modelos sin stock {loadingProductos && '(cargando...)'}
+                </Text> */}
+
+                {loadingProductos ? (
+                  <HStack spacing={2}>
+                    <Spinner size="sm" />
+                    <Text fontSize="sm" color="gray.600">Cargando modelos...</Text>
+                  </HStack>
+                ) : !productoStats || productoStats.modelosSinStock.length === 0 ? (
+                  <Text fontSize="sm" color="gray.500">
+                    No hay modelos sin stock.
+                  </Text>
+                ) : (
+                  <Table size="sm">
+                    <Thead>
+                      <Tr>
+                        <Th>Modelo</Th>
+                        <Th isNumeric>Stock</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {productoStats.modelosSinStock.map(m => (
+                        <Tr key={m.id}>
+                          <Td>{m.nombre}</Td>
+                          <Td isNumeric>{m.stockTotal}</Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                )}
+              </Box>
+            </>
+          )}
+
+          {rangeProductos === 'bajo_stock' && (
+            <>
+              {/* <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
+                <MetricCard
+                  title="Modelos con stock bajo (≤ 2)"
+                  value={productoStats?.modelosStockBajoCount ?? 0}
+                  loading={loadingProductos}
+                  help="Modelos que tienen muy pocas unidades disponibles (1 o 2)."
+                  suffix=" actualmente"
+                />
+              </SimpleGrid> */}
+
+              <Box bg="white" borderWidth="1px" borderRadius="md" p={4} overflowX="auto">
+                {/* <Text fontSize="16px" fontWeight={600} mb={2}>
+                  Modelos con stock bajo {loadingProductos && '(cargando...)'}
+                </Text> */}
+
+                {loadingProductos ? (
+                  <HStack spacing={2}>
+                    <Spinner size="sm" />
+                    <Text fontSize="sm" color="gray.600">Cargando modelos...</Text>
+                  </HStack>
+                ) : !productoStats || productoStats.modelosStockBajo.length === 0 ? (
+                  <Text fontSize="sm" color="gray.500">
+                    No hay modelos con stock bajo.
+                  </Text>
+                ) : (
+                  <Table size="sm">
+                    <Thead>
+                      <Tr>
+                        <Th>Modelo</Th>
+                        <Th isNumeric>Stock</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {productoStats.modelosStockBajo.map(m => (
+                        <Tr key={m.id}>
+                          <Td>{m.nombre}</Td>
+                          <Td isNumeric>{m.stockTotal}</Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                )}
+              </Box>
+            </>
+          )}
+
+          {rangeProductos === 'mas_vendido' && (
+            <Box mt={2}>
+              {/* <Text fontSize="16px" fontWeight={600} mb={2}>
+                Top 5 modelos más vendidos {rangeLabel}
+              </Text> */}
+
+              {loadingProductos ? (
+                <HStack spacing={2}>
+                  <Spinner size="sm" />
+                  <Text fontSize="sm" color="gray.600">Cargando productos...</Text>
+                </HStack>
+              ) : !productoStats || productoStats.topModelosMasVendidos.length === 0 ? (
+                <Text fontSize="sm" color="gray.500">
+                  No hay ventas de modelos en este período.
+                </Text>
+              ) : (
+                <Box bg="white" borderWidth="1px" borderRadius="md" p={4} overflowX="auto">
+                  <Table size="sm">
+                    <Thead>
+                      <Tr>
+                        <Th>#</Th>
+                        <Th>Modelo</Th>
+                        <Th isNumeric>Unidades vendidas</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {productoStats.topModelosMasVendidos.map((m, idx) => (
+                        <Tr key={m.modeloId}>
+                          <Td>{idx + 1}</Td>
+                          <Td>{m.nombre}</Td>
+                          <Td isNumeric>{m.unidadesVendidas}</Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
+
+        {/* ==================== VENTAS ==================== */}
+        <Text fontSize="20px" fontWeight={600} mt={10}>Ventas</Text>
         <Tabs
           index={tabIndex}
           onChange={(i) => setRange(tabs[i].key)}
           variant="line"
           colorScheme="blue"
         >
-          <TabList overflowX="auto">
+          <TabList>
             {tabs.map(t => (
               <Tab key={t.key} whiteSpace="nowrap">{t.label}</Tab>
             ))}
@@ -57,27 +304,34 @@ export default function Home() {
           <MetricCard
             title="Ventas totales"
             value={stats.total}
-            help="Cantidad total de ventas registradas en el período seleccionado."
+            loading={loadingVentas}
+            help="Cantidad total de equipos vendidos en el período seleccionado."
             suffix={` ${rangeLabel}`}
           />
           <MetricCard
             title="Ventas iPhone"
-            value={stats.iphone}
-            help="Ventas correspondientes a la categoría iPhone en el período."
+            value={stats.iphones}
+            loading={loadingVentas}
+            help="Equipos iPhone vendidos (usados y sellados) en el período."
             suffix={` ${rangeLabel}`}
           />
           <MetricCard
             title="Otros equipos"
             value={stats.otros}
-            help="Ventas de las demás categorías (no iPhone) en el período."
+            loading={loadingVentas}
+            help="Equipos de las demás categorías vendidos en el período."
             suffix={` ${rangeLabel}`}
           />
         </SimpleGrid>
 
-        <StickyNotesBoard />
+     
+        
+        <Box mt={8}>
+          <StickyNotesBoard />
+        </Box>
       </Container>
     </Box>
-  )
+  );
 }
 
 function MetricCard({
@@ -85,11 +339,13 @@ function MetricCard({
   value,
   help,
   suffix,
+  loading,
 }: {
   title: string;
   value: number | string;
   help?: string;
   suffix?: string;
+  loading?: boolean;
 }) {
   return (
     <Box bg="white" borderWidth="1px" borderRadius="md" p={4}>
@@ -106,7 +362,7 @@ function MetricCard({
         </HStack>
 
         <StatNumber lineHeight="1" fontSize="2xl">
-          {value}
+          {loading ? <Spinner size="sm" /> : value}
         </StatNumber>
 
         {suffix && (

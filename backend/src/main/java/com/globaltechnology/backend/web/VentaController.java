@@ -3,6 +3,8 @@ package com.globaltechnology.backend.web;
 import com.globaltechnology.backend.service.VentaService;
 import com.globaltechnology.backend.web.dto.VentaCreateDTO;
 import com.globaltechnology.backend.web.dto.VentaDTO;
+import com.globaltechnology.backend.web.dto.VentasStatsDTO;
+
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -24,6 +26,11 @@ public class VentaController {
 
     @GetMapping
   public List<VentaDTO> listar(){
-    return service.listar(); // implementá en el service
+    return service.listar(); 
+  }
+
+   @GetMapping("/stats")
+  public VentasStatsDTO stats(@RequestParam String range) {
+    return service.stats(range);
   }
 }

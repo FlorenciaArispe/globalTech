@@ -11,7 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.domain.Sort;
@@ -192,6 +195,79 @@ public List<VentaDTO> listar() {
       .toList();
 }
 
+ @Transactional(readOnly = true)
+  public VentasStatsDTO stats(String rangeKey) {
+    ZoneId zone = ZoneId.of("America/Argentina/Buenos_Aires"); // o la que uses
+    LocalDate hoy = LocalDate.now(zone);
+
+    LocalDate desdeDate;
+    LocalDate hastaDate;
+
+    switch (rangeKey) {
+      case "hoy" -> {
+        desdeDate = hoy;
+        hastaDate = hoy;
+      }
+      case "ayer" -> {
+        desdeDate = hoy.minusDays(1);
+        hastaDate = hoy.minusDays(1);
+      }
+      case "semana" -> {
+        // semana actual: lunes a hoy
+        desdeDate = hoy.with(DayOfWeek.MONDAY);
+        hastaDate = hoy;
+      }
+      case "mes" -> {
+        // último mes (30 días para simplificar)
+        desdeDate = hoy.minusDays(30);
+        hastaDate = hoy;
+      }
+      default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "range inválido");
+    }
+
+    // límites en Instant
+    Instant desde = desdeDate.atStartOfDay(zone).toInstant();
+    Instant hasta = hastaDate.plusDays(1).atStartOfDay(zone).toInstant(); // exclusivo
+
+    return calcularStatsEntre(desde, hasta);
+  }
+
+  private VentasStatsDTO calcularStatsEntre(Instant desde, Instant hasta) {
+    // Traemos los items en ese rango
+    var items = itemRepo.findByFechaVentaEntre(desde, hasta);
+
+    long total = 0;
+    long iphones = 0;
+    long otros = 0;
+
+    for (var it : items) {
+      int cantidad = it.getCantidad() != null ? it.getCantidad() : 1;
+
+      // ⚠️ ADAPTAR ESTO A TU MODELO REAL
+      var modelo = it.getVariante().getModelo();
+      var categoria = modelo.getCategoria().getNombre(); // o getSlug()
+      var marca = modelo.getMarca().getNombre();
+
+      boolean esIphone = false;
+
+      // ejemplo 1: categoría específica
+      // esIphone = "iPhone".equalsIgnoreCase(categoria);
+
+      // ejemplo 2: celulares Apple
+      if ("Apple".equalsIgnoreCase(marca) && categoria.toLowerCase().contains("celular")) {
+        esIphone = true;
+      }
+
+      total += cantidad;
+      if (esIphone) {
+        iphones += cantidad;
+      } else {
+        otros += cantidad;
+      }
+    }
+
+    return new VentasStatsDTO(total, iphones, otros);
+  }
  
  
 }
