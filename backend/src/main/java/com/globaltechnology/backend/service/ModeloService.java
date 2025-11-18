@@ -3,16 +3,14 @@ package com.globaltechnology.backend.service;
 import com.globaltechnology.backend.domain.*;
 import com.globaltechnology.backend.repository.*;
 import com.globaltechnology.backend.web.dto.*;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.math.BigDecimal;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -94,7 +92,6 @@ public class ModeloService {
     return toDTO(repo.save(m));
   }
 
-  // com/globaltechnology/backend/service/ModeloService.java
   public ModeloDTO rename(Long id, ModeloRenameDTO dto) {
     var m = repo.findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Modelo no encontrado"));
@@ -123,21 +120,20 @@ public class ModeloService {
     repo.deleteById(id);
   }
 
- public List<ModeloTablaDTO> tablaProductos(Long categoriaId, Long marcaId) {
+  public List<ModeloTablaDTO> tablaProductos(Long categoriaId, Long marcaId) {
     try {
-      // 1) filtrar modelos (igual a tu código)
       List<Modelo> modelos = (categoriaId != null && marcaId != null)
           ? repo.findAllByCategoria_IdAndMarca_Id(categoriaId, marcaId)
           : (categoriaId != null) ? repo.findAllByCategoria_Id(categoriaId)
-          : (marcaId != null) ? repo.findAllByMarca_Id(marcaId)
-          : repo.findAll();
+              : (marcaId != null) ? repo.findAllByMarca_Id(marcaId)
+                  : repo.findAll();
 
-      if (modelos.isEmpty()) return List.of();
+      if (modelos.isEmpty())
+        return List.of();
       modelos.sort(Comparator.comparing(Modelo::getNombre, String.CASE_INSENSITIVE_ORDER));
 
       var modeloIds = modelos.stream().map(Modelo::getId).toList();
 
-      // 2) variantes
       var variantes = varianteRepo.findAllByModelo_IdIn(modeloIds);
       if (variantes.isEmpty()) {
         var out = new ArrayList<ModeloTablaDTO>(modelos.size());
@@ -146,34 +142,27 @@ public class ModeloService {
               m.getId(), m.getNombre(),
               m.getCategoria().getId(), m.getCategoria().getNombre(),
               m.isTrackeaUnidad(),
-              List.of()
-          ));
+              List.of()));
         }
         return out;
       }
 
-      // 2b) Precargar imágenes y agrupar por varianteId y set (igual que Inventario)
       var varianteIds = variantes.stream().map(Variante::getId).toList();
       var todasImgs = varianteImagenRepo.findAllByVariante_IdIn(varianteIds);
 
-      Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet =
-          todasImgs.stream()
-              .collect(Collectors.groupingBy(
-                  vi -> vi.getVariante().getId(),
-                  Collectors.groupingBy(
-                      VarianteImagen::getSetTipo,
-                      Collectors.collectingAndThen(
-                          Collectors.toList(),
-                          list -> list.stream()
-                              .sorted(Comparator.comparingInt(VarianteImagen::getOrden))
-                              .map(VarianteImagenDTO::from)     // 👈 igual que Inventario
-                              .toList()
-                      )
-                  )
-              ));
+      Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet = todasImgs.stream()
+          .collect(Collectors.groupingBy(
+              vi -> vi.getVariante().getId(),
+              Collectors.groupingBy(
+                  VarianteImagen::getSetTipo,
+                  Collectors.collectingAndThen(
+                      Collectors.toList(),
+                      list -> list.stream()
+                          .sorted(Comparator.comparingInt(VarianteImagen::getOrden))
+                          .map(VarianteImagenDTO::from)
+                          .toList()))));
 
-      // 3) stock
-      var trackedIds   = variantes.stream().filter(v -> v.getModelo().isTrackeaUnidad()).map(Variante::getId).toList();
+      var trackedIds = variantes.stream().filter(v -> v.getModelo().isTrackeaUnidad()).map(Variante::getId).toList();
       var untrackedIds = variantes.stream().filter(v -> !v.getModelo().isTrackeaUnidad()).map(Variante::getId).toList();
 
       Map<Long, Long> stockNuevoMap = new HashMap<>();
@@ -196,7 +185,6 @@ public class ModeloService {
         }
       }
 
-      // 4) armar salida por modelo
       Map<Long, List<VarianteTablaDTO>> variantesPorModelo = new HashMap<>();
 
       for (var v : variantes) {
@@ -204,18 +192,17 @@ public class ModeloService {
 
         Long stockNuevos = trackea ? stockNuevoMap.getOrDefault(v.getId(), 0L) : null;
         Long stockUsados = trackea ? stockUsadoMap.getOrDefault(v.getId(), 0L) : null;
-        long stockTotal  = trackea
+        long stockTotal = trackea
             ? (stockNuevos + stockUsados)
             : stockMovMap.getOrDefault(v.getId(), 0L);
 
         String color = v.getColor() != null ? v.getColor().getNombre() : null;
-        String cap   = v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null;
+        String cap = v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null;
 
-        // 👇 IMÁGENES: igual que Inventario
         var porSet = imgsByVarAndSet.getOrDefault(v.getId(), Map.of());
         List<VarianteImagenDTO> imagenes = trackea
             ? concat(porSet.getOrDefault(ImagenSet.SELLADO, List.of()),
-                     porSet.getOrDefault(ImagenSet.USADO, List.of()))
+                porSet.getOrDefault(ImagenSet.USADO, List.of()))
             : porSet.getOrDefault(ImagenSet.CATALOGO, List.of());
 
         variantesPorModelo
@@ -227,18 +214,16 @@ public class ModeloService {
                 stockTotal,
                 stockNuevos,
                 stockUsados,
-                imagenes              // 👈 lista plana
-            ));
+                imagenes));
       }
 
-      // ordenar variantes
       var cmp = Comparator
-          .comparing((VarianteTablaDTO x) -> safeLower(x.colorNombre()), Comparator.nullsLast(Comparator.naturalOrder()))
+          .comparing((VarianteTablaDTO x) -> safeLower(x.colorNombre()),
+              Comparator.nullsLast(Comparator.naturalOrder()))
           .thenComparing(x -> safeLower(x.capacidadEtiqueta()), Comparator.nullsLast(Comparator.naturalOrder()))
           .thenComparing(VarianteTablaDTO::id);
       variantesPorModelo.values().forEach(list -> list.sort(cmp));
 
-      // 5) salida final
       var out = new ArrayList<ModeloTablaDTO>(modelos.size());
       for (var m : modelos) {
         out.add(new ModeloTablaDTO(
@@ -247,8 +232,7 @@ public class ModeloService {
             m.getCategoria().getId(),
             m.getCategoria().getNombre(),
             m.isTrackeaUnidad(),
-            variantesPorModelo.getOrDefault(m.getId(), List.of())
-        ));
+            variantesPorModelo.getOrDefault(m.getId(), List.of())));
       }
       return out;
 
@@ -259,8 +243,10 @@ public class ModeloService {
   }
 
   private static <T> List<T> concat(List<T> a, List<T> b) {
-    if (a.isEmpty()) return b;
-    if (b.isEmpty()) return a;
+    if (a.isEmpty())
+      return b;
+    if (b.isEmpty())
+      return a;
     var out = new ArrayList<T>(a.size() + b.size());
     out.addAll(a);
     out.addAll(b);
@@ -268,6 +254,337 @@ public class ModeloService {
   }
 
   private static String safeLower(String s) {
-    return s == null ? null : s.toLowerCase();
+    return s == null ? "" : s.toLowerCase();
   }
+
+  @Transactional(readOnly = true)
+  public List<CatalogoItemDTO> listarCatalogo(Long categoriaId, Long marcaId) {
+    try {
+
+      List<Modelo> modelos = (categoriaId != null && marcaId != null)
+          ? repo.findAllByCategoria_IdAndMarca_Id(categoriaId, marcaId)
+          : (categoriaId != null) ? repo.findAllByCategoria_Id(categoriaId)
+              : (marcaId != null) ? repo.findAllByMarca_Id(marcaId)
+                  : repo.findAll();
+
+      if (modelos.isEmpty()) {
+        return List.of();
+      }
+
+      modelos.sort(Comparator.comparing(Modelo::getNombre, String.CASE_INSENSITIVE_ORDER));
+      var modeloIds = modelos.stream().map(Modelo::getId).toList();
+
+      var variantes = varianteRepo.findAllByModelo_IdIn(modeloIds);
+
+      Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet = Map.of();
+      if (!variantes.isEmpty()) {
+        var varianteIds = variantes.stream().map(Variante::getId).toList();
+        var todasImgs = varianteImagenRepo.findAllByVariante_IdIn(varianteIds);
+
+        imgsByVarAndSet = todasImgs.stream()
+            .collect(Collectors.groupingBy(
+                vi -> vi.getVariante().getId(),
+                Collectors.groupingBy(
+                    VarianteImagen::getSetTipo,
+                    Collectors.collectingAndThen(
+                        Collectors.toList(),
+                        list -> list.stream()
+                            .sorted(Comparator.comparingInt(VarianteImagen::getOrden))
+                            .map(VarianteImagenDTO::from)
+                            .toList()))));
+      }
+
+      var trackedVariantes = variantes.stream().filter(v -> v.getModelo().isTrackeaUnidad()).toList();
+      var untrackedVariantes = variantes.stream().filter(v -> !v.getModelo().isTrackeaUnidad()).toList();
+
+      var out = new ArrayList<CatalogoItemDTO>();
+
+      Map<Long, SelladoAgg> selladoPorModelo = new HashMap<>();
+
+      if (!trackedVariantes.isEmpty()) {
+        var trackedIds = trackedVariantes.stream().map(Variante::getId).toList();
+        var unidades = unidadRepo.findAllByVariante_IdIn(trackedIds);
+
+        for (var u : unidades) {
+          var v = u.getVariante();
+          var m = v.getModelo();
+          var categoria = m.getCategoria();
+          var marca = m.getMarca();
+
+          BigDecimal precioBase = v.getPrecioBase();
+          BigDecimal override = u.getPrecioOverride();
+          BigDecimal efectivo = (override != null ? override : precioBase);
+
+          ImagenSet set = (u.getEstadoProducto() == EstadoComercial.USADO)
+              ? ImagenSet.USADO
+              : ImagenSet.SELLADO;
+
+          var porSet = imgsByVarAndSet.getOrDefault(v.getId(), Map.of());
+          var imagenes = porSet.getOrDefault(set, List.of());
+
+          if (u.getEstadoProducto() == EstadoComercial.USADO) {
+            boolean enStock = (u.getEstadoStock() == EstadoStock.EN_STOCK);
+            if (!enStock)
+              continue;
+
+            out.add(new CatalogoItemDTO(
+                u.getId(),
+                m.getId(),
+                m.getNombre(),
+                categoria.getId(),
+                categoria.getNombre(),
+                marca.getId(),
+                marca.getNombre(),
+                TipoCatalogoItem.TRACKED_USADO_UNIDAD,
+                v.getColor() != null ? v.getColor().getNombre() : null,
+                v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null,
+                u.getBateriaCondicionPct(),
+                efectivo,
+                true,
+                1L,
+                List.of(),
+                List.of(),
+                imagenes));
+
+          } else {
+            var agg = selladoPorModelo.computeIfAbsent(m.getId(), id -> {
+              var a = new SelladoAgg();
+              a.modelo = m;
+              return a;
+            });
+
+            if (u.getEstadoStock() == EstadoStock.EN_STOCK) {
+              agg.enStock = true;
+              agg.stockTotal++;
+
+              String color = (v.getColor() != null) ? v.getColor().getNombre() : null;
+              String cap = (v.getCapacidad() != null) ? v.getCapacidad().getEtiqueta() : null;
+
+              if (color != null)
+                agg.colores.add(color);
+
+              String key = (color != null ? color : "_") + "|" + (cap != null ? cap : "_");
+
+              var combo = agg.variantes.computeIfAbsent(key, k -> {
+                var c = new VarianteOpcionCatalogoAgg();
+                c.color = color;
+                c.capacidad = cap;
+                return c;
+              });
+
+              combo.stock++;
+            }
+
+            if (efectivo != null) {
+              if (agg.precioMin == null || efectivo.compareTo(agg.precioMin) < 0) {
+                agg.precioMin = efectivo;
+              }
+            }
+
+            if (agg.imagenes.isEmpty() && !imagenes.isEmpty()) {
+              agg.imagenes = new ArrayList<>(imagenes);
+            }
+          }
+        }
+        for (var agg : selladoPorModelo.values()) {
+          if (!agg.enStock || agg.stockTotal <= 0)
+            continue;
+
+          var m = agg.modelo;
+          var categoria = m.getCategoria();
+          var marca = m.getMarca();
+
+          var variantesDTO = agg.variantes.values().stream()
+              .map(c -> new VarianteOpcionCatalogoDTO(c.color, c.capacidad, c.stock))
+              .toList();
+
+          out.add(new CatalogoItemDTO(
+              m.getId(),
+              m.getId(),
+              m.getNombre(),
+              categoria.getId(),
+              categoria.getNombre(),
+              marca.getId(),
+              marca.getNombre(),
+              TipoCatalogoItem.TRACKED_SELLADO_AGREGADO,
+              null,
+              null,
+              null,
+              agg.precioMin,
+              true,
+              agg.stockTotal,
+              new ArrayList<>(agg.colores),
+              variantesDTO,
+              agg.imagenes != null ? agg.imagenes : List.of()));
+        }
+      }
+
+      if (!untrackedVariantes.isEmpty()) {
+        var untrackedIds = untrackedVariantes.stream().map(Variante::getId).toList();
+
+        Map<Long, Long> stockPorVariante = new HashMap<>();
+        for (var row : movRepo.stockNoTrackeadoPorVariante(untrackedIds)) {
+          Long varianteId = row.getVarianteId();
+          Integer stock = row.getStock();
+          stockPorVariante.put(varianteId, stock == null ? 0L : stock.longValue());
+        }
+
+        Map<Long, NoTrackAgg> noTrackPorModelo = new HashMap<>();
+
+        for (var v : untrackedVariantes) {
+          var m = v.getModelo();
+
+          long stock = stockPorVariante.getOrDefault(v.getId(), 0L);
+
+          var agg = noTrackPorModelo.computeIfAbsent(m.getId(), id -> {
+            var a = new NoTrackAgg();
+            a.modelo = m;
+            return a;
+          });
+
+          if (stock > 0) {
+            agg.enStock = true;
+            agg.stockTotal += stock;
+
+            String color = v.getColor() != null ? v.getColor().getNombre() : null;
+            String cap = v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null;
+
+            if (color != null)
+              agg.colores.add(color);
+
+            String key = (color != null ? color : "_") + "|" + (cap != null ? cap : "_");
+
+            var combo = agg.variantes.computeIfAbsent(key, k -> {
+              var c = new VarianteOpcionCatalogoAgg();
+              c.color = color;
+              c.capacidad = cap;
+              return c;
+            });
+
+            combo.stock += stock;
+          }
+
+          var precioBase = v.getPrecioBase();
+          if (precioBase != null) {
+            if (agg.precioMin == null || precioBase.compareTo(agg.precioMin) < 0) {
+              agg.precioMin = precioBase;
+            }
+          }
+
+          var porSet = imgsByVarAndSet.getOrDefault(v.getId(), Map.of());
+          var imgsCat = porSet.getOrDefault(ImagenSet.CATALOGO, List.of());
+          if (agg.imagenes.isEmpty() && !imgsCat.isEmpty()) {
+            agg.imagenes = new ArrayList<>(imgsCat);
+          }
+        }
+
+        for (var agg : noTrackPorModelo.values()) {
+          if (!agg.enStock || agg.stockTotal <= 0)
+            continue;
+
+          var m = agg.modelo;
+          var categoria = m.getCategoria();
+          var marca = m.getMarca();
+
+          var variantesDTO = agg.variantes.values().stream()
+              .map(c -> new VarianteOpcionCatalogoDTO(c.color, c.capacidad, c.stock))
+              .toList();
+
+          out.add(new CatalogoItemDTO(
+              m.getId(),
+              m.getId(),
+              m.getNombre(),
+              categoria.getId(),
+              categoria.getNombre(),
+              marca.getId(),
+              marca.getNombre(),
+              TipoCatalogoItem.NO_TRACK_AGREGADO,
+              null,
+              null,
+              null,
+              agg.precioMin,
+              true,
+              agg.stockTotal,
+              new ArrayList<>(agg.colores),
+              variantesDTO,
+              agg.imagenes != null ? agg.imagenes : List.of()));
+        }
+      }
+
+      Set<Long> modelosConStock = out.stream()
+          .map(CatalogoItemDTO::modeloId)
+          .collect(Collectors.toSet());
+
+      for (var m : modelos) {
+        if (!modelosConStock.contains(m.getId())) {
+          var categoria = m.getCategoria();
+          var marca = m.getMarca();
+
+          var tipo = m.isTrackeaUnidad()
+              ? TipoCatalogoItem.TRACKED_SELLADO_AGREGADO
+              : TipoCatalogoItem.NO_TRACK_AGREGADO;
+
+          out.add(new CatalogoItemDTO(
+              m.getId(),
+              m.getId(),
+              m.getNombre(),
+              categoria.getId(),
+              categoria.getNombre(),
+              marca.getId(),
+              marca.getNombre(),
+              tipo,
+              null,
+              null,
+              null,
+              null,
+              false,
+              0L,
+              List.of(),
+              List.of(),
+              List.of()));
+        }
+      }
+
+      Comparator<CatalogoItemDTO> comparator = Comparator
+          .comparing((CatalogoItemDTO dto) -> safeLower(dto.modeloNombre()))
+          .thenComparing(dto -> dto.tipo().name())
+          .thenComparing(dto -> safeLower(dto.color()))
+          .thenComparing(dto -> dto.itemId() == null ? 0L : dto.itemId());
+
+      out.sort(comparator);
+
+      return out;
+
+    } catch (Exception ex) {
+      log.error("Fallo en listarCatalogo(categoriaId={}, marcaId={}): {}", categoriaId, marcaId, ex.toString(), ex);
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error armando el catálogo público");
+    }
+  }
+
+  private static class SelladoAgg {
+    Modelo modelo;
+    boolean enStock = false;
+    long stockTotal = 0L;
+    BigDecimal precioMin;
+    List<VarianteImagenDTO> imagenes = new ArrayList<>();
+    Set<String> colores = new LinkedHashSet<>();
+    Map<String, VarianteOpcionCatalogoAgg> variantes = new LinkedHashMap<>();
+  }
+
+  private static class NoTrackAgg {
+    Modelo modelo;
+    boolean enStock = false;
+    long stockTotal = 0L;
+    BigDecimal precioMin;
+    List<VarianteImagenDTO> imagenes = new ArrayList<>();
+    Set<String> colores = new LinkedHashSet<>();
+    Map<String, VarianteOpcionCatalogoAgg> variantes = new LinkedHashMap<>();
+  }
+
+  private static class VarianteOpcionCatalogoAgg {
+    String color;
+    String capacidad;
+    long stock = 0;
+  }
+
 }

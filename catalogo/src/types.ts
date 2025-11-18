@@ -31,3 +31,36 @@ export type ProductoCatalogoDTO = {
     imagenes: string[];
   }[];
 };
+
+export type CatalogoItemDTO = {
+  itemId: number;
+  modeloId: number;
+  modeloNombre: string;
+
+  categoriaId: number;
+  categoriaNombre: string;
+
+  marcaId: number;
+  marcaNombre: string;
+
+  tipo: 'TRACKED_SELLADO_AGREGADO' | 'TRACKED_USADO_UNIDAD' | 'NO_TRACK_AGREGADO';
+
+  color: string | null;
+  bateriaCondicionPct: number | null;
+
+  precio: number | null;
+
+  enStock: boolean;
+  stockTotal: number;
+
+  coloresEnStock: string[];
+  capacidadesEnStock: string[];
+
+  imagenes: {
+    id: number;
+    url: string;
+    altText: string | null;
+    set: 'CATALOGO' | 'SELLADO' | 'USADO';
+    orden: number;
+  }[];
+};

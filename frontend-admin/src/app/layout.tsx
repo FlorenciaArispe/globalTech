@@ -1,8 +1,7 @@
-// src/app/layout.tsx  (Server Component)
 import type { Metadata } from 'next';
-import AppProviders from './providers'; // tu ReduxProvider + ChakraProvider
+import AppProviders from './providers'; 
 
-export const metadata: Metadata = { title: 'App' };
+export const metadata: Metadata = { title: 'Global Technology' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

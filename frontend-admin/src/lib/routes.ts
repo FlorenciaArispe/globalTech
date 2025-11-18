@@ -1,4 +1,4 @@
-import { type LucideIcon, Home, Package , DollarSign, Boxes, ListChecks, Tags, Stamp, User, BoxIcon } from 'lucide-react';
+import { type LucideIcon, Home, Package , DollarSign, Boxes, ListChecks, Tags, Stamp, User, BoxIcon, Star } from 'lucide-react';
 
 export type AppRoute = {
   label: string;
@@ -15,6 +15,7 @@ export const appRoutes: AppRoute[] = [
     children: [
       { href: '/productos', label: 'Productos', icon: Boxes },
       { href: '/productos/inventario', label: 'Inventario', icon: ListChecks },
+       { href: '/productos/destacados', label: 'Destacados', icon: Star },
       { href: '/productos/modelos', label: 'Modelos', icon: BoxIcon },
       { href: '/productos/categorias', label: 'Categorías', icon: Tags },
       { href: '/productos/marcas', label: 'Marcas', icon: Stamp },

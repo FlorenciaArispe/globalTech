@@ -1,6 +1,7 @@
 package com.globaltechnology.backend.web;
 
 import com.globaltechnology.backend.service.ModeloService;
+import com.globaltechnology.backend.web.dto.CatalogoItemDTO;
 import com.globaltechnology.backend.web.dto.ModeloCreateDTO;
 import com.globaltechnology.backend.web.dto.ModeloDTO;
 import com.globaltechnology.backend.web.dto.ModeloRenameDTO;
@@ -16,32 +17,51 @@ import java.util.List;
 
 public class ModeloController {
   private final ModeloService service;
-  public ModeloController(ModeloService service){ this.service = service; }
+
+  public ModeloController(ModeloService service) {
+    this.service = service;
+  }
 
   @GetMapping
   public List<ModeloDTO> list(@RequestParam(required = false) Long categoriaId,
-                              @RequestParam(required = false) Long marcaId){
+      @RequestParam(required = false) Long marcaId) {
     return service.list(categoriaId, marcaId);
   }
 
-  @GetMapping("/{id}") public ModeloDTO get(@PathVariable Long id){ return service.get(id); }
+  @GetMapping("/{id}")
+  public ModeloDTO get(@PathVariable Long id) {
+    return service.get(id);
+  }
 
-   @GetMapping("/tabla")
+  @GetMapping("/tabla")
   public List<ModeloTablaDTO> tabla(@RequestParam(required = false) Long categoriaId,
-                                    @RequestParam(required = false) Long marcaId) {
+      @RequestParam(required = false) Long marcaId) {
     return service.tablaProductos(categoriaId, marcaId);
   }
 
-  @PostMapping @ResponseStatus(HttpStatus.CREATED)
-  public ModeloDTO create(@Valid @RequestBody ModeloCreateDTO dto){ return service.create(dto); }
+    @GetMapping("/catalogo")
+  public List<CatalogoItemDTO> catalogo(
+      @RequestParam(required = false) Long categoriaId,
+      @RequestParam(required = false) Long marcaId
+  ) {
+    return service.listarCatalogo(categoriaId, marcaId);
+  }
 
-   // ✅ editar solo el nombre
+
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public ModeloDTO create(@Valid @RequestBody ModeloCreateDTO dto) {
+    return service.create(dto);
+  }
+
   @PatchMapping("/{id}/nombre")
   public ModeloDTO rename(@PathVariable Long id, @Valid @RequestBody ModeloRenameDTO dto) {
     return service.rename(id, dto);
   }
 
-
-  @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void delete(@PathVariable Long id){ service.delete(id); }
+  @DeleteMapping("/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable Long id) {
+    service.delete(id);
+  }
 }

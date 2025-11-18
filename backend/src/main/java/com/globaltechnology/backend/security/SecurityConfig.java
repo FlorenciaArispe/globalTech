@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.*;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.*;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.*;
@@ -35,7 +34,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/catalogo/**").permitAll()
 
-                     .requestMatchers(HttpMethod.GET, "/api/productos/**").hasAnyRole("ADMIN", "OPERADOR")
+            .requestMatchers(HttpMethod.GET, "/api/productos/**").hasAnyRole("ADMIN", "OPERADOR")
             // NOTAS
             .requestMatchers(HttpMethod.GET, "/api/notes/**").hasAnyRole("ADMIN", "OPERADOR")
             .requestMatchers(HttpMethod.POST, "/api/notes/**").hasRole("ADMIN")
@@ -52,6 +51,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/api/clientes/**").hasAnyRole("ADMIN", "OPERADOR")
 
             // MODELOS
+            .requestMatchers(HttpMethod.GET, "/api/modelos/catalogo").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/modelos/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.POST, "/api/modelos/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.PUT, "/api/modelos/**").hasRole("ADMIN")
@@ -97,6 +97,12 @@ public class SecurityConfig {
             // VENTAS
             .requestMatchers(HttpMethod.GET, "/api/ventas/**").hasAnyRole("ADMIN", "OPERADOR")
             .requestMatchers(HttpMethod.POST, "/api/ventas/**").hasAnyRole("ADMIN", "OPERADOR")
+
+            .requestMatchers(HttpMethod.GET, "/api/catalogo/destacados").permitAll()
+
+            .requestMatchers(HttpMethod.POST, "/api/catalogo/destacados/**").hasRole("ADMIN")
+.requestMatchers(HttpMethod.DELETE, "/api/catalogo/destacados/**").hasRole("ADMIN")
+
 
             // catch-all (si algo no matcheó arriba)
             .requestMatchers("/api/**").hasRole("ADMIN")
