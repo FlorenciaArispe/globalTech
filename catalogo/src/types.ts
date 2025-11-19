@@ -1,4 +1,4 @@
-export type ID = string;
+export type ID = number | string;
 
 export interface Categoria {
   id: ID;
@@ -6,17 +6,42 @@ export interface Categoria {
   slug: string;
 }
 
-export interface Producto {
+export type TipoCatalogoItem =
+  | 'TRACKED_USADO_UNIDAD'
+  | 'TRACKED_SELLADO_AGREGADO'
+  | 'NO_TRACK_AGREGADO';
+
+  export type VarianteOpcionCatalogoDTO = {
+  color: string | null;
+  capacidad: string | null;
+  stock: number;
+};
+
+export interface ProductoDestacado {
   id: ID;
-  nombre: string;
-  precio: number;
-  imagen: string;
-  destacado?: boolean;
+  modeloId: ID;
+  modeloNombre: string;
   categoriaId: ID;
-  capacidad?: string;
-  color?: string;
-  modelo?: string;
+  categoriaNombre: string;
+  marcaID: ID;
+  marcaNombre: string;
+  tipo: TipoCatalogoItem;
+  color: string | null;
+  capacidad: string | null;
+  bateriaCondicionPct: number | null;
+  precio: number;
+  enStock: boolean;
+  stockTotal: number;
+  variantesEnStock:VarianteOpcionCatalogoDTO[];
+  imagenes: {
+    id: number;
+    url: string;
+    altText: string | null;
+    set: 'CATALOGO' | 'SELLADO' | 'USADO';
+    orden: number;
+  }[];
 }
+
 
 export type ProductoCatalogoDTO = {
   id: number;
@@ -32,35 +57,35 @@ export type ProductoCatalogoDTO = {
   }[];
 };
 
-export type CatalogoItemDTO = {
-  itemId: number;
-  modeloId: number;
-  modeloNombre: string;
+// export type CatalogoItemDTO = {
+//   itemId: number;
+//   modeloId: number;
+//   modeloNombre: string;
 
-  categoriaId: number;
-  categoriaNombre: string;
+//   categoriaId: number;
+//   categoriaNombre: string;
 
-  marcaId: number;
-  marcaNombre: string;
+//   marcaId: number;
+//   marcaNombre: string;
 
-  tipo: 'TRACKED_SELLADO_AGREGADO' | 'TRACKED_USADO_UNIDAD' | 'NO_TRACK_AGREGADO';
+//   tipo: 'TRACKED_SELLADO_AGREGADO' | 'TRACKED_USADO_UNIDAD' | 'NO_TRACK_AGREGADO';
 
-  color: string | null;
-  bateriaCondicionPct: number | null;
+//   color: string | null;
+//   bateriaCondicionPct: number | null;
 
-  precio: number | null;
+//   precio: number | null;
 
-  enStock: boolean;
-  stockTotal: number;
+//   enStock: boolean;
+//   stockTotal: number;
 
-  coloresEnStock: string[];
-  capacidadesEnStock: string[];
+//   coloresEnStock: string[];
+//   capacidadesEnStock: string[];
 
-  imagenes: {
-    id: number;
-    url: string;
-    altText: string | null;
-    set: 'CATALOGO' | 'SELLADO' | 'USADO';
-    orden: number;
-  }[];
-};
+//   imagenes: {
+//     id: number;
+//     url: string;
+//     altText: string | null;
+//     set: 'CATALOGO' | 'SELLADO' | 'USADO';
+//     orden: number;
+//   }[];
+// };

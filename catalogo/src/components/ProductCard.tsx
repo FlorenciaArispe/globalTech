@@ -1,27 +1,39 @@
-import { Box, Image, Text, Stack, Badge } from '@chakra-ui/react';
+import { Box, Image, Text, Stack, Flex } from '@chakra-ui/react';
 import { Link } from 'react-router-dom';
+import type { ProductoDestacado } from '../types';
 
-const ProductCard = ({ product }: any) => {
-  
+type Props = {
+  product: ProductoDestacado;
+};
 
-  const nombre =
-    product.categoria === 1 || product.categoria === 2
-      ? `${product.modelo || ''} ${product.capacidad || ''}`.trim()
-      : product.nombre;
+const ProductCard = ({ product }: Props) => {
+
+  console.log("PRODUCTO DESTACADO", product);
+
+  const nombre = `${product.modeloNombre} ${product.capacidad ? ` - ${product.capacidad}` : ''} ${product.color ?? ''} ${product.bateriaCondicionPct ? `${product.bateriaCondicionPct}%` : ''}`
+    .trim();
 
   const primeraFoto =
-    Array.isArray(product.fotos) && product.fotos.length > 0
-      ? product.fotos[0]
+    Array.isArray(product.imagenes) &&
+      product.imagenes.length > 0 &&
+      product.imagenes[0].url
+      ? product.imagenes[0].url
       : "/images/no-image.jpg";
 
-  // Precio en pesos (solo si no es categoría 3)
-  // const precioPesos =
-  //   product.categoria !== 3 && !loading && cotizacion
-  //     ? (product.minorista * cotizacion).toLocaleString('es-AR', {
-  //         style: 'currency',
-  //         currency: 'ARS',
-  //       })
-  //     : null;
+  const badge = (() => {
+    switch (product.tipo) {
+      case "TRACKED_SELLADO_AGREGADO":
+        return "NUEVO SELLADO";
+      case "TRACKED_USADO_UNIDAD":
+        return "USADO PREMIUM";
+      case "NO_TRACK_AGREGADO":
+        return "NUEVO";
+      default:
+        return "";
+    }
+  })();
+
+  const precioAnterior = product.precio + 35;
 
   return (
     <Link to={`/productos/${product.id}`}>
@@ -31,7 +43,6 @@ const ProductCard = ({ product }: any) => {
         overflow="hidden"
         bg="white"
         boxShadow="lg"
-
         cursor="pointer"
       >
         <Image
@@ -41,50 +52,36 @@ const ProductCard = ({ product }: any) => {
           height="220px"
           objectFit="cover"
         />
-        <Stack p={3} minH="125px" justify="space-between">
-          <Text fontSize="15px" fontWeight="semibold" noOfLines={2}>
-            {nombre}{" "}
-            {product.categoria === 1 && (
-              <Text  fontSize="15px" as="span"  color="gray.500">
-                - NUEVO SELLADO
-              </Text>
-            )}
-            {product.categoria === 2 && (
-              <Text as="span"  fontSize="15px" color="gray.500">
-                - USADO PREMIUM
-              </Text>
-            )}
-          </Text>
 
-          <Box>
-            {product.categoria === 3 ? (
-              <Text fontSize="20px" fontWeight="bold" color="green.600">
-                
-               
-                {product.minorista.toLocaleString('es-AR', {
-                  style: 'currency',
-                  currency: 'ARS',
-                })}{" "}
-              
-                 
-               
-              </Text>
-            ) : (
-              <>
-                <Text fontSize="19px" fontWeight="bold" color="green.600">
-                  USD ${product.minorista}
+        <Stack p={3} minH="120px" justify="space-around">
+          <Flex direction={"column"}>
+            <Text fontSize="16px" fontWeight="semibold" noOfLines={2}>
+              {nombre}{" "}
+            </Text>
+            <Text fontSize="15px" fontWeight="semibold">
+              {badge && (
+                <Text as="span" fontSize="15px" color="gray.500">
+                  {badge}
                 </Text>
-                {/* {!loading && precioPesos && (
-                  <Text fontSize="14px"color="gray.600">
-                    {precioPesos}
-                    <Badge ml={2} h="20px" colorScheme="blue" variant="subtle">
-                      ARG
-                    </Badge>
-                  </Text>
-                )} */}
-              </>
-            )}
-          </Box>
+              )}
+            </Text>
+          </Flex>
+
+
+          <Flex direction="row" align={"center"} gap={3}>
+            <Text
+              fontSize="14px"
+              color="gray.400"
+              textDecoration="line-through"
+            >
+              USD ${precioAnterior}
+            </Text>
+
+            <Text fontSize="19px" fontWeight="bold" color="green.600">
+              USD ${product.precio}
+            </Text>
+          </Flex>
+
         </Stack>
       </Box>
     </Link>

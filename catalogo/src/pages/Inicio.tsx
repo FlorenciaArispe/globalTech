@@ -6,7 +6,8 @@ import ProductCard from "../components/ProductCard";
 import { useNavigate } from "react-router-dom";
 import { Link as RouterLink } from "react-router-dom";
 import { getCategorias, getProductos, getProductosByCategoriaId, getProductosDestacados } from "../data";
-import { Categoria, Producto } from "../types";
+import { Categoria, ProductoDestacado } from "../types";
+import { fetchCatalogoDestacados } from "../lib/productos";
 
 const images = [
   '/images-inicio/usadoGarantia.png',
@@ -29,24 +30,37 @@ const MotionBox = motion(Box);
 function Inicio() {
   const navigate = useNavigate();
   const [cats, setCats] = useState<Categoria[]>([]);
-  const [items, setItems] = useState<Producto[]>([]);
-  const [productosDestacados, setProductosDestacados] = useState<Producto[]>([]);
+  const [productosDestacados, setProductosDestacados] = useState<ProductoDestacado[]>([]);
   const [catId, setCatId] = useState<string | null>(null);
 
-  useEffect(() => {
+    useEffect(() => {
     (async () => {
-      setCats(await getCategorias());
-      setItems(await getProductos());
-      setProductosDestacados(await getProductosDestacados());
+      try {
+  
+        const destacados = await fetchCatalogoDestacados();
+     console.log("VER PRODUCTOS DESTACADOS", destacados)
+  
+         setProductosDestacados(destacados);
+      } finally {
+        // setLoading(false);
+      }
     })();
   }, []);
 
   useEffect(() => {
     (async () => {
-      if (!catId) { setItems(await getProductos()); return; }
-      setItems(await getProductosByCategoriaId(catId));
+      setCats(await getCategorias());
+      // setItems(await getProductos());
+      // setProductosDestacados(await getProductosDestacados());
     })();
-  }, [catId]);
+  }, []);
+
+  // useEffect(() => {
+  //   (async () => {
+  //     if (!catId) { setItems(await getProductos()); return; }
+  //     setItems(await getProductosByCategoriaId(catId));
+  //   })();
+  // }, [catId]);
 
 
 

@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogBody,
   AlertDialogFooter,
+  Tooltip,
 } from '@chakra-ui/react';
 import { Star, ChevronDown, MoreVertical, Trash2 } from 'lucide-react';
 import { api } from '@/lib/axios';
@@ -70,7 +71,6 @@ type CatalogoItemDTO = {
   coloresEnStock: string[];
   variantesEnStock: VarianteOpcionCatalogoDTO[];
 
-  // imágenes las ignoramos en esta pantalla
 };
 
 type ProductoDestacadoCreateDTO = {
@@ -93,7 +93,6 @@ export default function DestacadosPage() {
   const [deleting, setDeleting] = useState(false);
   const cancelRefDelete = useRef<HTMLButtonElement | null>(null);
 
-  // helper clave única
   const makeKey = (i: CatalogoItemDTO) => `${i.tipo}#${i.itemId}`;
 
   useEffect(() => {
@@ -109,7 +108,7 @@ export default function DestacadosPage() {
 
 
         if (!alive) return;
-console.log("DESTACADOS FRONT", destacadosResp)
+        console.log("DESTACADOS FRONT", destacadosResp)
         setCatalogo(catalogoResp.data ?? []);
         setDestacados(destacadosResp.data ?? []);
       } catch (e: any) {
@@ -129,13 +128,11 @@ console.log("DESTACADOS FRONT", destacadosResp)
     };
   }, [toast]);
 
-  // opciones que aún NO están en destacados
   const opcionesDisponibles = useMemo(() => {
     const setDest = new Set(destacados.map(makeKey));
     return catalogo.filter((item) => !setDest.has(makeKey(item)));
   }, [catalogo, destacados]);
 
-  // filtrar por texto lo que aparece en el menú
   const opcionesFiltradas = useMemo(() => {
     const q = searchNuevo.trim().toLowerCase();
     if (!q) return opcionesDisponibles;
@@ -163,18 +160,6 @@ console.log("DESTACADOS FRONT", destacadosResp)
     return parts.join(' · ');
   }
 
-  function formatTipo(t: TipoCatalogoItem): string {
-    switch (t) {
-      case 'TRACKED_USADO_UNIDAD':
-        return 'Usado (unidad)';
-      case 'TRACKED_SELLADO_AGREGADO':
-        return 'Sellado (agregado)';
-      case 'NO_TRACK_AGREGADO':
-        return 'Sin tracking';
-      default:
-        return t;
-    }
-  }
 
   async function handleAddDestacado(item: CatalogoItemDTO) {
     try {
@@ -250,13 +235,11 @@ console.log("DESTACADOS FRONT", destacadosResp)
   return (
     <Box bg="#f6f6f6" minH="100dvh">
       <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
-        {/* Header */}
         <HStack justify="space-between" align="center" mb={2}>
           <Text fontSize="30px" fontWeight={600}>
             Productos destacados
           </Text>
 
-          {/* Selector "Nuevo destacado" */}
           <Menu>
             <MenuButton
               as={Button}
@@ -311,7 +294,6 @@ console.log("DESTACADOS FRONT", destacadosResp)
           {destacados.length} {destacados.length === 1 ? 'producto destacado' : 'productos destacados'}
         </Text>
 
-        {/* Tabla / estado de carga */}
         {loading ? (
           <Flex
             bg="white"
@@ -336,16 +318,7 @@ console.log("DESTACADOS FRONT", destacadosResp)
             align="center"
           >
             <Text color="gray.600">Todavía no hay productos destacados.</Text>
-            <Button
-              colorScheme="blue"
-              size="sm"
-              onClick={() => {
-                // simplemente abrir el menú con el mouse; desde acá no hay hook,
-                // pero sirve como CTA visual
-              }}
-            >
-              Agregar primer destacado
-            </Button>
+      
           </Flex>
         ) : (
           <Box
@@ -362,7 +335,6 @@ console.log("DESTACADOS FRONT", destacadosResp)
                   <Th>Producto</Th>
                   <Th>Detalle</Th>
                   <Th isNumeric>Precio</Th>
-                  <Th>Tipo</Th>
                   <Th>Stock</Th>
                   <Th textAlign="right">Acciones</Th>
                 </Tr>
@@ -385,10 +357,10 @@ console.log("DESTACADOS FRONT", destacadosResp)
                     <Td>
                       {item.tipo === 'TRACKED_USADO_UNIDAD' ? (
                         <Text fontSize="sm">
-                          {item.color && <>{item.color} · </>}
-                          {item.capacidad && <>{item.capacidad} · </>}
+                          {item.color && <>{item.color} </>}
+                          {item.capacidad && <>{item.capacidad} </>}
                           {item.bateriaCondicionPct != null && (
-                            <>{item.bateriaCondicionPct}% batería</>
+                            <>{item.bateriaCondicionPct}% </>
                           )}
                         </Text>
                       ) : item.variantesEnStock?.length ? (
@@ -398,10 +370,10 @@ console.log("DESTACADOS FRONT", destacadosResp)
                               const p: string[] = [];
                               if (v.color) p.push(v.color);
                               if (v.capacidad) p.push(v.capacidad);
-                              p.push(`x${v.stock}`);
+
                               return p.join(' ');
                             })
-                            .join(' · ')}
+                            .join(' - ')}
                         </Text>
                       ) : (
                         <Text fontSize="sm" color="gray.500">
@@ -419,38 +391,24 @@ console.log("DESTACADOS FRONT", destacadosResp)
                       )}
                     </Td>
                     <Td>
-                      <Tag size="sm" variant="subtle">
-                        {formatTipo(item.tipo)}
-                      </Tag>
-                    </Td>
-                    <Td>
                       {item.enStock ? (
                         <Badge colorScheme="green">
-                          En stock ({item.stockTotal})
+                          En stock: {item.stockTotal}
                         </Badge>
                       ) : (
                         <Badge colorScheme="red">Sin stock</Badge>
                       )}
                     </Td>
                     <Td textAlign="right">
-                      <Menu>
-                        <MenuButton
-                          as={IconButton}
-                          aria-label="Acciones"
-                          icon={<MoreVertical size={16} />}
-                          size="sm"
-                          variant="outline"
+                      <Tooltip label=" Quitar de destacados">
+                        <IconButton
+                          aria-label=" Quitar de destacados"
+                          icon={<Trash2 size={16} />}
+                          size="xs"
+                          variant="ghost"
+                          onClick={() => openDelete(item)}
                         />
-                        <MenuList>
-                          <MenuItem
-                            icon={<Trash2 size={14} />}
-                            color="red.500"
-                            onClick={() => openDelete(item)}
-                          >
-                            Quitar de destacados
-                          </MenuItem>
-                        </MenuList>
-                      </Menu>
+                      </Tooltip>
                     </Td>
                   </Tr>
                 ))}
@@ -460,7 +418,6 @@ console.log("DESTACADOS FRONT", destacadosResp)
         )}
       </Container>
 
-      {/* Alert para quitar destacado */}
       <AlertDialog
         isOpen={deleteItem != null}
         leastDestructiveRef={cancelRefDelete}

@@ -51,14 +51,14 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         </Box>
       </Box>
 
-      <Box flex="1" maxW="720px" mx="auto" display={{ base: 'none', sm: 'block' }}>
+      {/* <Box flex="1" maxW="720px" mx="auto" display={{ base: 'none', sm: 'block' }}>
         <InputGroup>
           <InputLeftElement pointerEvents="none">
             <Search size={16} />
           </InputLeftElement>
           <Input placeholder="Buscar productos, clientes, ventas..." />
         </InputGroup>
-      </Box>
+      </Box> */}
 
       <Box ml="auto">
         <Menu>

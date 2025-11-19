@@ -129,7 +129,7 @@ export default function Productos() {
   const [addVarColorId, setAddVarColorId] = useState<Id | ''>('');
   const [addVarCapacidadId, setAddVarCapacidadId] = useState<Id | ''>('');
   const [search, setSearch] = useState('');
-const [sortNewestFirst, setSortNewestFirst] = useState(true);
+  const [sortNewestFirst, setSortNewestFirst] = useState(true);
 
 
   const openEditImgs = (varianteId: number, trackea: boolean) => {
@@ -187,33 +187,33 @@ const [sortNewestFirst, setSortNewestFirst] = useState(true);
     return () => { alive = false; };
   }, [router, toast]);
 
-const processedRows = useMemo(() => {
-  let data = [...rows];
+  const processedRows = useMemo(() => {
+    let data = [...rows];
 
-  const q = search.trim().toLowerCase();
-  if (q) {
-    data = data.filter(m => {
-      const matchModelo = m.nombre.toLowerCase().includes(q);
-      const matchCategoria = m.categoriaNombre.toLowerCase().includes(q);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      data = data.filter(m => {
+        const matchModelo = m.nombre.toLowerCase().includes(q);
+        const matchCategoria = m.categoriaNombre.toLowerCase().includes(q);
 
-      const matchVariante = (m.variantes ?? []).some(v => {
-        const nombreVar = nombreVariante(v).toLowerCase();
-        return nombreVar.includes(q);
+        const matchVariante = (m.variantes ?? []).some(v => {
+          const nombreVar = nombreVariante(v).toLowerCase();
+          return nombreVar.includes(q);
+        });
+
+        return matchModelo || matchCategoria || matchVariante;
       });
+    }
 
-      return matchModelo || matchCategoria || matchVariante;
+    data.sort((a, b) => {
+      const ida = Number(a.id);
+      const idb = Number(b.id);
+      if (!Number.isFinite(ida) || !Number.isFinite(idb)) return 0;
+      return sortNewestFirst ? idb - ida : ida - idb;
     });
-  }
 
-  data.sort((a, b) => {
-    const ida = Number(a.id);
-    const idb = Number(b.id);
-    if (!Number.isFinite(ida) || !Number.isFinite(idb)) return 0;
-    return sortNewestFirst ? idb - ida : ida - idb;
-  });
-
-  return data;
-}, [rows, search, sortNewestFirst]);
+    return data;
+  }, [rows, search, sortNewestFirst]);
 
 
 
@@ -575,30 +575,30 @@ const processedRows = useMemo(() => {
         </HStack>
 
         {rows.length > 0 && (
-  <>
-    <HStack spacing={3} align="center" mb={2}>
-      <Input
-  placeholder="Buscar por modelo, variante o categoría"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        bg="white"
-        size="md"
-      />
-      <Button
-        size="md"
-        variant="outline"
-        leftIcon={<ArrowUpDown size={16} />}
-        onClick={() => setSortNewestFirst(s => !s)}
-      >
-        {sortNewestFirst ? 'Más antiguo' : 'Más nuevo'}
-      </Button>
-    </HStack>
+          <>
+            <HStack spacing={3} align="center" mb={2}>
+              <Input
+                placeholder="Buscar por modelo, variante o categoría"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                bg="white"
+                size="md"
+              />
+              <Button
+                size="md"
+                variant="outline"
+                leftIcon={<ArrowUpDown size={16} />}
+                onClick={() => setSortNewestFirst(s => !s)}
+              >
+                {sortNewestFirst ? 'Más antiguo' : 'Más nuevo'}
+              </Button>
+            </HStack>
 
-    <Text fontSize="sm" color="gray.600" mb={3} ml={1}>
-      {processedRows.length} productos
-    </Text>
-  </>
-)}
+            <Text fontSize="sm" color="gray.600" mb={3} ml={1}>
+              {processedRows.length} productos
+            </Text>
+          </>
+        )}
 
         {loading && (
           <Flex bg="white" borderRadius="md" borderWidth="1px" py={20} align="center" justify="center">

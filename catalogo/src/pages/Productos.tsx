@@ -19,7 +19,7 @@ import ProductCard from '../components/ProductCard';
 
 import { FaWhatsapp } from 'react-icons/fa';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-import { fetchCatalogo, fetchCatalogoDestacados } from '../lib/productos';
+import { fetchCatalogoDestacados } from '../lib/productos';
 
 const Productos = () => {
    const location = useLocation(); 
@@ -37,13 +37,12 @@ const Productos = () => {
   useEffect(() => {
   (async () => {
     try {
-      const data = await fetchCatalogo();
-      console.log("VER DATA PARA CATALOGO", data)
+
 
       const destacados = await fetchCatalogoDestacados();
    console.log("VER PRODUCTOS DESTACADOS", destacados)
 
-      setItems(data);
+      setItems(destacados);
     } finally {
       setLoading(false);
     }
