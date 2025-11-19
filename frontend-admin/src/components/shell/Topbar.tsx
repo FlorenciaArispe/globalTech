@@ -66,7 +66,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
             <Avatar size="sm" name="Usuario" />
           </MenuButton>
           <MenuList>
-            <MenuItem as={NextLink} href="/home">Mi perfil</MenuItem>
+            <MenuItem as={NextLink} href="/perfil">Mi perfil</MenuItem>
             <MenuItem as={NextLink} href="/config">Configuración</MenuItem>
             <MenuItem as={NextLink} href="/login">Cerrar sesión</MenuItem>
           </MenuList>
