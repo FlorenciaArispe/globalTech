@@ -1,10 +1,9 @@
 export type ID = number | string;
 
-export interface Categoria {
-  id: ID;
+export type Categoria = {
+  id: string;
   nombre: string;
-  slug: string;
-}
+};
 
 export type TipoCatalogoItem =
   | 'TRACKED_USADO_UNIDAD'
@@ -17,7 +16,7 @@ export type TipoCatalogoItem =
   stock: number;
 };
 
-export interface ProductoDestacado {
+export interface Producto {
   id: ID;
   modeloId: ID;
   modeloNombre: string;

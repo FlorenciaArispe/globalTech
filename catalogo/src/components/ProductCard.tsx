@@ -1,14 +1,12 @@
 import { Box, Image, Text, Stack, Flex } from '@chakra-ui/react';
 import { Link } from 'react-router-dom';
-import type { ProductoDestacado } from '../types';
+import type { Producto } from '../types';
 
 type Props = {
-  product: ProductoDestacado;
+  product: Producto;
 };
 
 const ProductCard = ({ product }: Props) => {
-
-  console.log("PRODUCTO DESTACADO", product);
 
   const nombre = `${product.modeloNombre} ${product.capacidad ? ` - ${product.capacidad}` : ''} ${product.color ?? ''} ${product.bateriaCondicionPct ? `${product.bateriaCondicionPct}%` : ''}`
     .trim();

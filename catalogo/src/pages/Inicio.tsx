@@ -6,8 +6,8 @@ import ProductCard from "../components/ProductCard";
 import { useNavigate } from "react-router-dom";
 import { Link as RouterLink } from "react-router-dom";
 import { getCategorias, getProductos, getProductosByCategoriaId, getProductosDestacados } from "../data";
-import { Categoria, ProductoDestacado } from "../types";
-import { fetchCatalogoDestacados } from "../lib/productos";
+import { Categoria, Producto } from "../types";
+import { fetchCatalogoDestacados, fetchCategorias } from "../lib/productos";
 
 const images = [
   '/images-inicio/usadoGarantia.png',
@@ -30,7 +30,7 @@ const MotionBox = motion(Box);
 function Inicio() {
   const navigate = useNavigate();
   const [cats, setCats] = useState<Categoria[]>([]);
-  const [productosDestacados, setProductosDestacados] = useState<ProductoDestacado[]>([]);
+  const [productosDestacados, setProductosDestacados] = useState<Producto[]>([]);
   const [catId, setCatId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -38,7 +38,8 @@ function Inicio() {
       try {
   
         const destacados = await fetchCatalogoDestacados();
-     console.log("VER PRODUCTOS DESTACADOS", destacados)
+        const categorias = await fetchCategorias();
+        
   
          setProductosDestacados(destacados);
       } finally {

@@ -9,32 +9,26 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.globaltechnology.backend.repository.ProductoDestacadoRepository;
-import com.globaltechnology.backend.service.CatalogoService;
 import com.globaltechnology.backend.service.ModeloService;
 import com.globaltechnology.backend.web.dto.CatalogoItemDTO;
-import com.globaltechnology.backend.web.dto.ProductoCatalogoDTO;
 
 @RestController
 @RequestMapping("/api/catalogo")
 public class CatalogoController {
-
-  private final CatalogoService service;
-    private final ModeloService modeloService;          // ← para el catálogo nuevo
+    private final ModeloService modeloService;   
   private final ProductoDestacadoRepository destacadoRepo;
 
  
   public CatalogoController(
-      CatalogoService service,
       ModeloService modeloService,
       ProductoDestacadoRepository destacadoRepo
   ) {
-    this.service = service;
     this.modeloService = modeloService;
     this.destacadoRepo = destacadoRepo;
   }
   @GetMapping("/productos")
-  public List<ProductoCatalogoDTO> listar() {
-    return service.listarProductosCatalogo();
+  public List<CatalogoItemDTO> listar() {
+    return modeloService.listarCatalogo(null, null);
   }
 
   @GetMapping("/destacados")

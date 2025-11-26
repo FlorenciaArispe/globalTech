@@ -19,53 +19,48 @@ import ProductCard from '../components/ProductCard';
 
 import { FaWhatsapp } from 'react-icons/fa';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-import { fetchCatalogoDestacados } from '../lib/productos';
+import { fetchProductosCatalogo } from '../lib/productos';
+import { Producto } from '../types';
 
 const Productos = () => {
-   const location = useLocation(); 
+  const location = useLocation();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
-  const [productos, setProductos] = useState<any[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
 
-
-  //ACA EMPIEZA LO NUEVO PARA TRAER LO DE BACKEND
-  const [items, setItems] = useState<any[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  (async () => {
-    try {
+    (async () => {
+      try {
 
 
-      const destacados = await fetchCatalogoDestacados();
-   console.log("VER PRODUCTOS DESTACADOS", destacados)
+        const data = await fetchProductosCatalogo();
 
-      setItems(destacados);
-    } finally {
-      setLoading(false);
-    }
-  })();
-}, []);
-
-  //ACA TERMINA
+        setProductos(data);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
 
 
   useEffect(() => {
-  const params = new URLSearchParams(location.search);
-  const categoriaId = params.get('categoria');
+    const params = new URLSearchParams(location.search);
+    const categoriaId = params.get('categoria');
 
-  if (categoriaId && categorias.length > 0 && productos.length > 0) {
-    const categoria = categorias.find(cat => cat.id == categoriaId);
-    if (categoria) {
-      const filtered = productos.filter(product => product.categoria === categoria.id);
-      setFilteredProducts(filtered);
-      setSelectedCategories([categoria.id]);
+    if (categoriaId && categorias.length > 0 && productos.length > 0) {
+      const categoria = categorias.find(cat => cat.id == categoriaId);
+      if (categoria) {
+        const filtered = productos.filter(product => product.categoria === categoria.id);
+        setFilteredProducts(filtered);
+        setSelectedCategories([categoria.id]);
+      }
     }
-  }
-}, [location.search, categorias, productos]); 
+  }, [location.search, categorias, productos]);
 
 
   const handleToggleCategory = (categoryId: number) => {
@@ -95,7 +90,7 @@ const Productos = () => {
         <Box
           as={FaWhatsapp}
           boxSize="60px"
-          color="#25D366" 
+          color="#25D366"
           _hover={{ transform: "scale(1.1)" }}
           transition="all 0.3s ease"
         />
@@ -159,21 +154,21 @@ const Productos = () => {
           Filtrar
         </Button>
       </Flex>
-<SimpleGrid columns={2} spacing={3} mb={5}>
-  {filteredProducts.length > 0 ? (
-    filteredProducts.map((product) => (
-      <ProductCard key={product.id} product={product} />
-    ))
-  ) : (
-    <GridItem colSpan={2}>
-      <Box w="100%" textAlign="center">
-        <Text color="gray.500">
-          No se encontraron productos para este filtro.
-        </Text>
-      </Box>
-    </GridItem>
-  )}
-</SimpleGrid>
+      <SimpleGrid columns={2} spacing={3} mb={5}>
+        {productos.length > 0 ? (
+          productos.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))
+        ) : (
+          <GridItem colSpan={2}>
+            <Box w="100%" textAlign="center">
+              <Text color="gray.500">
+                No se encontraron productos para este filtro.
+              </Text>
+            </Box>
+          </GridItem>
+        )}
+      </SimpleGrid>
 
 
 

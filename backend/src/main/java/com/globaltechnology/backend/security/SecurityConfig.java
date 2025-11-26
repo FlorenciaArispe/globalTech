@@ -42,7 +42,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.DELETE, "/api/notes/**").hasRole("ADMIN")
 
             // CATEGORIAS
-            .requestMatchers(HttpMethod.GET, "/api/categorias/**").hasAnyRole("ADMIN", "OPERADOR")
+            .requestMatchers(HttpMethod.GET, "/api/categorias/**").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/categorias/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.PUT, "/api/categorias/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.DELETE, "/api/categorias/**").hasRole("ADMIN")
