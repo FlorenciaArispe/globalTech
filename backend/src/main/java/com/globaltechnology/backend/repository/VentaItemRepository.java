@@ -29,17 +29,16 @@ public interface VentaItemRepository extends JpaRepository<VentaItem, Long> {
         WHERE ven.fecha BETWEEN :desde AND :hasta
       """)
   List<VentaItem> findByFechaVentaEntre(@Param("desde") Instant desde,
-                                        @Param("hasta") Instant hasta);
+      @Param("hasta") Instant hasta);
 
-
-  // 👇👇 ESTA ES SOLO LA PROJECTION, SIN QUERY
   public interface TopModeloProjection {
     Long getModeloId();
+
     String getNombre();
+
     Long getUnidadesVendidas();
   }
 
-  // 👇👇 Y ESTE ES EL MÉTODO DEL REPOSITORY QUE USA ESA PROJECTION
   @Query("""
         SELECT m.id AS modeloId,
                m.nombre AS nombre,
@@ -54,18 +53,17 @@ public interface VentaItemRepository extends JpaRepository<VentaItem, Long> {
       """)
   List<TopModeloProjection> findTopModelosVendidosEntre(
       @Param("desde") Instant desde,
-      @Param("hasta") Instant hasta
-  );
+      @Param("hasta") Instant hasta);
 
   @Query("""
-  SELECT m.id AS modeloId,
-         m.nombre AS nombre,
-         SUM(i.cantidad) AS unidadesVendidas
-  FROM VentaItem i
-  JOIN i.variante v
-  JOIN v.modelo m
-  GROUP BY m.id, m.nombre
-      ORDER BY unidadesVendidas DESC
-""")
-List<TopModeloProjection> findVentasTotalesPorModelo();
+        SELECT m.id AS modeloId,
+               m.nombre AS nombre,
+               SUM(i.cantidad) AS unidadesVendidas
+        FROM VentaItem i
+        JOIN i.variante v
+        JOIN v.modelo m
+        GROUP BY m.id, m.nombre
+            ORDER BY unidadesVendidas DESC
+      """)
+  List<TopModeloProjection> findVentasTotalesPorModelo();
 }

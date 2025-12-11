@@ -1,4 +1,3 @@
-// web/dto/MovimientoDTO.java (respuesta)
 package com.globaltechnology.backend.web.dto;
 
 import com.globaltechnology.backend.domain.TipoMovimiento;
@@ -9,8 +8,8 @@ public record MovimientoDTO(
     Instant fecha,
     TipoMovimiento tipo,
     Long varianteId,
-    Long unidadId,      // null en no-trackeados
-    Integer cantidad,   // ya con signo (+ entrada, - salida)
+    Long unidadId,     
+    Integer cantidad,   
     String refTipo,
     Long refId,
     String notas

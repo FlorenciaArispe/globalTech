@@ -1,12 +1,9 @@
-// com.globaltechnology.backend.service.InventarioService
-
 package com.globaltechnology.backend.service;
 
 import com.globaltechnology.backend.domain.*;
 import com.globaltechnology.backend.repository.*;
 import com.globaltechnology.backend.web.dto.InventarioRowDTO;
 import com.globaltechnology.backend.web.dto.VarianteImagenDTO;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,27 +35,23 @@ public class InventarioService {
   @Transactional(readOnly = true)
   public List<InventarioRowDTO> listarInventario(Long categoriaId, Long marcaId) {
 
-    // 1) Modelos filtrados
-    List<Modelo> modelos = 
-        (categoriaId != null && marcaId != null) ? modeloRepo.findAllByCategoria_IdAndMarca_Id(categoriaId, marcaId)
-            : (categoriaId != null) ? modeloRepo.findAllByCategoria_Id(categoriaId)
-                : (marcaId != null) ? modeloRepo.findAllByMarca_Id(marcaId) : modeloRepo.findAll();
+    List<Modelo> modelos = (categoriaId != null && marcaId != null)
+        ? modeloRepo.findAllByCategoria_IdAndMarca_Id(categoriaId, marcaId)
+        : (categoriaId != null) ? modeloRepo.findAllByCategoria_Id(categoriaId)
+            : (marcaId != null) ? modeloRepo.findAllByMarca_Id(marcaId) : modeloRepo.findAll();
 
     if (modelos.isEmpty())
       return List.of();
 
     var modeloIds = modelos.stream().map(Modelo::getId).toList();
 
-    // 2) Variantes de esos modelos
     var variantes = varianteRepo.findAllByModelo_IdIn(modeloIds);
     if (variantes.isEmpty())
       return List.of();
 
-    // 🔎 Pre-carga de imágenes de TODAS las variantes para evitar N+1
     var varianteIds = variantes.stream().map(Variante::getId).toList();
     var todasImgs = varianteImagenRepo.findAllByVariante_IdIn(varianteIds);
 
-    // Agrupar por varianteId y set
     Map<Long, Map<ImagenSet, List<VarianteImagenDTO>>> imgsByVarAndSet = todasImgs.stream()
         .collect(Collectors.groupingBy(
             vi -> vi.getVariante().getId(),
@@ -76,7 +69,6 @@ public class InventarioService {
 
     var out = new ArrayList<InventarioRowDTO>(variantes.size() * 2);
 
-    // 3) TRACKED: una fila por Unidad
     if (!tracked.isEmpty()) {
       var trackedIds = tracked.stream().map(Variante::getId).toList();
       var unidades = unidadRepo.findAllByVariante_IdIn(trackedIds);
@@ -118,12 +110,10 @@ public class InventarioService {
             true,
             u.getCreatedAt(),
             u.getUpdatedAt(),
-            imagenes 
-        ));
+            imagenes));
       }
     }
 
-    // 4) UNTRACKED: una fila por Variante con stock acumulado (movimientos)
     if (!untracked.isEmpty()) {
       var untrackedIds = untracked.stream().map(Variante::getId).toList();
 
@@ -151,7 +141,7 @@ public class InventarioService {
             v.getCapacidad() != null ? v.getCapacidad().getEtiqueta() : null,
             null,
             null,
-            null, 
+            null,
             null,
             null,
             v.getPrecioBase(),
@@ -162,11 +152,9 @@ public class InventarioService {
             v.getCreatedAt(),
             v.getUpdatedAt(),
             imagenes));
-
       }
     }
 
-    // 5) orden sugerido
     out.sort(Comparator
         .comparing(InventarioRowDTO::modeloNombre, String.CASE_INSENSITIVE_ORDER)
         .thenComparing(r -> Optional.ofNullable(r.colorNombre()).orElse(""), String.CASE_INSENSITIVE_ORDER)

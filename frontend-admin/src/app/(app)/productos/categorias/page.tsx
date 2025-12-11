@@ -32,7 +32,7 @@ export default function CategoriasPage() {
     let alive = true;
 
     const token = getToken();
-    console.log("TOKEN CATEGORIAS", token)
+
     if (!token) {
       router.replace('/login');
       return;
@@ -43,7 +43,7 @@ export default function CategoriasPage() {
         const { data } = await api.get<Categoria[]>('/api/categorias');
         if (alive) setCategorias(data);
       } catch (e: any) {
-        console.log('status', e?.response?.status, 'data', e?.response?.data);
+
         toast({
           status: 'error',
           title: 'No se pudieron cargar las categorías',

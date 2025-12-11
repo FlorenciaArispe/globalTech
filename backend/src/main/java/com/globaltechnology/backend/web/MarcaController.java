@@ -28,9 +28,9 @@ public class MarcaController {
         return marcaService.crear(req.getNombre());
     }
 
-     @DeleteMapping("/{id}")
-  @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void delete(@PathVariable Long id) {
-    marcaService.eliminar(id);
-  }
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        marcaService.eliminar(id);
+    }
 }

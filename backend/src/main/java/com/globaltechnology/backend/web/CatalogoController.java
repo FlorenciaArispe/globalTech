@@ -6,37 +6,48 @@ import java.util.Map;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.globaltechnology.backend.repository.ProductoDestacadoRepository;
 import com.globaltechnology.backend.service.ModeloService;
 import com.globaltechnology.backend.web.dto.CatalogoItemDTO;
+import com.globaltechnology.backend.web.dto.CatalogoItemResumenDTO;
+import com.globaltechnology.backend.web.dto.TipoCatalogoItem;
 
 @RestController
 @RequestMapping("/api/catalogo")
 public class CatalogoController {
-    private final ModeloService modeloService;   
+  private final ModeloService modeloService;
   private final ProductoDestacadoRepository destacadoRepo;
 
- 
   public CatalogoController(
       ModeloService modeloService,
-      ProductoDestacadoRepository destacadoRepo
-  ) {
+      ProductoDestacadoRepository destacadoRepo) {
     this.modeloService = modeloService;
     this.destacadoRepo = destacadoRepo;
   }
-  @GetMapping("/productos")
-  public List<CatalogoItemDTO> listar() {
-    return modeloService.listarCatalogo(null, null);
+
+  @GetMapping
+  public List<CatalogoItemResumenDTO> listar(
+      @RequestParam(required = false) TipoCatalogoItem tipo) {
+    return modeloService.listarCatalogo(tipo);
+  }
+
+  @GetMapping("/detalle")
+  public CatalogoItemDTO detalle(
+      @RequestParam Long itemId,
+      @RequestParam TipoCatalogoItem tipo) {
+    return modeloService.obtenerDetalleCatalogo(itemId, tipo);
   }
 
   @GetMapping("/destacados")
-  public List<CatalogoItemDTO> listarDestacados() {
+  public List<CatalogoItemResumenDTO> listarDestacados() {
     var destacados = destacadoRepo.findAllByActivoTrueOrderByOrdenAscIdAsc();
-    if (destacados.isEmpty()) return List.of();
+    if (destacados.isEmpty())
+      return List.of();
 
-    var catalogo = modeloService.listarCatalogo(null, null);
+    var catalogo = modeloService.listarCatalogo(null);
 
     Map<String, Integer> ordenPorClave = new HashMap<>();
     int fallback = 1000;
@@ -58,7 +69,5 @@ public class CatalogoController {
         })
         .toList();
   }
-
-  
 
 }

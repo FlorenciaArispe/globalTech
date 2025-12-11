@@ -106,9 +106,8 @@ export default function DestacadosPage() {
           api.get<CatalogoItemDTO[]>('/api/catalogo/destacados'),
         ]);
 
-
         if (!alive) return;
-        console.log("DESTACADOS FRONT", destacadosResp)
+        
         setCatalogo(catalogoResp.data ?? []);
         setDestacados(destacadosResp.data ?? []);
       } catch (e: any) {

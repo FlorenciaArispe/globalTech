@@ -1,7 +1,6 @@
 package com.globaltechnology.backend.web;
 
 import com.globaltechnology.backend.service.ModeloService;
-import com.globaltechnology.backend.web.dto.CatalogoItemDTO;
 import com.globaltechnology.backend.web.dto.ModeloCreateDTO;
 import com.globaltechnology.backend.web.dto.ModeloDTO;
 import com.globaltechnology.backend.web.dto.ModeloRenameDTO;
@@ -38,15 +37,6 @@ public class ModeloController {
       @RequestParam(required = false) Long marcaId) {
     return service.tablaProductos(categoriaId, marcaId);
   }
-
-    @GetMapping("/catalogo")
-  public List<CatalogoItemDTO> catalogo(
-      @RequestParam(required = false) Long categoriaId,
-      @RequestParam(required = false) Long marcaId
-  ) {
-    return service.listarCatalogo(categoriaId, marcaId);
-  }
-
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)

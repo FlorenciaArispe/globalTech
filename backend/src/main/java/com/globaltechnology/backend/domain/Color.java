@@ -5,10 +5,15 @@ import lombok.*;
 
 @Entity
 @Table(name = "colores")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @EqualsAndHashCode(of = "id")
 public class Color {
-  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
   @Column(name = "nombre", nullable = false, unique = true, length = 60)

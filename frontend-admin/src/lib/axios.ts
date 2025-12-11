@@ -21,10 +21,6 @@ api.interceptors.request.use((config) => {
   }
 
   const shown = String((config.headers as any).Authorization ?? 'NO_TOKEN');
-  console.log(
-    `[api] ${config.method?.toUpperCase()} ${api.defaults.baseURL}${config.url} Authorization=`,
-    shown
-  );
 
   return config;
 });
@@ -33,7 +29,6 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     const st = err?.response?.status;
-    console.log('[api] ERROR', st, err?.config?.url, err?.response?.data ?? '');
     if (st === 401) {
       clearToken?.();
       clearUser?.();

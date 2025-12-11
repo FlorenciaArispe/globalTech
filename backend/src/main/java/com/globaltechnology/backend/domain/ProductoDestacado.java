@@ -1,7 +1,6 @@
 package com.globaltechnology.backend.domain;
 
 import com.globaltechnology.backend.web.dto.TipoCatalogoItem;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -17,30 +16,29 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// com.globaltechnology.backend.domain.ProductoDestacado
-
 @Entity
-@Table(name = "productos_destacados",
-       uniqueConstraints = @UniqueConstraint(
-           name = "uk_producto_destacado_tipo_item",
-           columnNames = {"tipo", "item_id"}
-       )
-)
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Table(name = "productos_destacados", uniqueConstraints = @UniqueConstraint(name = "uk_producto_destacado_tipo_item", columnNames = {
+    "tipo", "item_id" }))
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ProductoDestacado {
 
-  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "tipo", nullable = false, length = 40)
-  private TipoCatalogoItem tipo;   // TRACKED_USADO_UNIDAD, TRACKED_SELLADO_AGREGADO, NO_TRACK_AGREGADO
+  private TipoCatalogoItem tipo; 
 
   @Column(name = "item_id", nullable = false)
-  private Long itemId;             // = CatalogoItemDTO.itemId
+  private Long itemId; 
 
   @Column(name = "orden")
-  private Integer orden;          // para ordenar en el home
+  private Integer orden; 
 
   @Column(name = "activo", nullable = false)
   private boolean activo = true;

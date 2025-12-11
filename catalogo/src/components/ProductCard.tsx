@@ -1,22 +1,16 @@
 import { Box, Image, Text, Stack, Flex } from '@chakra-ui/react';
 import { Link } from 'react-router-dom';
-import type { Producto } from '../types';
+import type { Producto, TipoCatalogoItem } from '../types';
 
 type Props = {
   product: Producto;
+  destacado: boolean;
 };
 
-const ProductCard = ({ product }: Props) => {
+const ProductCard = ({ product, destacado }: Props) => {
 
   const nombre = `${product.modeloNombre} ${product.capacidad ? ` - ${product.capacidad}` : ''} ${product.color ?? ''} ${product.bateriaCondicionPct ? `${product.bateriaCondicionPct}%` : ''}`
     .trim();
-
-  const primeraFoto =
-    Array.isArray(product.imagenes) &&
-      product.imagenes.length > 0 &&
-      product.imagenes[0].url
-      ? product.imagenes[0].url
-      : "/images/no-image.jpg";
 
   const badge = (() => {
     switch (product.tipo) {
@@ -33,8 +27,15 @@ const ProductCard = ({ product }: Props) => {
 
   const precioAnterior = product.precio + 35;
 
+  const imagenSrc = product.imagenUrl ?? '/images/default.png';
+
   return (
-    <Link to={`/productos/${product.id}`}>
+    <Link
+      to={`/productos/${product.itemId}`}
+      state={{
+        tipo: product.tipo as TipoCatalogoItem,
+      }}
+    >
       <Box
         borderWidth="1px"
         borderRadius="lg"
@@ -44,38 +45,38 @@ const ProductCard = ({ product }: Props) => {
         cursor="pointer"
       >
         <Image
-          src={primeraFoto}
+          src={imagenSrc}
           alt={nombre}
           width="100%"
-          height="220px"
+          height={destacado ? "220px" : "180px"}
           objectFit="cover"
         />
 
-        <Stack p={3} minH="120px" justify="space-around">
+        <Stack p={3} h={destacado ? "125px" : "120px"} justify="space-between">
           <Flex direction={"column"}>
-            <Text fontSize="16px" fontWeight="semibold" noOfLines={2}>
+            <Text fontSize={destacado ? "16px" : "14px"} fontWeight="semibold" noOfLines={2}>
               {nombre}{" "}
             </Text>
-            <Text fontSize="15px" fontWeight="semibold">
-              {badge && (
-                <Text as="span" fontSize="15px" color="gray.500">
-                  {badge}
-                </Text>
-              )}
-            </Text>
+
+            {badge && (
+              <Text as="span" fontSize={destacado ? "15px" : "14px"} color="gray.500" fontWeight="semibold">
+                {badge}
+              </Text>
+            )}
           </Flex>
 
+          <Flex direction="row" align={"center"} gap={3} >
+            {destacado &&
+              <Text
+                fontSize="14px"
+                color="gray.400"
+                textDecoration="line-through"
+              >
+                USD ${precioAnterior}
+              </Text>
+            }
 
-          <Flex direction="row" align={"center"} gap={3}>
-            <Text
-              fontSize="14px"
-              color="gray.400"
-              textDecoration="line-through"
-            >
-              USD ${precioAnterior}
-            </Text>
-
-            <Text fontSize="19px" fontWeight="bold" color="green.600">
+            <Text fontSize={destacado ? "19px" : "17px"} fontWeight="bold" color="green.600">
               USD ${product.precio}
             </Text>
           </Flex>

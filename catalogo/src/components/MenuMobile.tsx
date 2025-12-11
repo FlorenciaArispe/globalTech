@@ -8,15 +8,19 @@ import {
   useDisclosure,
   VStack,
   Button,
-  Flex,
+  Divider,
 } from "@chakra-ui/react";
-import { FaArrowRight } from "react-icons/fa";
-import { FiArrowRight, FiMenu } from "react-icons/fi";
+import { FiArrowRight, FiMenu, FiHome, FiBox } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
 export const MenuMobile = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
+
+  const goTo = (path: string) => {
+    navigate(path);
+    onClose();
+  };
 
   return (
     <>
@@ -29,129 +33,117 @@ export const MenuMobile = () => {
         fontSize="24px"
         mt={2}
       />
-      <Drawer
-        isOpen={isOpen}
-        placement="left"
-        onClose={onClose}
-        size="full"
-      >
+
+      <Drawer isOpen={isOpen} placement="left" onClose={onClose} size="full">
         <DrawerOverlay />
         <DrawerContent width="full">
           <DrawerCloseButton fontSize="18px" mt={1} mr={2} />
 
-          <DrawerBody  >
-            <VStack spacing={3} mt={10} align="start"  >
+          <DrawerBody>
+            <VStack spacing={3} mt={10} align="start" w="100%">
+
               <Button
+                w="100%"
                 variant="ghost"
                 color="black"
-                onClick={() => {
-                  navigate('/');
-                  onClose();
-                }}
+                leftIcon={<FiHome />}
+                onClick={() => goTo("/")}
+                justifyContent="flex-start"
               >
                 Inicio
               </Button>
+
               <Button
+                w="100%"
                 variant="ghost"
                 color="black"
-                onClick={() => {
-                  navigate('/productos');
-                  onClose();
-                }}
+                leftIcon={<FiBox />}
+                onClick={() => goTo("/productos")}
+                justifyContent="flex-start"
               >
                 Productos
               </Button>
 
               <Button
-                w={"100%"}
+                w="100%"
+                pl={8}
                 variant="ghost"
                 color="black"
                 fontWeight="normal"
-                onClick={() => {
-                  navigate('/productos?categoria=1');
-                  onClose();
-                }}
-                display={"flex"}
-                flexDirection={"row"} justifyContent="space-between" alignContent="center"
+                onClick={() =>
+                  goTo("/productos?tipo=TRACKED_SELLADO_AGREGADO")
+                }
+                justifyContent="space-between"
+                rightIcon={<FiArrowRight />}
               >
-
-                <span>Sellados</span>
-                <FiArrowRight style={{ strokeWidth: 1.5, fontSize: '20px' }} />
-
-
+                iPhone Sellados
               </Button>
+
               <Button
-                w={"100%"}
+                w="100%"
+                pl={8}
                 variant="ghost"
                 color="black"
                 fontWeight="normal"
-                onClick={() => {
-                  navigate('/productos?categoria=2');
-                  onClose();
-                }}
-                display={"flex"}
-                flexDirection={"row"} justifyContent="space-between" alignContent="center"
+                onClick={() =>
+                  goTo("/productos?tipo=TRACKED_USADO_UNIDAD")
+                }
+                justifyContent="space-between"
+                rightIcon={<FiArrowRight />}
               >
-                <span>Usados</span>
-                <FiArrowRight style={{ strokeWidth: 1.5, fontSize: '20px' }} />
+                iPhone Usados
               </Button>
+
               <Button
-              mb={6}
-                w={"100%"}
+                w="100%"
+                pl={8}
                 variant="ghost"
                 color="black"
                 fontWeight="normal"
-                onClick={() => {
-                  navigate('/productos?categoria=3');
-                  onClose();
-                }}
-                display={"flex"}
-                flexDirection={"row"} justifyContent="space-between" alignContent="center"
+                onClick={() => goTo("/productos?tipo=NO_TRACK_AGREGADO")}
+                justifyContent="space-between"
+                rightIcon={<FiArrowRight />}
               >
-                <span>Accesorios</span>
-                <FiArrowRight style={{ strokeWidth: 1.5, fontSize: '20px' }} />
+                Otros
               </Button>
+
+              <Divider my={4} borderColor="gray.300" />
+
               <Button
                 variant="ghost"
                 color="black"
-                onClick={() => {
-                  navigate('/plan-canje');
-                  onClose();
-                }}
+                onClick={() => goTo("/plan-canje")}
+                justifyContent="flex-start"
               >
                 PLAN CANJE
               </Button>
+
               <Button
                 variant="ghost"
                 color="black"
-                onClick={() => {
-                  navigate('/politicaygarantia');
-                  onClose();
-                }}
+                onClick={() => goTo("/politicaygarantia")}
+                justifyContent="flex-start"
               >
                 Política de devolución y garantía
               </Button>
+
               <Button
                 variant="ghost"
                 color="black"
-                onClick={() => {
-                  navigate('/quienes-somos');
-                  onClose();
-                }}
+                onClick={() => goTo("/quienes-somos")}
+                justifyContent="flex-start"
               >
-                Quienes somos
+                Quiénes somos
               </Button>
+
               <Button
                 variant="ghost"
                 color="black"
-                onClick={() => {
-                  navigate('/contacto');
-                  onClose();
-                }}
+                onClick={() => goTo("/contacto")}
+                justifyContent="flex-start"
               >
                 Contacto
               </Button>
-
 
             </VStack>
           </DrawerBody>

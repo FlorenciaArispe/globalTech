@@ -1,4 +1,5 @@
 package com.globaltechnology.backend.repository;
+
 import com.globaltechnology.backend.domain.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -44,17 +45,21 @@ public interface UnidadRepository extends JpaRepository<Unidad, Long> {
 
   public interface VarianteStockPorEstadoRow {
     Long getVarianteId();
+
     EstadoComercial getEstadoProducto();
+
     long getStock();
   }
 
   interface ModeloStockRow {
     Long getModeloId();
+
     long getStock();
   }
 
   interface VarianteStockRow {
     Long getVarianteId();
+
     Long getStock();
   }
 

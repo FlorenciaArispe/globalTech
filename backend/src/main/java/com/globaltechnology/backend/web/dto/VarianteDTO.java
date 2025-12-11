@@ -1,4 +1,3 @@
-// VarianteDTO.java
 package com.globaltechnology.backend.web.dto;
 
 import java.math.BigDecimal;

@@ -21,7 +21,7 @@ public class VarianteService {
   private final CapacidadRepository capRepo;
   private final UnidadRepository unidadRepo;
   private final MovimientoInventarioRepository movRepo;
-    private final VarianteImagenRepository varianteImagenRepo;
+  private final VarianteImagenRepository varianteImagenRepo;
 
   private static final List<EstadoStock> DISPONIBLES = List.of(EstadoStock.EN_STOCK);
 
@@ -29,14 +29,14 @@ public class VarianteService {
       ColorRepository colorRepo, CapacidadRepository capRepo,
       UnidadRepository unidadRepo,
       MovimientoInventarioRepository movRepo,
-        VarianteImagenRepository varianteImagenRepo) {
+      VarianteImagenRepository varianteImagenRepo) {
     this.repo = repo;
     this.modeloRepo = modeloRepo;
     this.colorRepo = colorRepo;
     this.capRepo = capRepo;
     this.unidadRepo = unidadRepo;
-    this.movRepo = movRepo; 
-     this.varianteImagenRepo = varianteImagenRepo;
+    this.movRepo = movRepo;
+    this.varianteImagenRepo = varianteImagenRepo;
   }
 
   private long stockDeVariante(Variante v) {
@@ -74,7 +74,6 @@ public class VarianteService {
     var v = repo.findById(varianteId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Variante no encontrada"));
 
-    // si querés limitar decimales:
     nuevoPrecio = nuevoPrecio.setScale(2, java.math.RoundingMode.HALF_UP);
 
     v.setPrecioBase(nuevoPrecio);
@@ -84,25 +83,21 @@ public class VarianteService {
   public List<VarianteDTO> list() {
     var variantes = repo.findAll();
 
-    // separo por tipo de tracking
     var tracked = variantes.stream().filter(v -> v.getModelo().isTrackeaUnidad()).map(Variante::getId).toList();
     var untracked = variantes.stream().filter(v -> !v.getModelo().isTrackeaUnidad()).map(Variante::getId).toList();
 
-    // stock por unidades (tracked)
     var stockUnidadMap = new java.util.HashMap<Long, Long>();
     if (!tracked.isEmpty()) {
       var rows = unidadRepo.stockPorVariante(tracked, DISPONIBLES);
       rows.forEach(r -> stockUnidadMap.put(r.getVarianteId(), r.getStock())); // getStock() debe ser Long
     }
 
-    // stock por movimientos (untracked)
     var stockMovMap = new java.util.HashMap<Long, Long>();
     if (!untracked.isEmpty()) {
       var rows = movRepo.stockNoTrackeadoPorVariante(untracked);
       rows.forEach(r -> stockMovMap.put(r.getVarianteId(), r.getStock() == null ? 0L : r.getStock().longValue()));
     }
 
-    // merge: para cada variante, usa el mapa que corresponda
     return variantes.stream()
         .map(v -> {
           long stock = v.getModelo().isTrackeaUnidad()
@@ -116,7 +111,7 @@ public class VarianteService {
   public VarianteDTO get(Long id) {
     var v = repo.findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Variante no encontrada"));
-    long stock = stockDeVariante(v); // ⬅️ antes contabas sólo unidades
+    long stock = stockDeVariante(v);
     return toDTO(v, stock);
   }
 
@@ -144,12 +139,10 @@ public class VarianteService {
       cap = capRepo.findById(dto.capacidadId()).orElse(null);
     }
 
-    // ✅ Validar precio
     if (dto.precioBase() == null || dto.precioBase().signum() < 0) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Precio base inválido");
     }
 
-    // ✅ Duplicado robusto (ver repo más abajo)
     if (repo.existsByModeloAndAtributos(modelo.getId(),
         color != null ? color.getId() : null,
         cap != null ? cap.getId() : null)) {
@@ -160,13 +153,12 @@ public class VarianteService {
         .modelo(modelo)
         .color(color)
         .capacidad(cap)
-        .precioBase(dto.precioBase()) // ⬅️ SETEÁS EL PRECIO (era el 500)
+        .precioBase(dto.precioBase()) 
         .build();
 
     try {
       v = repo.save(v);
     } catch (org.springframework.dao.DataIntegrityViolationException ex) {
-      // por si la unique de DB salta igual
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Variante duplicada", ex);
     }
 
@@ -201,7 +193,6 @@ public class VarianteService {
       cap = capRepo.findById(dto.capacidadId()).orElse(null);
     }
 
-    // Duplicado lógico si cambian a una combinación existente
     if (!modelo.equals(v.getModelo()) ||
         (color != (v.getColor())) ||
         (cap != (v.getCapacidad()))) {
@@ -218,27 +209,20 @@ public class VarianteService {
     return toDTO(v, stock);
   }
 
-@Transactional
+  @Transactional
   public void delete(Long id) {
     if (!repo.existsById(id)) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Variante no encontrada");
     }
 
-    // ❌ si tiene unidades, seguimos bloqueando
     if (unidadRepo.existsByVariante_Id(id)) {
       throw new ResponseStatusException(
           HttpStatus.CONFLICT,
-          "No se puede eliminar: la variante tiene unidades asociadas"
-      );
+          "No se puede eliminar: la variante tiene unidades asociadas");
     }
 
-    // 1️⃣ borrar movimientos
     movRepo.deleteByVariante_Id(id);
-
-    // 2️⃣ borrar imágenes
     varianteImagenRepo.deleteByVariante_Id(id);
-
-    // 3️⃣ borrar variante
     repo.deleteById(id);
   }
 

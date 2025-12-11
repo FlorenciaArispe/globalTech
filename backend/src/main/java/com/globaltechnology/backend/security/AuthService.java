@@ -11,7 +11,9 @@ public class AuthService implements UserDetailsService {
 
   private final UserRepository userRepo;
 
-  public AuthService(UserRepository userRepo) { this.userRepo = userRepo; }
+  public AuthService(UserRepository userRepo) {
+    this.userRepo = userRepo;
+  }
 
   @Override
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {

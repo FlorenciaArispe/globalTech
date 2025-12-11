@@ -175,7 +175,6 @@ export default function NuevoProductoPage() {
         requiereCapacidad: Boolean(nuevoModeloReqCap),
       };
 
-      console.log("payload", payload)
       const token = localStorage.getItem('jwt');
       const resp = await api.post('/api/modelos', payload, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -189,11 +188,9 @@ export default function NuevoProductoPage() {
         toast({ status: 'success', title: 'Modelo creado' });
       } else {
         toast({ status: 'error', title: `Respuesta inesperada (${resp.status})` });
-        console.log('POST /api/modelos resp', resp);
       }
     } catch (e: any) {
       const status = e?.response?.status;
-      console.log('POST /api/modelos error', status, e?.response?.data);
 
       if (status === 401) {
         toast({ status: 'error', title: 'Sesión expirada' });
@@ -271,7 +268,6 @@ export default function NuevoProductoPage() {
         toast({ status: 'success', title: 'Capacidad creada' });
       } else {
         toast({ status: 'error', title: `Respuesta inesperada (${resp.status})` });
-        console.log('POST /api/capacidades', resp.status, resp.data);
       }
     } catch (e: any) {
       const status = e?.response?.status;
@@ -411,7 +407,6 @@ export default function NuevoProductoPage() {
         toast({ status: 'success', title: 'Color creado' });
       } else {
         toast({ status: 'error', title: `Respuesta inesperada (${resp.status})` });
-        console.log('POST /api/colores', resp.status, resp.data);
       }
     } catch (e: any) {
       const status = e?.response?.status;

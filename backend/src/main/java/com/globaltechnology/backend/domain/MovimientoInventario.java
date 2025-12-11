@@ -5,36 +5,37 @@ import lombok.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "movimientos_inventario",
-       indexes = {
-         @Index(name = "idx_mov_variante", columnList = "variante_id"),
-         @Index(name = "idx_mov_unidad",   columnList = "unidad_id"),
-         @Index(name = "idx_mov_fecha",    columnList = "fecha")
-       })
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Table(name = "movimientos_inventario", indexes = {
+    @Index(name = "idx_mov_variante", columnList = "variante_id"),
+    @Index(name = "idx_mov_unidad", columnList = "unidad_id"),
+    @Index(name = "idx_mov_fecha", columnList = "fecha")
+})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @EqualsAndHashCode(of = "id")
 public class MovimientoInventario {
-  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
   @Column(nullable = false)
   private Instant fecha;
 
-  @Enumerated(EnumType.STRING)           // <— ¡MUY importante si la columna es VARCHAR!
+  @Enumerated(EnumType.STRING) 
   @Column(nullable = false, length = 30)
-  private TipoMovimiento tipo;           // ENTRADA, SALIDA, VENTA
+  private TipoMovimiento tipo; 
 
   @ManyToOne(optional = false)
   @JoinColumn(name = "variante_id", nullable = false)
   private Variante variante;
 
-  // Para trackeados por unidad: puede NO ser null (venta de unidad específica)
-  // Para no-trackeados: quedará null
   @ManyToOne
   @JoinColumn(name = "unidad_id")
   private Unidad unidad;
 
-  // Stock se mueve por unidades enteras (sugiero Integer)
   @Column(name = "cantidad", nullable = false)
   private Integer cantidad;
 

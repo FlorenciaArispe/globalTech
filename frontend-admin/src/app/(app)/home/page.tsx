@@ -48,12 +48,8 @@ type ProductoStats = {
 export default function Home() {
   const [range, setRange] = useState<RangeKey>('hoy');
   const [rangeProductos, setRangeProductos] = useState<ProductosKey>('sin_stock');
-
-  // --- Ventas ---
   const [stats, setStats] = useState<VentasStats>({ total: 0, iphones: 0, otros: 0 });
   const [loadingVentas, setLoadingVentas] = useState(false);
-
-  // --- Productos ---
   const [productoStats, setProductoStats] = useState<ProductoStats | null>(null);
   const [loadingProductos, setLoadingProductos] = useState(false);
 
@@ -73,7 +69,6 @@ export default function Home() {
   const tabIndex = tabs.findIndex(t => t.key === range);
   const tabProductosIndex = tabsProductos.findIndex(t => t.key === rangeProductos);
 
-  // 🔹 Stats de VENTAS
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -82,7 +77,6 @@ export default function Home() {
           params: { range },
         });
 
-        console.log('respuesta estadisticas ventas', res);
         setStats(res.data);
       } catch (e) {
         console.error('Error cargando stats ventas', e);
@@ -95,26 +89,22 @@ export default function Home() {
     fetchStats();
   }, [range]);
 
-// 🔹 Stats de PRODUCTOS
-useEffect(() => {
-  const fetchProductoStats = async () => {
-    try {
-      setLoadingProductos(true);
-      const res = await api.get<ProductoStats>('/api/productos/stats');
-      console.log('respuesta estadisticas productos', res);
-      setProductoStats(res.data);
-    } catch (e) {
-      console.error('Error cargando stats productos', e);
-      setProductoStats(null);
-    } finally {
-      setLoadingProductos(false);
-    }
-  };
+  useEffect(() => {
+    const fetchProductoStats = async () => {
+      try {
+        setLoadingProductos(true);
+        const res = await api.get<ProductoStats>('/api/productos/stats');
+        setProductoStats(res.data);
+      } catch (e) {
+        console.error('Error cargando stats productos', e);
+        setProductoStats(null);
+      } finally {
+        setLoadingProductos(false);
+      }
+    };
 
-  fetchProductoStats();
-// 👇 importante: sin [range]
-}, []);
-
+    fetchProductoStats();
+  }, []);
 
   const rangeLabel = useMemo(() => {
     switch (range) {
@@ -130,7 +120,6 @@ useEffect(() => {
       <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
         <Text fontSize="30px" fontWeight={600} mb={4}>Inicio</Text>
 
-           {/* ==================== PRODUCTOS ==================== */}
         <Text fontSize="20px" fontWeight={600} mt={4}>Productos</Text>
 
         <Tabs
@@ -146,24 +135,11 @@ useEffect(() => {
           </TabList>
         </Tabs>
 
-        {/* ⭐ Contenido según el tab de productos */}
         <Box mt={4}>
           {rangeProductos === 'sin_stock' && (
             <>
-              {/* <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
-                <MetricCard
-                  title="Modelos sin stock"
-                  value={productoStats?.modelosSinStockCount ?? 0}
-                  loading={loadingProductos}
-                  help="Cantidad de modelos que actualmente no tienen unidades en stock."
-                  suffix=" actualmente"
-                />
-              </SimpleGrid> */}
 
               <Box bg="white" borderWidth="1px" borderRadius="md" p={4} overflowX="auto">
-                {/* <Text fontSize="16px" fontWeight={600} mb={2}>
-                  Modelos sin stock {loadingProductos && '(cargando...)'}
-                </Text> */}
 
                 {loadingProductos ? (
                   <HStack spacing={2}>
@@ -198,20 +174,8 @@ useEffect(() => {
 
           {rangeProductos === 'bajo_stock' && (
             <>
-              {/* <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
-                <MetricCard
-                  title="Modelos con stock bajo (≤ 2)"
-                  value={productoStats?.modelosStockBajoCount ?? 0}
-                  loading={loadingProductos}
-                  help="Modelos que tienen muy pocas unidades disponibles (1 o 2)."
-                  suffix=" actualmente"
-                />
-              </SimpleGrid> */}
 
               <Box bg="white" borderWidth="1px" borderRadius="md" p={4} overflowX="auto">
-                {/* <Text fontSize="16px" fontWeight={600} mb={2}>
-                  Modelos con stock bajo {loadingProductos && '(cargando...)'}
-                </Text> */}
 
                 {loadingProductos ? (
                   <HStack spacing={2}>
@@ -246,9 +210,6 @@ useEffect(() => {
 
           {rangeProductos === 'mas_vendido' && (
             <Box mt={2}>
-              {/* <Text fontSize="16px" fontWeight={600} mb={2}>
-                Top 5 modelos más vendidos {rangeLabel}
-              </Text> */}
 
               {loadingProductos ? (
                 <HStack spacing={2}>
@@ -285,7 +246,6 @@ useEffect(() => {
           )}
         </Box>
 
-        {/* ==================== VENTAS ==================== */}
         <Text fontSize="20px" fontWeight={600} mt={10}>Ventas</Text>
         <Tabs
           index={tabIndex}
@@ -324,8 +284,6 @@ useEffect(() => {
           />
         </SimpleGrid>
 
-     
-        
         <Box mt={8}>
           <StickyNotesBoard />
         </Box>

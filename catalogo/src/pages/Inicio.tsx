@@ -5,9 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import { useNavigate } from "react-router-dom";
 import { Link as RouterLink } from "react-router-dom";
-import { getCategorias, getProductos, getProductosByCategoriaId, getProductosDestacados } from "../data";
-import { Categoria, Producto } from "../types";
-import { fetchCatalogoDestacados, fetchCategorias } from "../lib/productos";
+import { fetchCatalogoDestacados } from "../lib/productos";
+import { Producto } from "../types";
 
 const images = [
   '/images-inicio/usadoGarantia.png',
@@ -29,41 +28,17 @@ const MotionBox = motion(Box);
 
 function Inicio() {
   const navigate = useNavigate();
-  const [cats, setCats] = useState<Categoria[]>([]);
   const [productosDestacados, setProductosDestacados] = useState<Producto[]>([]);
-  const [catId, setCatId] = useState<string | null>(null);
-
-    useEffect(() => {
-    (async () => {
-      try {
-  
-        const destacados = await fetchCatalogoDestacados();
-        const categorias = await fetchCategorias();
-        
-  
-         setProductosDestacados(destacados);
-      } finally {
-        // setLoading(false);
-      }
-    })();
-  }, []);
 
   useEffect(() => {
     (async () => {
-      setCats(await getCategorias());
-      // setItems(await getProductos());
-      // setProductosDestacados(await getProductosDestacados());
+      try {
+        const destacados = await fetchCatalogoDestacados();
+        setProductosDestacados(destacados);
+      } finally {
+      }
     })();
   }, []);
-
-  // useEffect(() => {
-  //   (async () => {
-  //     if (!catId) { setItems(await getProductos()); return; }
-  //     setItems(await getProductosByCategoriaId(catId));
-  //   })();
-  // }, [catId]);
-
-
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -96,71 +71,68 @@ function Inicio() {
           alt="Imagen descriptiva"
           objectFit="cover"
           w="100%"
-
         />
 
         <Box mt={8} px={1}>
-
-          <Box mt={8} px={1}>
-            <Box
-              ref={scrollRef}
-              overflowX="auto"
-              whiteSpace="nowrap"
-              display="flex"
-              gap={6}
-              pb={4}
-              css={{
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-                "&::-webkit-scrollbar": {
-                  display: "none",
-                },
-              }}
-            >
-              {images.map((src, index) => (
-                <RouterLink to={imageLinks[index]} key={index}>
-                  <MotionBox
-                    key={index}
-                    minW="165px"
-                    h="183px"
-                    flex="0 0 auto"
-                    borderRadius="20px"
-                    boxShadow="0 4px 12px rgba(0, 0, 0, 0.2)"
-                    backgroundImage={`url(${src})`}
-                    backgroundSize="cover"
-                    backgroundPosition="center"
-                    cursor="pointer"
-                    animate={{
-                      y: [0, -4, 0],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                      delay: index * 0.2,
-                    }}
-                  />
-                </RouterLink>
-              ))}
-            </Box>
-
-            <HStack justify="center" mt={3} spacing={2}>
-              {images.map((_, index) => (
-                <Box
+          <Box
+            ref={scrollRef}
+            overflowX="auto"
+            whiteSpace="nowrap"
+            display="flex"
+            gap={6}
+            pb={4}
+            css={{
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+              "&::-webkit-scrollbar": {
+                display: "none",
+              },
+            }}
+          >
+            {images.map((src, index) => (
+              <RouterLink to={imageLinks[index]} key={index}>
+                <MotionBox
                   key={index}
-                  w={2}
-                  h={2}
-                  borderRadius="full"
-                  bg={index === activeIndex ? "gray.500" : "gray.300"}
-                  transition="background 0.3s"
+                  minW="165px"
+                  h="183px"
+                  flex="0 0 auto"
+                  borderRadius="20px"
+                  boxShadow="0 4px 12px rgba(0, 0, 0, 0.2)"
+                  backgroundImage={`url(${src})`}
+                  backgroundSize="cover"
+                  backgroundPosition="center"
+                  cursor="pointer"
+                  animate={{
+                    y: [0, -4, 0],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: index * 0.2,
+                  }}
                 />
-              ))}
-            </HStack>
+              </RouterLink>
+            ))}
           </Box>
+
+          <HStack justify="center" mt={3} spacing={2}>
+            {images.map((_, index) => (
+              <Box
+                key={index}
+                w={2}
+                h={2}
+                borderRadius="full"
+                bg={index === activeIndex ? "gray.500" : "gray.300"}
+                transition="background 0.3s"
+              />
+            ))}
+          </HStack>
         </Box>
+
         <RouterLink
           to="https://wa.me/message/5RCBRGOHGKPVL1"
-          target="_blank" // Abre el enlace en una nueva pestaña
+          target="_blank"
           style={{ position: "fixed", bottom: "20px", right: "20px", zIndex: "1000" }}
         >
           <Box
@@ -176,7 +148,7 @@ function Inicio() {
           <Text mb={4} fontSize={"18px"} fontWeight={700}> Productos destacados</Text>
           <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={8}>
             {productosDestacados.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.itemId} product={product} destacado={true} />
             ))}
           </SimpleGrid>
           <Box textAlign="center" mt={6}>
@@ -201,7 +173,6 @@ function Inicio() {
         </Box>
 
         <VStack mt={10} spacing={8} align="center">
-          {/* Envíos */}
           <Box textAlign="center" maxW="300px">
             <Icon as={FaTruck} boxSize={12} color="black" mb={4} />
             <Box fontWeight="bold" fontSize="xl" mb={2}>
@@ -212,7 +183,6 @@ function Inicio() {
             </Box>
           </Box>
 
-          {/* Retiros */}
           <Box textAlign="center" maxW="300px">
             <Icon as={FaStore} boxSize={12} color="black" mb={4} />
             <Box fontWeight="bold" fontSize="xl" mb={2}>
@@ -223,7 +193,6 @@ function Inicio() {
             </Box>
           </Box>
 
-          {/* Pagos */}
           <Box textAlign="center" maxW="300px">
             <Icon as={FaMoneyBillWave} boxSize={12} color="black" mb={4} />
             <Box fontWeight="bold" fontSize="xl" mb={2}>
@@ -234,7 +203,6 @@ function Inicio() {
             </Box>
           </Box>
 
-          {/* Compra segura */}
           <Box textAlign="center" maxW="300px" mb={10}>
             <Icon as={FaShieldAlt} boxSize={12} color="black" mb={4} />
             <Box fontWeight="bold" fontSize="xl" mb={2}>
@@ -245,7 +213,6 @@ function Inicio() {
             </Box>
           </Box>
         </VStack>
-
 
       </Box>
     </Box>

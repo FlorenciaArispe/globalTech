@@ -12,73 +12,97 @@ import {
   Text,
   Link,
   GridItem,
+  RangeSlider,
+  RangeSliderTrack,
+  RangeSliderFilledTrack,
+  RangeSliderThumb,
 } from '@chakra-ui/react';
 import { ChevronRightIcon, CloseIcon } from '@chakra-ui/icons';
 import { IoFilter } from 'react-icons/io5';
 import ProductCard from '../components/ProductCard';
-
 import { FaWhatsapp } from 'react-icons/fa';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { fetchProductosCatalogo } from '../lib/productos';
-import { Producto } from '../types';
+import { Producto, TipoCatalogoItem } from '../types';
+
+const MAX_PRICE = 5000;
+const MIN_PRICE = 0;
+
+function getTipoLabel(tipo: TipoCatalogoItem): string {
+  switch (tipo) {
+    case 'TRACKED_USADO_UNIDAD':
+      return 'iPhone Usados';
+    case 'TRACKED_SELLADO_AGREGADO':
+      return 'iPhone Sellados';
+    case 'NO_TRACK_AGREGADO':
+      return 'Otros';
+    default:
+      return tipo;
+  }
+}
 
 const Productos = () => {
-  const location = useLocation();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [categorias, setCategorias] = useState<any[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
+  const [selectedTipo, setSelectedTipo] = useState<TipoCatalogoItem | null>(
+    null
+  );
+
+  const [priceRange, setPriceRange] = useState<[number, number]>([
+    MIN_PRICE,
+    MAX_PRICE,
+  ]);
 
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tipoParam = params.get('tipo') as TipoCatalogoItem | null;
+
+    if (
+      tipoParam === 'TRACKED_USADO_UNIDAD' ||
+      tipoParam === 'TRACKED_SELLADO_AGREGADO' ||
+      tipoParam === 'NO_TRACK_AGREGADO'
+    ) {
+      setSelectedTipo(tipoParam);
+    } else {
+      setSelectedTipo(null);
+    }
+  }, [location.search]);
+
   useEffect(() => {
     (async () => {
+      setLoading(true);
       try {
-
-
-        const data = await fetchProductosCatalogo();
-
-        setProductos(data);
+        const prods = await fetchProductosCatalogo(selectedTipo ?? undefined);
+        setProductos(prods);
+      } catch (e) {
+        console.error('Error cargando productos', e);
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [selectedTipo]);
 
-
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const categoriaId = params.get('categoria');
-
-    if (categoriaId && categorias.length > 0 && productos.length > 0) {
-      const categoria = categorias.find(cat => cat.id == categoriaId);
-      if (categoria) {
-        const filtered = productos.filter(product => product.categoria === categoria.id);
-        setFilteredProducts(filtered);
-        setSelectedCategories([categoria.id]);
-      }
-    }
-  }, [location.search, categorias, productos]);
-
-
-  const handleToggleCategory = (categoryId: number) => {
-    const updatedCategories = selectedCategories.includes(categoryId)
-      ? selectedCategories.filter((id) => id !== categoryId)
-      : [...selectedCategories, categoryId];
-
-    setSelectedCategories(updatedCategories);
-
-    const filtered = productos.filter((product) =>
-      updatedCategories.length === 0 ? true : updatedCategories.includes(product.categoria)
-    );
-
-    setFilteredProducts(filtered);
+  const handleClearTipo = () => {
+    setSelectedTipo(null);
   };
 
+  const handleClearPrice = () => {
+    setPriceRange([MIN_PRICE, MAX_PRICE]);
+  };
+
+  const [minPrice, maxPrice] = priceRange;
+  const filteredProductos = productos.filter(
+    (p) => p.precio >= minPrice && p.precio <= maxPrice
+  );
+
+  const showPriceChip =
+    minPrice !== MIN_PRICE || maxPrice !== MAX_PRICE; 
   return (
-    <Box w="100%" px={4} mt={{ base: "15px", md: "80px" }}>
+    <Box w="100%" px={4} mt={{ base: '15px', md: '80px' }}>
       <Link
         href="https://wa.me/message/5RCBRGOHGKPVL1"
         isExternal
@@ -91,49 +115,73 @@ const Productos = () => {
           as={FaWhatsapp}
           boxSize="60px"
           color="#25D366"
-          _hover={{ transform: "scale(1.1)" }}
+          _hover={{ transform: 'scale(1.1)' }}
           transition="all 0.3s ease"
         />
       </Link>
 
-      <Breadcrumb spacing="8px" separator={<ChevronRightIcon color="gray.500" />} mb={4}>
+      <Breadcrumb
+        spacing="8px"
+        separator={<ChevronRightIcon color="gray.500" />}
+        mb={4}
+      >
         <BreadcrumbItem>
-          <BreadcrumbLink as={RouterLink} to="/">Inicio</BreadcrumbLink>
+          <BreadcrumbLink as={RouterLink} to="/">
+            Inicio
+          </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbItem isCurrentPage>
-          <BreadcrumbLink as={RouterLink} to="/productos">Productos</BreadcrumbLink>
+          <BreadcrumbLink as={RouterLink} to="/productos">
+            Productos
+          </BreadcrumbLink>
         </BreadcrumbItem>
       </Breadcrumb>
 
+      <Flex mt={2} wrap="wrap" gap={2} mb={2}>
+        {selectedTipo && (
+          <Box
+            px={3}
+            py={1}
+            bg="gray.100"
+            borderRadius="md"
+            display="flex"
+            alignItems="center"
+            fontSize="sm"
+          >
+            {getTipoLabel(selectedTipo)}
+            <IconButton
+              icon={<CloseIcon boxSize={2.5} />}
+              size="xs"
+              ml={2}
+              aria-label="Quitar filtro tipo"
+              onClick={handleClearTipo}
+            />
+          </Box>
+        )}
 
-      <Flex mt={2} wrap="wrap" gap={2}>
-        {selectedCategories.map((id) => {
-          const cat = categorias.find((c) => c.id === id);
-          return (
-            <Box
-              key={id}
-              px={3}
-              py={1}
-              bg="gray.100"
-              borderRadius="md"
-              display="flex"
-              alignItems="center"
-              fontSize="sm"
-            >
-              {cat?.nombre}
-              <IconButton
-                icon={<CloseIcon boxSize={2.5} />}
-                size="xs"
-                ml={2}
-                aria-label="Quitar filtro"
-                onClick={() => handleToggleCategory(id)}
-              />
-            </Box>
-          );
-        })}
-
+        {showPriceChip && (
+          <Box
+            px={3}
+            py={1}
+            bg="gray.100"
+            borderRadius="md"
+            display="flex"
+            alignItems="center"
+            fontSize="sm"
+          >
+            USD {minPrice} - USD {maxPrice}
+            <IconButton
+              icon={<CloseIcon boxSize={2.5} />}
+              size="xs"
+              ml={2}
+              aria-label="Quitar filtro precio"
+              onClick={handleClearPrice}
+            />
+          </Box>
+        )}
       </Flex>
-      <Flex justify="space-between" align="center" mb={5} >
+
+      <Flex justify="space-between" align="center" mb={5}>
         <Heading size="md">Productos</Heading>
         <Button
           size="sm"
@@ -144,33 +192,39 @@ const Productos = () => {
           onClick={() => setIsFilterOpen(true)}
           leftIcon={<IoFilter />}
           _hover={{
-            backgroundColor: "gray.100",
-            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)"
+            backgroundColor: 'gray.100',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
           }}
           _active={{
-            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
           }}
         >
           Filtrar
         </Button>
       </Flex>
+
+      {/* Grid de productos */}
       <SimpleGrid columns={2} spacing={3} mb={5}>
-        {productos.length > 0 ? (
-          productos.map((product) => (
-            <ProductCard key={product.id} product={product} />
+        {filteredProductos.length > 0 ? (
+          filteredProductos.map((product) => (
+            <ProductCard
+              key={product.itemId}
+              product={product}
+              destacado={false}
+            />
           ))
         ) : (
-          <GridItem colSpan={2}>
-            <Box w="100%" textAlign="center">
-              <Text color="gray.500">
-                No se encontraron productos para este filtro.
-              </Text>
-            </Box>
-          </GridItem>
+          !loading && (
+            <GridItem colSpan={2}>
+              <Box w="100%" textAlign="center">
+                <Text color="gray.500">
+                  No se encontraron productos para este filtro.
+                </Text>
+              </Box>
+            </GridItem>
+          )
         )}
       </SimpleGrid>
-
-
 
       {isFilterOpen && (
         <Box
@@ -187,7 +241,9 @@ const Productos = () => {
         >
           <Flex justify="space-between" align="center" mb={6}>
             <Box w="32px" />
-            <Heading size="md" textAlign="center">FILTROS</Heading>
+            <Heading size="md" textAlign="center">
+              FILTROS
+            </Heading>
             <IconButton
               aria-label="Cerrar filtro"
               icon={<CloseIcon />}
@@ -197,49 +253,96 @@ const Productos = () => {
             />
           </Flex>
 
-          {/* <Box mb={6}>
-            <Text fontWeight="bold" mb={2}>Ordenar</Text>
-            <Select placeholder="Seleccionar orden">
-              <option value="precioMayor">Precio: mayor a menor</option>
-              <option value="precioMenor">Precio: menor a mayor</option>
-              <option value="az">A - Z</option>
-              <option value="za">Z - A</option>
-            </Select>
-          </Box> */}
-
           <Box mb={6}>
-            <Text fontWeight="bold" mb={4}>Categorías</Text>
+            <Text fontWeight="bold" mb={4}>
+              Tipo de producto
+            </Text>
             <Flex gap={2} wrap="wrap">
-              {categorias.map((cat) =>
-                <Button
-                  key={cat.id}
-                  size="sm"
-                  variant="outline"
-                  colorScheme="blackAlpha"
-                  onClick={() => {
-                    const filtered = productos.filter(product => product.categoria === cat.id);
-                    setFilteredProducts(filtered);
-                    setSelectedCategories([cat.id]);
-                    setIsFilterOpen(false);
-                  }}
-                >
-                  {cat.nombre}
-                </Button>
-              )}
+              <Button
+                size="sm"
+                variant={selectedTipo === null ? 'solid' : 'outline'}
+                colorScheme="blackAlpha"
+                onClick={() => {
+                  setSelectedTipo(null); 
+                  setIsFilterOpen(false);
+                }}
+              >
+                Todos
+              </Button>
+
+              <Button
+                size="sm"
+                variant={
+                  selectedTipo === 'TRACKED_USADO_UNIDAD' ? 'solid' : 'outline'
+                }
+                colorScheme="blackAlpha"
+                onClick={() => {
+                  setSelectedTipo('TRACKED_USADO_UNIDAD');
+                  setIsFilterOpen(false);
+                }}
+              >
+                iPhone Usados
+              </Button>
+
+              <Button
+                size="sm"
+                variant={
+                  selectedTipo === 'TRACKED_SELLADO_AGREGADO'
+                    ? 'solid'
+                    : 'outline'
+                }
+                colorScheme="blackAlpha"
+                onClick={() => {
+                  setSelectedTipo('TRACKED_SELLADO_AGREGADO');
+                  setIsFilterOpen(false);
+                }}
+              >
+                iPhone Sellados
+              </Button>
+
+              <Button
+                size="sm"
+                variant={
+                  selectedTipo === 'NO_TRACK_AGREGADO' ? 'solid' : 'outline'
+                }
+                colorScheme="blackAlpha"
+                onClick={() => {
+                  setSelectedTipo('NO_TRACK_AGREGADO');
+                  setIsFilterOpen(false);
+                }}
+              >
+                Otros
+              </Button>
             </Flex>
           </Box>
 
-          {/* <Box>
-            <Text fontWeight="bold" mb={2}>Precio</Text>
-            <Flex gap={2} mb={3}>
-              <Input w={"140px"} placeholder="Desde" type="number" />
-              <Input w={"140px"} placeholder="Hasta" type="number" />
+          <Box mb={6}>
+            <Text fontWeight="bold" mb={2}>
+              Rango de precio
+            </Text>
+            <Text fontSize="sm" mb={2}>
+              De <b>{minPrice} USD</b> a <b>{maxPrice} USD</b>
+            </Text>
 
-              <Button size="sm" colorScheme="blackAlpha">
-                Aplicar
-              </Button>
+            <RangeSlider
+              min={MIN_PRICE}
+              max={MAX_PRICE}
+              step={50}
+              value={priceRange}
+              onChange={(val) => setPriceRange(val as [number, number])}
+            >
+              <RangeSliderTrack>
+                <RangeSliderFilledTrack />
+              </RangeSliderTrack>
+              <RangeSliderThumb index={0} />
+              <RangeSliderThumb index={1} />
+            </RangeSlider>
+
+            <Flex justify="space-between" mt={1}>
+              <Text fontSize="xs">min {MIN_PRICE} USD</Text>
+              <Text fontSize="xs">max {MAX_PRICE} USD</Text>
             </Flex>
-          </Box> */}
+          </Box>
         </Box>
       )}
     </Box>

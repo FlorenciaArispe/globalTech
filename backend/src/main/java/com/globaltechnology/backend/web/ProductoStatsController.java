@@ -16,8 +16,6 @@ public class ProductoStatsController {
 
   @GetMapping("/stats")
   public ProductoStatsDTO stats() {
-    // 👉 ya sin parámetro: snapshot global
     return service.stats();
   }
 }
-

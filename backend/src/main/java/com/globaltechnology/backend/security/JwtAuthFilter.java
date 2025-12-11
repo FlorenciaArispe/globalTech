@@ -22,38 +22,37 @@ public class JwtAuthFilter extends OncePerRequestFilter {
   private final org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
 
   public JwtAuthFilter(JwtService jwtService,
-                       org.springframework.security.core.userdetails.UserDetailsService uds) {
+      org.springframework.security.core.userdetails.UserDetailsService uds) {
     this.jwtService = jwtService;
     this.userDetailsService = uds;
   }
 
   @Override
-protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-    throws ServletException, IOException {
+  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      throws ServletException, IOException {
 
-  String authHeader = request.getHeader("Authorization");
-  if (authHeader != null && authHeader.startsWith("Bearer ")) {
-    String token = authHeader.substring(7);
-    String username = jwtService.extractUsername(token);
+    String authHeader = request.getHeader("Authorization");
+    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+      String token = authHeader.substring(7);
+      String username = jwtService.extractUsername(token);
 
-    if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-      UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-      if (jwtService.isTokenValid(token, userDetails)) {  // <-- valida subject y expiración
-        var authToken = new UsernamePasswordAuthenticationToken(
-            userDetails, null, userDetails.getAuthorities()
-        );
-        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(authToken);
+      if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        if (jwtService.isTokenValid(token, userDetails)) { // <-- valida subject y expiración
+          var authToken = new UsernamePasswordAuthenticationToken(
+              userDetails, null, userDetails.getAuthorities());
+          authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+          SecurityContextHolder.getContext().setAuthentication(authToken);
+        }
       }
     }
+    chain.doFilter(request, response);
   }
-  chain.doFilter(request, response);
-}
 
- @Override
-protected boolean shouldNotFilter(HttpServletRequest request) {
-  String path = request.getServletPath();
-  return path.equals("/auth/login") || path.startsWith("/actuator/");
-}
+  @Override
+  protected boolean shouldNotFilter(HttpServletRequest request) {
+    String path = request.getServletPath();
+    return path.equals("/auth/login") || path.startsWith("/actuator/");
+  }
 
 }

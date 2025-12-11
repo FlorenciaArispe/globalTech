@@ -12,18 +12,35 @@ import java.util.List;
 @RequestMapping("/api/categorias")
 public class CategoriaController {
   private final CategoriaService service;
-  public CategoriaController(CategoriaService service){ this.service = service; }
 
-  @GetMapping public List<CategoriaDTO> list(){ return service.list(); }
-  
-  @GetMapping("/{id}") public CategoriaDTO get(@PathVariable Long id){ return service.get(id); }
+  public CategoriaController(CategoriaService service) {
+    this.service = service;
+  }
 
-  @PostMapping @ResponseStatus(HttpStatus.CREATED)
-  public CategoriaDTO create(@Valid @RequestBody CategoriaCreateDTO dto){ return service.create(dto); }
+  @GetMapping
+  public List<CategoriaDTO> list() {
+    return service.list();
+  }
+
+  @GetMapping("/{id}")
+  public CategoriaDTO get(@PathVariable Long id) {
+    return service.get(id);
+  }
+
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public CategoriaDTO create(@Valid @RequestBody CategoriaCreateDTO dto) {
+    return service.create(dto);
+  }
 
   @PutMapping("/{id}")
-  public CategoriaDTO update(@PathVariable Long id, @Valid @RequestBody CategoriaCreateDTO dto){ return service.update(id, dto); }
+  public CategoriaDTO update(@PathVariable Long id, @Valid @RequestBody CategoriaCreateDTO dto) {
+    return service.update(id, dto);
+  }
 
-  @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void delete(@PathVariable Long id){ service.delete(id); }
+  @DeleteMapping("/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable Long id) {
+    service.delete(id);
+  }
 }

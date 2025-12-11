@@ -14,7 +14,9 @@ import java.util.List;
 public class CapacidadService {
   private final CapacidadRepository repo;
 
-  public CapacidadService(CapacidadRepository repo) { this.repo = repo; }
+  public CapacidadService(CapacidadRepository repo) {
+    this.repo = repo;
+  }
 
   private static CapacidadDTO toDTO(Capacidad c) {
     return new CapacidadDTO(c.getId(), c.getEtiqueta());

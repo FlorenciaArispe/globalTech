@@ -1,4 +1,5 @@
 package com.globaltechnology.backend.repository;
+
 import com.globaltechnology.backend.domain.Capacidad;
 import org.springframework.data.jpa.repository.JpaRepository;
 

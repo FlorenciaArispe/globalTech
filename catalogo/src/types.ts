@@ -17,6 +17,20 @@ export type TipoCatalogoItem =
 };
 
 export interface Producto {
+  itemId: ID;                     
+  modeloId: ID;               
+  modeloNombre: string;
+  categoriaId: ID;
+  categoriaNombre: string;
+  tipo: TipoCatalogoItem;
+  color: string | null;
+  capacidad: string | null;
+  bateriaCondicionPct: number | null;
+  precio: number;
+  imagenUrl: string | null;  
+}
+
+export interface ProductoDetalle {
   id: ID;
   modeloId: ID;
   modeloNombre: string;
@@ -31,7 +45,7 @@ export interface Producto {
   precio: number;
   enStock: boolean;
   stockTotal: number;
-  variantesEnStock:VarianteOpcionCatalogoDTO[];
+  variantesEnStock: VarianteOpcionCatalogoDTO[];
   imagenes: {
     id: number;
     url: string;
@@ -40,7 +54,6 @@ export interface Producto {
     orden: number;
   }[];
 }
-
 
 export type ProductoCatalogoDTO = {
   id: number;
@@ -56,35 +69,3 @@ export type ProductoCatalogoDTO = {
   }[];
 };
 
-// export type CatalogoItemDTO = {
-//   itemId: number;
-//   modeloId: number;
-//   modeloNombre: string;
-
-//   categoriaId: number;
-//   categoriaNombre: string;
-
-//   marcaId: number;
-//   marcaNombre: string;
-
-//   tipo: 'TRACKED_SELLADO_AGREGADO' | 'TRACKED_USADO_UNIDAD' | 'NO_TRACK_AGREGADO';
-
-//   color: string | null;
-//   bateriaCondicionPct: number | null;
-
-//   precio: number | null;
-
-//   enStock: boolean;
-//   stockTotal: number;
-
-//   coloresEnStock: string[];
-//   capacidadesEnStock: string[];
-
-//   imagenes: {
-//     id: number;
-//     url: string;
-//     altText: string | null;
-//     set: 'CATALOGO' | 'SELLADO' | 'USADO';
-//     orden: number;
-//   }[];
-// };

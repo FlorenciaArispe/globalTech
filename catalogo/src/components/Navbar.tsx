@@ -8,54 +8,80 @@ import {
   useBreakpointValue,
 } from "@chakra-ui/react";
 import { MenuMobile } from "./MenuMobile";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { SearchIcon } from "@chakra-ui/icons";
+import { fetchProductosCatalogo } from "../lib/productos";
+import type { Producto } from "../types";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const [searchVisible, setSearchVisible] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [resultados, setResultados] = useState<any[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [resultados, setResultados] = useState<Producto[]>([]);
+  const [loadingProductos, setLoadingProductos] = useState(false);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingProductos(true);
+        const all = await fetchProductosCatalogo();
+        setProductos(all);
+      } catch (e) {
+        console.error("Error cargando productos para búsqueda", e);
+      } finally {
+        setLoadingProductos(false);
+      }
+    })();
+  }, []);
 
   const toggleSearch = () => {
     setSearchVisible((prev) => !prev);
-  };
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const valor = e.target.value;
-
-    // Permitir letras, números, tildes, ñ y espacios
-    const regex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]*$/;
-
-    if (regex.test(valor)) {
-      setSearchText(valor);
-
-      if (valor.trim().length >= 2) {
-        buscarCoincidencias(valor.trim());
-      } else {
-        setResultados([]);
-      }
+    if (!searchVisible) {
+    } else {
+      setSearchText("");
+      setResultados([]);
     }
   };
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valor = e.target.value;
 
-  // const buscarCoincidencias = async (texto: string) => {
-  //   // const productos = await getProductos();
-  //   const textoMin = texto.toLowerCase();
+    const regex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]*$/;
 
-  //   const coincidencias = productos.filter(p =>
-  //     p.nombre?.toLowerCase().includes(textoMin) ||
-  //     p.modelo?.toLowerCase().includes(textoMin)
-  //   );
+    if (!regex.test(valor)) return;
 
-  //   setResultados(coincidencias);
-  // };
+    setSearchText(valor);
 
-  const handleSeleccionProducto = (id: number) => {
-    navigate(`/productos/${id}`);
-    setSearchText('');
+    const texto = valor.trim().toLowerCase();
+
+    if (texto.length < 2) {
+      setResultados([]);
+      return;
+    }
+
+    const coincidencias = productos.filter((p) => {
+      const modelo = p.modeloNombre?.toLowerCase() ?? "";
+      const capacidad = p.capacidad?.toLowerCase() ?? "";
+      return (
+        modelo.includes(texto) ||
+        capacidad.includes(texto)
+      );
+    });
+
+    setResultados(coincidencias);
+  };
+
+  const handleSeleccionProducto = (producto: Producto) => {
+    const id = (producto as any).itemId ?? (producto as any).id;
+
+    navigate(`/productos/${id}`, {
+      state: { tipo: producto.tipo },
+    });
+
+    setSearchText("");
     setResultados([]);
     setSearchVisible(false);
   };
@@ -69,13 +95,11 @@ const Navbar = () => {
       zIndex={10}
       bg="white"
       p={2}
-       height="68px" // Establecer un alto fijo
-  minHeight="68px"
+      height="68px"
+      minHeight="68px"
     >
       <Flex justify="space-between" align="center">
-        {isMobile && (
-          <MenuMobile />
-        )}
+        {isMobile && <MenuMobile />}
 
         <Link to="/">
           <Image
@@ -98,6 +122,8 @@ const Navbar = () => {
                 outline: "1px solid black",
                 backgroundColor: "transparent",
               }}
+              as={Link}
+              to="/"
             >
               Inicio
             </Button>
@@ -125,6 +151,7 @@ const Navbar = () => {
             </Button>
           </Flex>
         )}
+
         <IconButton
           aria-label="Buscar"
           icon={<SearchIcon />}
@@ -137,16 +164,21 @@ const Navbar = () => {
             border: "1px solid white",
           }}
         />
+
         {searchVisible && (
-          <Box position="relative" w="full" ml={4}>
+          <Box position="relative" w={isMobile ? "60%" : "40%"} ml={4}>
             <Input
-              placeholder="Buscar productos..."
+              placeholder={
+                loadingProductos ? "Cargando productos..." : "Buscar productos..."
+              }
               size="sm"
               variant="flushed"
               focusBorderColor="blue.400"
               value={searchText}
               onChange={handleSearchChange}
+              isDisabled={loadingProductos}
             />
+
             {resultados.length > 0 && (
               <Box
                 position="absolute"
@@ -158,32 +190,65 @@ const Navbar = () => {
                 borderRadius="md"
                 mt={1}
                 zIndex={20}
-                maxH="200px"
+                maxH="250px"
                 overflowY="auto"
               >
-                {resultados.map((r) => (
-                  <Button
-                    key={r.id}
-                    variant="ghost"
-                    justifyContent="flex-start"
-                    w="100%"
-                    onClick={() => handleSeleccionProducto(r.id)}
-                    _hover={{ bg: "gray.100" }}
-                    fontSize="sm"
-                  >
-                    {r.nombre || r.modelo}
-                  </Button>
-                ))}
+                {resultados.map((r) => {
+                  let texto = r.modeloNombre;
+
+                  if (r.tipo === "TRACKED_USADO_UNIDAD") {
+                    const capacidad = r.capacidad ? ` ${r.capacidad}` : "";
+                    const color = r.color ? ` ${r.color}` : "";
+                    const bateria =
+                      r.bateriaCondicionPct != null ? ` ${r.bateriaCondicionPct}%` : "";
+                    texto = `${r.modeloNombre}${capacidad}${color}${bateria}`;
+                  }
+
+                  return (
+                    <Button
+                      key={r.itemId}
+                      variant="ghost"
+                      justifyContent="flex-start"
+                      w="100%"
+                      onClick={() => handleSeleccionProducto(r)}
+                      _hover={{ bg: "gray.100" }}
+                      fontSize="sm"
+                      py={2}
+                    >
+                      {texto}
+                    </Button>
+                  );
+                })}
               </Box>
             )}
+
+            {resultados.length === 0 &&
+              searchText.trim().length >= 2 &&
+              !loadingProductos && (
+                <Box
+                  position="absolute"
+                  top="100%"
+                  left={0}
+                  w="full"
+                  bg="white"
+                  border="1px solid #ccc"
+                  borderRadius="md"
+                  mt={1}
+                  zIndex={20}
+                  maxH="200px"
+                  overflowY="auto"
+                  fontSize="sm"
+                  color="gray.500"
+                  px={3}
+                  py={2}
+                >
+                  No se encontraron productos.
+                </Box>
+              )}
           </Box>
         )}
       </Flex>
-
-
-
     </Box>
-
   );
 };
 

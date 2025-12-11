@@ -7,22 +7,22 @@ import java.time.Instant;
 import java.util.List;
 
 public record InventarioRowDTO(
-    Long modeloId,
-    String modeloNombre,
-    Long varianteId,
-    String colorNombre,
-    String capacidadEtiqueta,
-    Long unidadId,
-    String imei,
-    Integer bateriaCondicionPct,
-    EstadoComercial estadoProducto,
-    EstadoStock estadoStock,
-    BigDecimal precioBase,
-    BigDecimal precioOverride,
-    BigDecimal precioEfectivo,
-    Long stockAcumulado,
-    boolean trackeaUnidad,
-    Instant createdAt,
-    Instant updatedAt,
-    List<VarianteImagenDTO> imagenes // 👈 nuevo campo
-) {}
+        Long modeloId,
+        String modeloNombre,
+        Long varianteId,
+        String colorNombre,
+        String capacidadEtiqueta,
+        Long unidadId,
+        String imei,
+        Integer bateriaCondicionPct,
+        EstadoComercial estadoProducto,
+        EstadoStock estadoStock,
+        BigDecimal precioBase,
+        BigDecimal precioOverride,
+        BigDecimal precioEfectivo,
+        Long stockAcumulado,
+        boolean trackeaUnidad,
+        Instant createdAt,
+        Instant updatedAt,
+        List<VarianteImagenDTO> imagenes) {
+}

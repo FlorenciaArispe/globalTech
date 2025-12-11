@@ -4,16 +4,6 @@ import { useEffect, useState } from 'react';
 import {
   Box, Container, Text, Table, Thead, Tr, Th, Tbody, Td,
   HStack, Tag, Spinner, Flex, IconButton, Tooltip, Badge, Button,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverArrow,
-  PopoverCloseButton,
-  PopoverHeader,
-  PopoverBody,
-  Portal,
-  Wrap,
-  WrapItem
 } from '@chakra-ui/react';
 import { Eye, Plus } from 'lucide-react';
 import NextLink from 'next/link';
@@ -44,10 +34,6 @@ type VentaDTO = {
   items: VentaItemDTO[];
 };
 
-const money = (n?: number | null) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
-    .format(n ?? 0);
-
 export default function VentasPage() {
   const [rows, setRows] = useState<VentaDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +43,7 @@ export default function VentasPage() {
     (async () => {
       try {
         const { data } = await api.get<VentaDTO[]>('/api/ventas');
-        console.log("VENTAS", data)
+        
         if (!alive) return;
         setRows(Array.isArray(data) ? data : []);
       } finally {
@@ -70,7 +56,7 @@ export default function VentasPage() {
 
   return (
     <Box bg="#f6f6f6" minH="100dvh">
-    <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
+      <Container maxW="container.xl" pt={10} pb={10} px={{ base: 4, md: 6 }}>
 
         <HStack justify="space-between" mb={4}>
           <Text fontSize="30px" fontWeight={600}>Ventas</Text>
@@ -104,10 +90,9 @@ export default function VentasPage() {
                 <Tr>
                   <Th width="150px">Fecha</Th>
                   <Th>Cliente</Th>
-                  <Th isNumeric>Desc.</Th>
-                
                   <Th>Ítems</Th>
-                    <Th isNumeric>Total</Th>
+                  <Th isNumeric>Total</Th>
+                  <Th isNumeric>Descuento</Th>
                   <Th textAlign="center">Observación</Th>
                 </Tr>
               </Thead>
@@ -121,8 +106,7 @@ export default function VentasPage() {
                       })}
                     </Td>
                     <Td>{v.clienteNombre ?? <Tag size="sm">Mostrador</Tag>}</Td>
-                    <Td >{money(v.descuentoTotal)}</Td>
-                 
+
                     <Td>
                       <Box maxH="96px" overflowY="auto" pr={2}>
                         {v.items.map((it, idx) => {
@@ -135,7 +119,8 @@ export default function VentasPage() {
                         })}
                       </Box>
                     </Td>
-                       <Td isNumeric><Badge colorScheme="blue">{money(v.total)}</Badge></Td>
+                    <Td isNumeric><Badge colorScheme="blue" fontSize={"14px"} textAlign={"center"} minW={"70px"}>{v.total} USD</Badge></Td>
+                    <Td>{v.descuentoTotal} </Td>
                     <Td textAlign="center">
                       <Tooltip
                         label={v.observaciones ? v.observaciones : "Sin observación"}

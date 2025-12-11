@@ -1,4 +1,3 @@
-// src/main.tsx
 import * as React from 'react'
 import * as ReactDOM from 'react-dom/client'
 import { ChakraProvider, extendTheme } from '@chakra-ui/react'

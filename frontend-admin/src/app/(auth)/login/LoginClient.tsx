@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useDispatch } from 'react-redux';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Box, Button, Input, VStack, Heading, useToast,
@@ -11,7 +10,6 @@ import {
   IconButton,
 } from '@chakra-ui/react';
 import { api } from '@/lib/axios';
-import { setCredentials } from '@/store/slices/authSlice';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { setToken } from '@/lib/auth';
 
@@ -20,7 +18,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const dispatch = useDispatch();
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
@@ -36,13 +33,7 @@ export default function LoginPage() {
     try {
       const { data } = await api.post('/auth/login', { username, password });
       const token: string = data.token || data.access_token || data.accessToken;
-      console.log("TOKEN A GUARDAR", token)
       setToken(token);
-      console.log('[login] jwt guardado =', localStorage.getItem('jwt'));
-      // api.defaults.headers.common.Authorization = `Bearer ${token}`;
-      // console.log('Guardado?', localStorage.getItem('token')?.slice(0, 20) + '…');
-      // dispatch(setCredentials({ token, user: data.user || username }));
-
       toast({ status: 'success', title: '¡Bienvenido!' });
       router.replace(next);
     } catch (err: any) {
@@ -63,22 +54,22 @@ export default function LoginPage() {
       display="flex"
       alignItems="center"
       justifyContent="center"
-      px={{ base: 4, md: 0 }}              // margen lateral en mobile
+      px={{ base: 4, md: 0 }}              
     >
       <Box
         bg="white"
-        borderRadius={{ base: 0, md: '25px' }} // opcional: sin bordes en mobile
+        borderRadius={{ base: 0, md: '25px' }} 
         boxShadow="lg"
-        w={{ base: '100%', md: '450px', lg: '750px' }} // 100% en mobile
+        w={{ base: '100%', md: '450px', lg: '750px' }} 
       >
         <Flex
           direction={{ base: 'column', lg: 'row' }}
-          align={{ base: 'stretch', lg: 'center' }}     // estirar hijos en mobile
+          align={{ base: 'stretch', lg: 'center' }}    
           justify="center"
         >
           <Box
             flex={{ base: '1 1 auto', lg: '0 0 50%' }}
-            w={{ base: '100%', lg: 'auto' }}            // 100% en mobile
+            w={{ base: '100%', lg: 'auto' }}    
             p={4}
           >
             <VStack p={4} spacing={6} as="form" onSubmit={handleSubmit}>

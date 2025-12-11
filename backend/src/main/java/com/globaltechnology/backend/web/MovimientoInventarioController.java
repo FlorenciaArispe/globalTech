@@ -1,4 +1,3 @@
-// web/MovimientoInventarioController.java
 package com.globaltechnology.backend.web;
 
 import com.globaltechnology.backend.service.MovimientoInventarioService;

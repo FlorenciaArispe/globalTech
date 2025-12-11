@@ -1,4 +1,3 @@
-// web/InventarioController.java
 package com.globaltechnology.backend.web;
 
 import com.globaltechnology.backend.service.InventarioService;
@@ -17,12 +16,10 @@ public class InventarioController {
     this.service = service;
   }
 
-  // filtros opcionales
   @GetMapping
   public List<InventarioRowDTO> list(
       @RequestParam(required = false) Long categoriaId,
-      @RequestParam(required = false) Long marcaId
-  ) {
+      @RequestParam(required = false) Long marcaId) {
     return service.listarInventario(categoriaId, marcaId);
   }
 }

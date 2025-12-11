@@ -43,7 +43,7 @@ public class ProductoDestacadoController {
 
   @DeleteMapping
   public void desmarcarDestacado(@RequestParam TipoCatalogoItem tipo,
-                                 @RequestParam Long itemId) {
+      @RequestParam Long itemId) {
     var existente = destacadoRepo.findByTipoAndItemId(tipo, itemId).orElse(null);
     if (existente != null) {
       existente.setActivo(false);

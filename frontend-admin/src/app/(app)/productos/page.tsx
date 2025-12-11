@@ -161,9 +161,6 @@ export default function Productos() {
           api.get<CapacidadDTO[]>('/api/capacidades'),
         ]);
 
-        console.log('TABLA', modelosResp.data);
-        console.log('COLORES', coloresResp.data);
-        console.log('CAPACIDADES', capacidadesResp.data);
 
         if (!alive) return;
         setRows(Array.isArray(modelosResp.data) ? modelosResp.data : []);
@@ -491,7 +488,6 @@ export default function Productos() {
   const saveVarianteSinImei = async () => {
     if (!addVarModeloId) return;
 
-    // Validar precio
     const precioNum = parsePrecio(addVarPrecio);
     if (precioNum == null) {
       toast({
@@ -502,7 +498,6 @@ export default function Productos() {
       return;
     }
 
-    // Si el modelo trackea IMEI, pedimos color y capacidad
     if (addVarTrackeaUnidad) {
       if (!addVarColorId || !addVarCapacidadId) {
         toast({
@@ -540,11 +535,9 @@ export default function Productos() {
       closeAddVariante();
 
       if (creada?.id != null) {
-        // Si no trackea unidad, abrimos editor de fotos igual que antes
         openEditImgs(Number(creada.id), addVarTrackeaUnidad);
       }
     } catch (e: any) {
-      console.log('POST /api/variantes error', e?.response?.data);
       toast({
         status: 'error',
         title: 'No se pudo crear la variante',

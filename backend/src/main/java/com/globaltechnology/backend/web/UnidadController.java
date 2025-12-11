@@ -12,19 +12,29 @@ import java.util.List;
 @RequestMapping("/api/unidades")
 public class UnidadController {
   private final UnidadService service;
-  public UnidadController(UnidadService service){ this.service = service; }
+
+  public UnidadController(UnidadService service) {
+    this.service = service;
+  }
 
   @GetMapping("/{id}")
-  public UnidadDTO get(@PathVariable Long id){ return service.get(id); }
+  public UnidadDTO get(@PathVariable Long id) {
+    return service.get(id);
+  }
 
-  @PostMapping @ResponseStatus(HttpStatus.CREATED)
-  public UnidadDTO create(@Valid @RequestBody UnidadCreateDTO dto){ return service.create(dto); }
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public UnidadDTO create(@Valid @RequestBody UnidadCreateDTO dto) {
+    return service.create(dto);
+  }
 
   @PutMapping("/{id}")
-  public UnidadDTO update(@PathVariable Long id, @Valid @RequestBody UnidadUpdateDTO dto){ return service.update(id, dto); }
+  public UnidadDTO update(@PathVariable Long id, @Valid @RequestBody UnidadUpdateDTO dto) {
+    return service.update(id, dto);
+  }
 
   @GetMapping("/por-variante/{varianteId}")
-  public List<UnidadDTO> porVariante(@PathVariable Long varianteId){
+  public List<UnidadDTO> porVariante(@PathVariable Long varianteId) {
     return service.listByVariante(varianteId);
   }
 
@@ -36,9 +46,9 @@ public class UnidadController {
   }
 
   @DeleteMapping("/{id}")
-@ResponseStatus(HttpStatus.NO_CONTENT)
-public void delete(@PathVariable Long id) {
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable Long id) {
     service.delete(id);
-}
+  }
 
 }

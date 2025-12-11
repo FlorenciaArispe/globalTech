@@ -14,7 +14,9 @@ import java.util.List;
 public class ColorService {
   private final ColorRepository repo;
 
-  public ColorService(ColorRepository repo) { this.repo = repo; }
+  public ColorService(ColorRepository repo) {
+    this.repo = repo;
+  }
 
   private static ColorDTO toDTO(Color c) {
     return new ColorDTO(c.getId(), c.getNombre());

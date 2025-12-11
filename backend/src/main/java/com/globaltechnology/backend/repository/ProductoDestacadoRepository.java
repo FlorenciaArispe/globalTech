@@ -10,5 +10,6 @@ import com.globaltechnology.backend.web.dto.TipoCatalogoItem;
 
 public interface ProductoDestacadoRepository extends JpaRepository<ProductoDestacado, Long> {
   List<ProductoDestacado> findAllByActivoTrueOrderByOrdenAscIdAsc();
+
   Optional<ProductoDestacado> findByTipoAndItemId(TipoCatalogoItem tipo, Long itemId);
 }

@@ -15,7 +15,7 @@ public class AdminSeeder {
       if (!repo.existsByUsername("admin")) {
         User u = new User();
         u.setUsername("admin");
-        u.setPassword(encoder.encode("admin123")); // cambiá en prod
+        u.setPassword(encoder.encode("admin123"));
         u.setRoles(Set.of(Role.ADMIN));
         repo.save(u);
       }

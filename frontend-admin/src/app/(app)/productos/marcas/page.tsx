@@ -32,7 +32,6 @@ export default function MarcasPage() {
         const { data } = await api.get<Marca[]>('/api/marcas');
         if (alive) setMarcas(data);
       } catch (e: any) {
-        console.log('status', e?.response?.status, 'data', e?.response?.data);
         toast({
           status: 'error',
           title: 'No se pudieron cargar las marcas',

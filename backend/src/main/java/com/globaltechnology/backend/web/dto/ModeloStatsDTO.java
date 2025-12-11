@@ -1,4 +1,3 @@
-// ModeloStatsDTO.java
 package com.globaltechnology.backend.web.dto;
 
 public record ModeloStatsDTO(

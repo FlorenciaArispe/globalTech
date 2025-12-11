@@ -2,10 +2,10 @@
 
 import NextLink from 'next/link';
 import {
-  Box, Flex, IconButton, Input, InputGroup, InputLeftElement,
+  Box, Flex, IconButton,
   Avatar, Menu, MenuButton, MenuList, MenuItem, HStack, Text, Image
 } from '@chakra-ui/react';
-import { Search, Menu as MenuIcon } from 'lucide-react';
+import { Menu as MenuIcon } from 'lucide-react';
 
 export default function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   return (
@@ -50,15 +50,6 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
           <Image src="/solo-logo.png" alt="YAMORE" h="40px" w="auto" objectFit="contain" draggable={false} />
         </Box>
       </Box>
-
-      {/* <Box flex="1" maxW="720px" mx="auto" display={{ base: 'none', sm: 'block' }}>
-        <InputGroup>
-          <InputLeftElement pointerEvents="none">
-            <Search size={16} />
-          </InputLeftElement>
-          <Input placeholder="Buscar productos, clientes, ventas..." />
-        </InputGroup>
-      </Box> */}
 
       <Box ml="auto">
         <Menu>

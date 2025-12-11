@@ -26,38 +26,29 @@ public class VarianteImagenController {
     return service.list(varianteId);
   }
 
-  /**
-   * Reemplaza completamente el set (SELLADO/USADO/CATALOGO) con hasta 3 archivos.
-   * Form-data:
-   *   files: (array) MultipartFile[]
-   *   alts:  (array opcional) String[] para alt text en mismo orden
-   */
   @PutMapping(path = "/{set}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-public List<VarianteImagenDTO> replaceSet(
-    @PathVariable("varianteId") Long varianteId,
-    @PathVariable("set") ImagenSet set,
-    @RequestParam("files") List<MultipartFile> files,           // <-- RequestParam
-    @RequestParam(value = "alts", required = false) List<String> alts
-) throws IOException {
-  return service.replaceSet(varianteId, set, files, alts);
-}
+  public List<VarianteImagenDTO> replaceSet(
+      @PathVariable("varianteId") Long varianteId,
+      @PathVariable("set") ImagenSet set,
+      @RequestParam("files") List<MultipartFile> files,
+      @RequestParam(value = "alts", required = false) List<String> alts) throws IOException {
+    return service.replaceSet(varianteId, set, files, alts);
+  }
 
   @DeleteMapping("/{imagenId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void deleteOne(@PathVariable Long varianteId, @PathVariable Long imagenId) {
-    // varianteId no se usa en el método, pero lo dejamos por convención REST
+   
     service.deleteImage(imagenId);
   }
 
-  // VarianteImagenController.java
-@PostMapping(path = "/{set}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-public List<VarianteImagenDTO> appendSet(
-    @PathVariable("varianteId") Long varianteId,
-    @PathVariable("set") ImagenSet set,
-    @RequestParam("files") List<MultipartFile> files,
-    @RequestParam(value = "alts", required = false) List<String> alts
-) throws IOException {
-  return service.appendToSet(varianteId, set, files, alts);
-}
+  @PostMapping(path = "/{set}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public List<VarianteImagenDTO> appendSet(
+      @PathVariable("varianteId") Long varianteId,
+      @PathVariable("set") ImagenSet set,
+      @RequestParam("files") List<MultipartFile> files,
+      @RequestParam(value = "alts", required = false) List<String> alts) throws IOException {
+    return service.appendToSet(varianteId, set, files, alts);
+  }
 
 }
