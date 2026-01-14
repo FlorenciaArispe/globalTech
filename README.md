@@ -22,7 +22,8 @@ docker compose --profile dev up -d backend static frontend-dev catalog-dev
 ```bash
 docker compose --profile catalog up catalog-dev
 ```
-Disponible en: http://localhost:5173
+CATALOGO disponible en: http://localhost:5173
+ADMIN disponible en: http://localhost:3000
 
 ### 🔹 Levantar solo el frontend de administración (DEV)
 
