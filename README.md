@@ -37,6 +37,7 @@ Todo el sistema se encuentra **dockerizado**, facilitando su ejecución y despli
 
 El sistema sigue una arquitectura cliente-servidor, con un backend centralizado y dos frontends que consumen la misma API.
 
+
 ---
 
 ## 🔙 Backend – API REST
@@ -46,7 +47,7 @@ El sistema sigue una arquitectura cliente-servidor, con un backend centralizado 
 - Spring Boot
 - Spring Security
 - JPA / Hibernate
-- Base de datos relacional
+- PostgreSQL
 - Docker
 
 ### Descripción
@@ -58,7 +59,7 @@ El backend es el **núcleo del sistema**, encargado de:
 - Exponer endpoints REST para:
   - Administración
   - Catálogo público
-- Manejar autenticación y autorización para la parte administrativa. LOGIN
+- Manejar autenticación y autorización para la parte administrativa
 
 ### Estructura
 
@@ -138,7 +139,7 @@ Incluye contenedores para:
 - Backend
 - Frontend de administración
 - Catálogo público
-- Base de datos
+- Base de datos PostgreSQL
 
 ---
 
@@ -159,4 +160,3 @@ Proyecto en desarrollo, con una base sólida orientada a:
 - Roles y permisos de usuario
 - Optimización SEO del catálogo público
 - Integración con medios de pago
-
