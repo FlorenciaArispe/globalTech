@@ -1,5 +1,43 @@
 # 📦 Sistema de Control de Stock e Inventario – Comercio de Tecnología
 
+## 🚀 Cómo levantar el proyecto
+
+El proyecto está completamente **dockerizado** y puede ejecutarse en distintos modos según lo que se necesite levantar en desarrollo.
+
+---
+
+### 🔹 Levantar todo junto en modo desarrollo (con imágenes)
+
+Incluye:
+- Backend
+- Frontend Admin
+- Catálogo Público
+- Base de datos
+
+```bash
+docker compose --profile dev up -d backend static frontend-dev catalog-dev
+```
+### 🔹 Levantar solo el catálogo público (DEV)
+
+```bash
+docker compose --profile catalog up catalog-dev
+```
+Disponible en: http://localhost:5173
+
+### 🔹 Levantar solo el frontend de administración (DEV)
+
+```bash
+docker compose up -d db backend pgadmin frontend-dev
+```
+
+### Base de datos. El sistema utiliza PostgreSQL.
+Variables principales:
+- POSTGRES_DB=tienda
+- POSTGRES_USER=tienda_user
+- POSTGRES_PASSWORD=tienda_pass
+
+---
+
 ## 📝 Descripción
 
 Este proyecto es un **sistema integral de control de stock e inventario** para un comercio dedicado a la venta de **equipos de tecnología**, principalmente:
